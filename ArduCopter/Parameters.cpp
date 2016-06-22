@@ -616,7 +616,28 @@ const AP_Param::Info Copter::var_info[] = {
     // @Description: Acro roll/pitch Expo to allow faster rotation when stick at edges
     // @Values: 0:Disabled,0.1:Very Low,0.2:Low,0.3:Medium,0.4:High,0.5:Very High
     // @User: Advanced
-    GSCALAR(acro_expo,  "ACRO_EXPO",    ACRO_EXPO_DEFAULT),
+    GSCALAR(acro_rp_expo,  "ACRO_RP_EXPO",    ACRO_EXPO_DEFAULT),
+
+    // @Param: ACRO_EXPO
+    // @DisplayName: Acro Expo
+    // @Description: Acro roll/pitch Expo to allow faster rotation when stick at edges
+    // @Values: 0:Disabled,0.1:Very Low,0.2:Low,0.3:Medium,0.4:High,0.5:Very High
+    // @User: Advanced
+    GSCALAR(acro_y_expo,  "ACRO_Y_EXPO",    ACRO_EXPO_DEFAULT),
+
+    // @Param: ACRO_EXPO
+    // @DisplayName: Acro Expo
+    // @Description: Acro roll/pitch Expo to allow faster rotation when stick at edges
+    // @Values: 0:Disabled,0.1:Very Low,0.2:Low,0.3:Medium,0.4:High,0.5:Very High
+    // @User: Advanced
+    GSCALAR(acro_thr_expo,  "ACRO_THR_EXPO",    ACRO_EXPO_DEFAULT),
+
+    // @Param: ACRO_EXPO
+    // @DisplayName: Acro Expo
+    // @Description: Acro roll/pitch Expo to allow faster rotation when stick at edges
+    // @Values: 0:Disabled,0.1:Very Low,0.2:Low,0.3:Medium,0.4:High,0.5:Very High
+    // @User: Advanced
+    GSCALAR(acro_thr_expo,  "ACRO_EXPO",    ACRO_EXPO_DEFAULT),
 
     // @Param: VEL_XY_P
     // @DisplayName: Velocity (horizontal) P gain

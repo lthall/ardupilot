@@ -125,7 +125,7 @@ public:
         k_param_rangefinder, // rangefinder object
         k_param_fs_ekf_thresh,
         k_param_terrain,
-        k_param_acro_expo,
+        k_param_acro_rp_expo,
         k_param_throttle_deadzone,
         k_param_optflow,
         k_param_dcmcheck_thresh,        // deprecated - remove
@@ -362,6 +362,8 @@ public:
         k_param_DataFlash = 253, // 253 - Logging Group
 
         // 254,255: reserved
+        k_param_acro_y_expo,
+        k_param_acro_thr_expo,
     };
 
     AP_Int16        format_version;
@@ -478,7 +480,9 @@ public:
     AP_Float                acro_balance_roll;
     AP_Float                acro_balance_pitch;
     AP_Int8                 acro_trainer;
-    AP_Float                acro_expo;
+    AP_Float                acro_rp_expo;
+    AP_Float                acro_y_expo;
+    AP_Float                acro_thr_expo;
 
     // PI/D controllers
     AC_PI_2D                pi_vel_xy;
