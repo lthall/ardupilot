@@ -135,7 +135,7 @@ void Copter::set_throttle_takeoff()
 // get_pilot_desired_throttle - transform pilot's throttle input to make cruise throttle mid stick
 // used only for manual throttle modes
 // returns throttle output 0 to 1
-float Copter::get_pilot_desired_throttle(int16_t throttle_control, float expo)
+float Copter::get_pilot_desired_throttle(int16_t throttle_control, float thr_mid)
 {
     float throttle_out;
 
@@ -144,29 +144,10 @@ float Copter::get_pilot_desired_throttle(int16_t throttle_control, float expo)
     // ensure reasonable throttle values
     throttle_control = constrain_int16(throttle_control,0,1000);
 
-    if(expo > 1.0f){
-        // ensure mid throttle is set within a reasonable range
-        float thr_mid = constrain_float(motors.get_throttle_hover(), 0.1f, 0.9f);
-
-        // check throttle is above, below or in the deadband
-        if (throttle_control < mid_stick) {
-            // below the deadband
-            throttle_out = ((float)throttle_control)*thr_mid/(float)mid_stick;
-        } else if(throttle_control > mid_stick) {
-            // above the deadband
-            throttle_out = (thr_mid) + ((float)(throttle_control-mid_stick)) * (1.0f - thr_mid) / (float)(1000-mid_stick);
-        } else {
-            // must be in the deadband
-            throttle_out = thr_mid;
-        }
-    }else if (expo < -0.5f){
-        // calculate the expo value that will result in hover throttle at half input throttle
-        expo = constrain_float(-(motors.get_throttle_hover()-0.5)/0.375, -0.5f, 1.0f);
-    }
-
     // calculate normalised throttle input
     float throttle_in = ((float)(throttle_control))/1000.0f;
 
+    float expo = constrain_float(-(thr_mid-0.5)/0.375, -0.5f, 1.0f);
     // calculate the output throttle using the given expo function
     throttle_out = throttle_in*(1.0f-expo) + expo*throttle_in*throttle_in*throttle_in;
     return throttle_out;

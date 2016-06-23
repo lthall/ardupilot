@@ -363,7 +363,7 @@ public:
 
         // 254,255: reserved
         k_param_acro_y_expo,
-        k_param_acro_thr_expo,
+        k_param_acro_thr_mid,
     };
 
     AP_Int16        format_version;
@@ -482,7 +482,7 @@ public:
     AP_Int8                 acro_trainer;
     AP_Float                acro_rp_expo;
     AP_Float                acro_y_expo;
-    AP_Float                acro_thr_expo;
+    AP_Float                acro_thr_mid;
 
     // PI/D controllers
     AC_PI_2D                pi_vel_xy;

@@ -10,7 +10,10 @@
 bool Copter::acro_init(bool ignore_checks)
 {
    // if landed and the mode we're switching from does not have manual throttle and the throttle stick is too high
-   if (motors.armed() && ap.land_complete && !mode_has_manual_throttle(control_mode) && (get_pilot_desired_throttle(channel_throttle->get_control_in(), g.acro_thr_expo) > get_non_takeoff_throttle())) {
+   if (motors.armed() &&
+           ap.land_complete &&
+           !mode_has_manual_throttle(control_mode) &&
+           (get_pilot_desired_throttle(channel_throttle->get_control_in(), g.acro_thr_mid) > get_non_takeoff_throttle())) {
        return false;
    }
    // set target altitude to zero for reporting
@@ -39,7 +42,7 @@ void Copter::acro_run()
     get_pilot_desired_angle_rates(channel_roll->get_control_in(), channel_pitch->get_control_in(), channel_yaw->get_control_in(), target_roll, target_pitch, target_yaw);
 
     // get pilot's desired throttle
-    pilot_throttle_scaled = get_pilot_desired_throttle(channel_throttle->get_control_in(), g.acro_thr_expo);
+    pilot_throttle_scaled = get_pilot_desired_throttle(channel_throttle->get_control_in(), g.acro_thr_mid);
 
     // run attitude controller
     attitude_control.input_rate_bf_roll_pitch_yaw(target_roll, target_pitch, target_yaw);

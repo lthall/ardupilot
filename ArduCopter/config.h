@@ -438,8 +438,8 @@
  #define ACRO_Y_EXPO_DEFAULT        0.3f
 #endif
 
-#ifndef ACRO_THR_EXPO_DEFAULT
- #define ACRO_THR_EXPO_DEFAULT      -1.0f
+#ifndef ACRO_THR_MID_DEFAULT
+ #define ACRO_THR_MID_DEFAULT      -1.0f
 #endif
 
 // RTL Mode
