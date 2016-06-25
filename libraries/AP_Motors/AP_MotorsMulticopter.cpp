@@ -376,7 +376,7 @@ void AP_MotorsMulticopter::update_throttle_hover(float dt)
 {
     if (_throttle_hover_learn != HOVER_LEARN_DISABLED) {
         // we have chosen to constrain the hover throttle to be within the range reachable by the third order expo polynomial.
-        _throttle_hover = constrain_float(_throttle_hover + (dt/(dt+AP_MOTORS_THST_HOVER_TC))*(_throttle_in-_throttle_hover), 0.125f, 0.6875f);
+        _throttle_hover = constrain_float(_throttle_hover + (dt/(dt+AP_MOTORS_THST_HOVER_TC))*(get_throttle()-_throttle_hover), 0.125f, 0.6875f);
     }
 }
 
