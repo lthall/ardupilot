@@ -276,11 +276,16 @@ float Copter::get_surface_tracking_climb_rate(int16_t target_rate, float current
 #endif
 }
 
-// set_accel_throttle_I_from_pilot_throttle - smoothes transition from pilot controlled throttle to autopilot throttle
-void Copter::set_accel_throttle_I_from_pilot_throttle(float pilot_throttle)
+// set_accel_throttle_I_from_motors_get_throttle - smoothes transition from pilot controlled throttle to autopilot throttle
+void Copter::set_accel_throttle_I_from_motors_get_throttle()
 {
+    float cos_tilt = ahrs.cos_pitch() * ahrs.cos_roll();
+    float inverted_factor = constrain_float(2.0f*cos_tilt, 0.0f, 1.0f);
+    float boost_factor = 1.0f/constrain_float(cos_tilt, 0.5f, 1.0f);
+
+    float throttle_in = motors.get_throttle()/(inverted_factor*boost_factor);
     // shift difference between pilot's throttle and hover throttle into accelerometer I
-    g.pid_accel_z.set_integrator((pilot_throttle-motors.get_throttle_hover()) * 1000.0f);
+    g.pid_accel_z.set_integrator(constrain_float(throttle_in-motors.get_throttle_hover(), -1.0f, 1.0f) * 1000.0f);
 }
 
 // updates position controller's maximum altitude using fence and EKF limits
