@@ -139,7 +139,9 @@ float Copter::get_pilot_desired_throttle(int16_t throttle_control, float thr_mid
 {
     float throttle_out;
 
-    int16_t mid_stick = channel_throttle->get_control_mid();
+    if(is_zero(thr_mid)){
+        thr_mid = motors.get_throttle_hover();
+    }
 
     // ensure reasonable throttle values
     throttle_control = constrain_int16(throttle_control,0,1000);
