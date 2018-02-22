@@ -40,9 +40,12 @@ void AP_MotorsTri::init(motor_frame_class frame_class, motor_frame_type frame_ty
 
     // find the yaw servo
     _rear_servo = SRV_Channels::get_channel_for(SRV_Channel::k_motor3, AP_MOTORS_CH_TRI_REAR);
+    _gvnr_servo = SRV_Channels::get_channel_for(SRV_Channel::k_motor4, AP_MOTORS_CH_TRI_GVNR);
     _yaw1_servo = SRV_Channels::get_channel_for(SRV_Channel::k_motor5, AP_MOTORS_CH_TRI_YAW1);
     _yaw2_servo = SRV_Channels::get_channel_for(SRV_Channel::k_motor6, AP_MOTORS_CH_TRI_YAW2);
-    if (!_rear_servo | !_yaw1_servo | !_yaw2_servo) {
+    _yaw3_servo = SRV_Channels::get_channel_for(SRV_Channel::k_motor7, AP_MOTORS_CH_TRI_YAW3);
+    _yaw4_servo = SRV_Channels::get_channel_for(SRV_Channel::k_motor8, AP_MOTORS_CH_TRI_YAW4);
+    if (!_rear_servo | !_gvnr_servo | !_yaw1_servo | !_yaw2_servo | !_yaw3_servo | !_yaw4_servo | !_rear_servo) {
         GCS_MAVLINK::send_statustext_all(MAV_SEVERITY_ERROR, "MotorsTri: unable to setup yaw channel");
         // don't set initialised_ok
         return;
@@ -50,8 +53,11 @@ void AP_MotorsTri::init(motor_frame_class frame_class, motor_frame_type frame_ty
 
     // we set four servos to angle
     _rear_servo->set_angle(AP_MOTORS_SERVO_INPUT_RANGE);
+    _gvnr_servo->set_angle(AP_MOTORS_SERVO_INPUT_RANGE);
     _yaw1_servo->set_angle(AP_MOTORS_SERVO_INPUT_RANGE);
     _yaw2_servo->set_angle(AP_MOTORS_SERVO_INPUT_RANGE);
+    _yaw3_servo->set_angle(AP_MOTORS_SERVO_INPUT_RANGE);
+    _yaw4_servo->set_angle(AP_MOTORS_SERVO_INPUT_RANGE);
 
     // record successful initialisation if what we setup was the desired frame_class
     _flags.initialised_ok = (frame_class == MOTOR_FRAME_TRI);
@@ -72,7 +78,7 @@ void AP_MotorsTri::set_update_rate( uint16_t speed_hz )
     // set update rate for the 2 motors (but not the servo on channels)
     uint32_t mask = 
 	    1U << AP_MOTORS_MOT_1 |
-        1U << AP_MOTORS_MOT_2;
+	    1U << AP_MOTORS_MOT_2;
     rc_set_freq(mask, _speed_hz);
 }
 
@@ -83,8 +89,11 @@ void AP_MotorsTri::enable()
     rc_enable_ch(AP_MOTORS_MOT_1);
     rc_enable_ch(AP_MOTORS_MOT_2);
     rc_enable_ch(AP_MOTORS_CH_TRI_REAR);
+    rc_enable_ch(AP_MOTORS_CH_TRI_GVNR);
     rc_enable_ch(AP_MOTORS_CH_TRI_YAW1);
     rc_enable_ch(AP_MOTORS_CH_TRI_YAW2);
+    rc_enable_ch(AP_MOTORS_CH_TRI_YAW3);
+    rc_enable_ch(AP_MOTORS_CH_TRI_YAW4);
 }
 
 void AP_MotorsTri::output_to_motors()
@@ -94,17 +103,23 @@ void AP_MotorsTri::output_to_motors()
             // sends minimum values out to the motors
             rc_write(AP_MOTORS_MOT_1, get_pwm_output_min());
             rc_write(AP_MOTORS_MOT_2, get_pwm_output_min());
-            rc_write(AP_MOTORS_CH_TRI_REAR, calc_pwm_output_1to1(-1.0f, _rear_servo));
+            rc_write(AP_MOTORS_CH_TRI_REAR, calc_pwm_output_1to1(-_pitch_radio_passthrough, _rear_servo));
+            rc_write(AP_MOTORS_CH_TRI_GVNR, _gvnr_servo->get_output_min());
             rc_write(AP_MOTORS_CH_TRI_YAW1, calc_pwm_output_1to1(_yaw_radio_passthrough, _yaw1_servo));
             rc_write(AP_MOTORS_CH_TRI_YAW2, calc_pwm_output_1to1(_yaw_radio_passthrough, _yaw2_servo));
+            rc_write(AP_MOTORS_CH_TRI_YAW3, calc_pwm_output_1to1(-_yaw_radio_passthrough, _yaw3_servo));
+            rc_write(AP_MOTORS_CH_TRI_YAW4, calc_pwm_output_1to1(-_yaw_radio_passthrough, _yaw4_servo));
             break;
         case SPIN_WHEN_ARMED:
             // sends output to motors when armed but not flying
             rc_write(AP_MOTORS_MOT_1, calc_spin_up_to_pwm());
             rc_write(AP_MOTORS_MOT_2, calc_spin_up_to_pwm());
-            rc_write(AP_MOTORS_CH_TRI_REAR, calc_pwm_output_1to1(-(1.0f - _spin_up_ratio), _rear_servo));
+            rc_write(AP_MOTORS_CH_TRI_REAR, calc_pwm_output_1to1(-_pitch_radio_passthrough * (1.0f - _spin_up_ratio), _rear_servo));
+            rc_write(AP_MOTORS_CH_TRI_GVNR, _gvnr_servo->get_trim());
             rc_write(AP_MOTORS_CH_TRI_YAW1, calc_pwm_output_1to1(_yaw_radio_passthrough * (1.0f - _spin_up_ratio), _yaw1_servo));
             rc_write(AP_MOTORS_CH_TRI_YAW2, calc_pwm_output_1to1(_yaw_radio_passthrough * (1.0f - _spin_up_ratio), _yaw2_servo));
+            rc_write(AP_MOTORS_CH_TRI_YAW3, calc_pwm_output_1to1(-_yaw_radio_passthrough * (1.0f - _spin_up_ratio), _yaw3_servo));
+            rc_write(AP_MOTORS_CH_TRI_YAW4, calc_pwm_output_1to1(-_yaw_radio_passthrough * (1.0f - _spin_up_ratio), _yaw4_servo));
             break;
         case SPOOL_UP:
         case THROTTLE_UNLIMITED:
@@ -113,8 +128,11 @@ void AP_MotorsTri::output_to_motors()
             rc_write(AP_MOTORS_MOT_1, calc_thrust_to_pwm(_thrust_right));
             rc_write(AP_MOTORS_MOT_2, calc_thrust_to_pwm(_thrust_left));
             rc_write(AP_MOTORS_CH_TRI_REAR, calc_pwm_output_1to1(_thrust_rear, _rear_servo));
+            rc_write(AP_MOTORS_CH_TRI_GVNR, _gvnr_servo->get_trim());
             rc_write(AP_MOTORS_CH_TRI_YAW1, calc_pwm_output_1to1(_deflection_yaw, _yaw1_servo));
             rc_write(AP_MOTORS_CH_TRI_YAW2, calc_pwm_output_1to1(_deflection_yaw, _yaw2_servo));
+            rc_write(AP_MOTORS_CH_TRI_YAW3, calc_pwm_output_1to1(-_deflection_yaw, _yaw3_servo));
+            rc_write(AP_MOTORS_CH_TRI_YAW4, calc_pwm_output_1to1(-_deflection_yaw, _yaw4_servo));
             break;
     }
 }
@@ -126,8 +144,12 @@ uint16_t AP_MotorsTri::get_motor_mask()
     // tri copter uses channels 1,2,4 and 7
     return rc_map_mask((1U << AP_MOTORS_MOT_1) |
                        (1U << AP_MOTORS_MOT_2) |
+                       (1U << AP_MOTORS_CH_TRI_REAR) |
+                       (1U << AP_MOTORS_CH_TRI_GVNR) |
                        (1U << AP_MOTORS_CH_TRI_YAW1) |
-                       (1U << AP_MOTORS_CH_TRI_YAW2));
+                       (1U << AP_MOTORS_CH_TRI_YAW2) |
+                       (1U << AP_MOTORS_CH_TRI_YAW3) |
+                       (1U << AP_MOTORS_CH_TRI_YAW4));
 }
 
 // output_armed - sends commands to the motors
@@ -247,7 +269,11 @@ void AP_MotorsTri::output_test(uint8_t motor_seq, int16_t pwm)
     switch (motor_seq) {
         case 1:
             // front right servo 1
-            rc_write(AP_MOTORS_CH_TRI_YAW2, pwm);
+            rc_write(AP_MOTORS_CH_TRI_YAW3, pwm);
+            break;
+        case 2:
+            // front right servo 2
+            rc_write(AP_MOTORS_CH_TRI_YAW4, pwm);
             break;
         case 3:
             // right motor
@@ -257,6 +283,10 @@ void AP_MotorsTri::output_test(uint8_t motor_seq, int16_t pwm)
             // back servo
             rc_write(AP_MOTORS_CH_TRI_REAR, pwm);
             break;
+        case 5:
+            // back govner
+            rc_write(AP_MOTORS_CH_TRI_GVNR, pwm);
+            break;
         case 6:
             // front left motor
             rc_write(AP_MOTORS_MOT_2, pwm);
@@ -264,6 +294,10 @@ void AP_MotorsTri::output_test(uint8_t motor_seq, int16_t pwm)
         case 7:
             // front left servo 2
             rc_write(AP_MOTORS_CH_TRI_YAW1, pwm);
+            break;
+        case 8:
+            // front left servo 1
+            rc_write(AP_MOTORS_CH_TRI_YAW2, pwm);
             break;
         default:
             // do nothing

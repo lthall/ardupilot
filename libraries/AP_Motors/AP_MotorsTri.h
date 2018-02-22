@@ -8,8 +8,11 @@
 #include "AP_MotorsMulticopter.h"
 
 #define AP_MOTORS_CH_TRI_REAR    CH_3
+#define AP_MOTORS_CH_TRI_GVNR    CH_4
 #define AP_MOTORS_CH_TRI_YAW1    CH_5
 #define AP_MOTORS_CH_TRI_YAW2    CH_6
+#define AP_MOTORS_CH_TRI_YAW3    CH_7
+#define AP_MOTORS_CH_TRI_YAW4    CH_8
 
 #define AP_MOTORS_SERVO_INPUT_RANGE    4500    // input of -4500 will cause servos to their minimum (i.e. radio_min), +4500 will move them to their maximum (i.e. radio_max)
 
@@ -57,9 +60,12 @@ protected:
 
     // parameters
 
-    SRV_Channel     *_rear_servo; // yaw output channel
+    SRV_Channel     *_rear_servo;  // elevator output channel
+    SRV_Channel     *_gvnr_servo;  // elevator govner output channel
     SRV_Channel     *_yaw1_servo; // yaw output channel
     SRV_Channel     *_yaw2_servo; // yaw output channel
+    SRV_Channel     *_yaw3_servo; // yaw output channel
+    SRV_Channel     *_yaw4_servo; // yaw output channel
     float           _deflection_yaw;
     float           _thrust_right;
     float           _thrust_rear;
