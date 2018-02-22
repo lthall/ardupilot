@@ -7,11 +7,12 @@
 #include <SRV_Channel/SRV_Channel.h>
 #include "AP_MotorsMulticopter.h"
 
-// tail servo uses channel 7
-#define AP_MOTORS_CH_TRI_YAW    CH_7
+#define AP_MOTORS_CH_TRI_REAR    CH_3
+#define AP_MOTORS_CH_TRI_YAW1    CH_5
+#define AP_MOTORS_CH_TRI_YAW2    CH_6
 
-#define AP_MOTORS_TRI_SERVO_RANGE_DEG_MIN   5   // minimum angle movement of tail servo in degrees
-#define AP_MOTORS_TRI_SERVO_RANGE_DEG_MAX   80  // maximum angle movement of tail servo in degrees
+#define AP_MOTORS_SERVO_INPUT_RANGE    4500    // input of -4500 will cause servos to their minimum (i.e. radio_min), +4500 will move them to their maximum (i.e. radio_max)
+
 
 /// @class      AP_MotorsTri
 class AP_MotorsTri : public AP_MotorsMulticopter {
@@ -53,14 +54,13 @@ protected:
 
     // call vehicle supplied thrust compensation if set
     void                thrust_compensation(void) override;
-    
-    // calc_yaw_radio_output - calculate final radio output for yaw channel
-    int16_t             calc_yaw_radio_output(float yaw_input, float yaw_input_max);        // calculate radio output for yaw servo, typically in range of 1100-1900
 
     // parameters
 
-    SRV_Channel     *_yaw_servo; // yaw output channel
-    float           _pivot_angle;                       // Angle of yaw pivot
+    SRV_Channel     *_rear_servo; // yaw output channel
+    SRV_Channel     *_yaw1_servo; // yaw output channel
+    SRV_Channel     *_yaw2_servo; // yaw output channel
+    float           _deflection_yaw;
     float           _thrust_right;
     float           _thrust_rear;
     float           _thrust_left;
