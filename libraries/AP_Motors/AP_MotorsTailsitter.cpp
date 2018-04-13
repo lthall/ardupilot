@@ -50,9 +50,6 @@ void AP_MotorsTailsitter::output_to_motors()
     if (!_flags.initialised_ok) {
         return;
     }
-    float throttle_left  = 0;
-    float throttle_right = 0;
-    float throttle_top = 0;
     
     switch (_spool_mode) {
         case SHUT_DOWN:
@@ -62,6 +59,9 @@ void AP_MotorsTailsitter::output_to_motors()
             limit.throttle_lower = true;
             limit.throttle_upper = true;
             _throttle = 0;
+            SRV_Channels::set_output_pwm(SRV_Channel::k_throttleLeft,  calc_thrust_to_pwm(_throttle));
+            SRV_Channels::set_output_pwm(SRV_Channel::k_throttleRight, calc_thrust_to_pwm(_throttle));
+            SRV_Channels::set_output_pwm(SRV_Channel::k_throttleTop, calc_thrust_to_pwm(_throttle));
             break;
         case SPIN_WHEN_ARMED:
             // set limits flags
@@ -71,9 +71,9 @@ void AP_MotorsTailsitter::output_to_motors()
             limit.throttle_upper = true;
             // sends output to motors when armed but not flying
             _throttle = constrain_float(_spin_up_ratio, 0.0f, 1.0f) * _spin_min;
-            throttle_left  = _throttle;
-            throttle_right = _throttle;
-            throttle_top = _throttle;
+            SRV_Channels::set_output_pwm(SRV_Channel::k_throttleLeft,  calc_thrust_to_pwm(_throttle));
+            SRV_Channels::set_output_pwm(SRV_Channel::k_throttleRight, calc_thrust_to_pwm(_throttle));
+            SRV_Channels::set_output_pwm(SRV_Channel::k_throttleTop, calc_thrust_to_pwm(_throttle));
             break;
         case SPOOL_UP:
         case THROTTLE_UNLIMITED:
@@ -83,10 +83,9 @@ void AP_MotorsTailsitter::output_to_motors()
             limit.yaw = false;
             limit.throttle_lower = false;
             limit.throttle_upper = false;
-
-            throttle_left  = _thrust_left;
-            throttle_right = _thrust_right;
-            throttle_top = _thrust_rear;
+            SRV_Channels::set_output_pwm(SRV_Channel::k_throttleLeft,  calc_thrust_to_pwm(_thrust_left));
+            SRV_Channels::set_output_pwm(SRV_Channel::k_throttleRight, calc_thrust_to_pwm(_thrust_right));
+            SRV_Channels::set_output_pwm(SRV_Channel::k_throttleTop, calc_thrust_to_pwm(_thrust_rear));
             _aileron = -_deflection_yaw;
             _elevator = _deflection_pitch;
             _rudder = 0.0f;
@@ -97,11 +96,6 @@ void AP_MotorsTailsitter::output_to_motors()
     SRV_Channels::set_output_scaled(SRV_Channel::k_elevator, _elevator*SERVO_OUTPUT_RANGE);
     SRV_Channels::set_output_scaled(SRV_Channel::k_rudder,   _rudder*SERVO_OUTPUT_RANGE);
     SRV_Channels::set_output_scaled(SRV_Channel::k_throttle, _throttle*THROTTLE_RANGE);
-
-    // also support differential roll with twin motors
-    SRV_Channels::set_output_scaled(SRV_Channel::k_throttleLeft,  throttle_left*THROTTLE_RANGE);
-    SRV_Channels::set_output_scaled(SRV_Channel::k_throttleRight, throttle_right*THROTTLE_RANGE);
-    SRV_Channels::set_output_scaled(SRV_Channel::k_throttleTop, throttle_top*THROTTLE_RANGE);
 
 #if APM_BUILD_TYPE(APM_BUILD_ArduCopter)
     SRV_Channels::calc_pwm();
@@ -204,7 +198,7 @@ void AP_MotorsTailsitter::output_armed_stabilizing()
     _thrust_rear = constrain_float(_thrust_rear, 0.0f, 1.0f);
 
     // limit thrust out for calculation of actuator gains
-    float thrust_out_actuator = constrain_float(MAX(_throttle_hover*0.5f,thrust_out), 0.1f, 1.0f);
+    float thrust_out_actuator = constrain_float(thrust_out, 0.1f, 1.0f);
 
     _deflection_yaw = yaw_thrust/thrust_out_actuator;
 
