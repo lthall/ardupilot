@@ -59,9 +59,9 @@ void AP_MotorsTailsitter::output_to_motors()
             limit.throttle_lower = true;
             limit.throttle_upper = true;
             _throttle = 0;
-            SRV_Channels::set_output_pwm(SRV_Channel::k_throttleLeft,  calc_thrust_to_pwm(_throttle));
-            SRV_Channels::set_output_pwm(SRV_Channel::k_throttleRight, calc_thrust_to_pwm(_throttle));
-            SRV_Channels::set_output_pwm(SRV_Channel::k_throttleTop, calc_thrust_to_pwm(_throttle));
+            SRV_Channels::set_output_pwm(SRV_Channel::k_throttleLeft,  get_pwm_output_min());
+            SRV_Channels::set_output_pwm(SRV_Channel::k_throttleRight, get_pwm_output_min());
+            SRV_Channels::set_output_pwm(SRV_Channel::k_throttleTop, get_pwm_output_min());
             break;
         case SPIN_WHEN_ARMED:
             // set limits flags
@@ -70,10 +70,9 @@ void AP_MotorsTailsitter::output_to_motors()
             limit.throttle_lower = true;
             limit.throttle_upper = true;
             // sends output to motors when armed but not flying
-            _throttle = constrain_float(_spin_up_ratio, 0.0f, 1.0f) * _spin_min;
-            SRV_Channels::set_output_pwm(SRV_Channel::k_throttleLeft,  calc_thrust_to_pwm(_throttle));
-            SRV_Channels::set_output_pwm(SRV_Channel::k_throttleRight, calc_thrust_to_pwm(_throttle));
-            SRV_Channels::set_output_pwm(SRV_Channel::k_throttleTop, calc_thrust_to_pwm(_throttle));
+            SRV_Channels::set_output_pwm(SRV_Channel::k_throttleLeft,  calc_spin_up_to_pwm());
+            SRV_Channels::set_output_pwm(SRV_Channel::k_throttleRight, calc_spin_up_to_pwm());
+            SRV_Channels::set_output_pwm(SRV_Channel::k_throttleTop, calc_spin_up_to_pwm());
             break;
         case SPOOL_UP:
         case THROTTLE_UNLIMITED:
@@ -95,7 +94,6 @@ void AP_MotorsTailsitter::output_to_motors()
     SRV_Channels::set_output_scaled(SRV_Channel::k_aileron,  _aileron*SERVO_OUTPUT_RANGE);
     SRV_Channels::set_output_scaled(SRV_Channel::k_elevator, _elevator*SERVO_OUTPUT_RANGE);
     SRV_Channels::set_output_scaled(SRV_Channel::k_rudder,   _rudder*SERVO_OUTPUT_RANGE);
-    SRV_Channels::set_output_scaled(SRV_Channel::k_throttle, _throttle*THROTTLE_RANGE);
 
 #if APM_BUILD_TYPE(APM_BUILD_ArduCopter)
     SRV_Channels::calc_pwm();
