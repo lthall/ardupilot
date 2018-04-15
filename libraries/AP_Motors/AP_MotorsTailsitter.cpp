@@ -62,6 +62,8 @@ void AP_MotorsTailsitter::output_to_motors()
             SRV_Channels::set_output_pwm(SRV_Channel::k_throttleLeft,  get_pwm_output_min());
             SRV_Channels::set_output_pwm(SRV_Channel::k_throttleRight, get_pwm_output_min());
             SRV_Channels::set_output_pwm(SRV_Channel::k_throttleTop, get_pwm_output_min());
+            _aileron = -_yaw_radio_passthrough;
+            _elevator = _pitch_radio_passthrough;
             break;
         case SPIN_WHEN_ARMED:
             // set limits flags
@@ -73,6 +75,8 @@ void AP_MotorsTailsitter::output_to_motors()
             SRV_Channels::set_output_pwm(SRV_Channel::k_throttleLeft,  calc_spin_up_to_pwm());
             SRV_Channels::set_output_pwm(SRV_Channel::k_throttleRight, calc_spin_up_to_pwm());
             SRV_Channels::set_output_pwm(SRV_Channel::k_throttleTop, calc_spin_up_to_pwm());
+            _aileron = -_deflection_yaw;
+            _elevator = _deflection_pitch;
             break;
         case SPOOL_UP:
         case THROTTLE_UNLIMITED:
