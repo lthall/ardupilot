@@ -143,7 +143,7 @@ void AP_MotorsTailsitter::output_armed_stabilizing()
     }
 
     _thrust_right = -roll_thrust/2.0f;
-    _thrust_left = roll_thrust/2.0f;;
+    _thrust_left = roll_thrust/2.0f;
     _thrust_rear = -pitch_thrust;
 
     // calculate throttle that gives most possible room for yaw (range 1000 ~ 2000) which is the lower of:
@@ -191,7 +191,7 @@ void AP_MotorsTailsitter::output_armed_stabilizing()
     // add scaled roll, pitch, constrained yaw and throttle for each motor
     _thrust_right = thrust_out + rpy_scale*_thrust_right;
     _thrust_left = thrust_out + rpy_scale*_thrust_left;
-    _thrust_rear = constrain_float(_boost_scale*thrust_out, 0.0f, 1.0f) + _thrust_rear;
+    _thrust_rear = constrain_float(_boost_scale*(thrust_out + _thrust_rear), 0.0f, 1.0f);
 
     // constrain all outputs to 0.0f to 1.0f
     // test code should be run with these lines commented out as they should not do anything
