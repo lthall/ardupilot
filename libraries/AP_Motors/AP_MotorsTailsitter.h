@@ -34,8 +34,13 @@ protected:
     void output_armed_stabilizing();
 
     // calculated outputs
-    float _aileron;  // -1..1
-    float _elevator; // -1..1
-    float _rudder;   // -1..1
-    float _throttle; // 0..1
+    float   _aileron;  // -1..1
+    float   _elevator; // -1..1
+    float   _rudder;   // -1..1
+    float   _throttle; // 0..1
+    float   _deflection_yaw;   // -1..1
+    float   _deflection_pitch;   // -1..1
+    float   _thrust_right; // 0..1
+    float   _thrust_rear; // 0..1
+    float   _thrust_left; // 0..1
 };
