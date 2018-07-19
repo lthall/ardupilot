@@ -87,7 +87,7 @@ void QuadPlane::tailsitter_output(void)
 
     if (hal.util->get_soft_armed()) {
         // scale surfaces for throttle
-        tailsitter_speed_scaling();
+        //tailsitter_speed_scaling();
     }
 
     

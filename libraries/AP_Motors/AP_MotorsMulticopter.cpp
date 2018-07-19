@@ -166,13 +166,21 @@ const AP_Param::GroupInfo AP_MotorsMulticopter::var_info[] = {
     // @User: Advanced
     AP_GROUPINFO("SPOOL_TIME",   36, AP_MotorsMulticopter,  _spool_up_time, AP_MOTORS_SPOOL_UP_TIME_DEFAULT),
 
-    // @Param: BOOST_SCALE
+    // @Param: REAR_MAX
     // @DisplayName: Motor boost scale
     // @Description: This is a scaling factor for vehicles with a vertical booster motor used for extra lift. It is used with electric multicopters that have an internal combusion booster motor for longer endurance. The output to the BoostThrottle servo function is set to the current motor thottle times this scaling factor. A higher scaling factor will put more of the load on the booster motor. A value of 1 will set the BoostThrottle equal to the main throttle.
-    // @Range: 0 5
+    // @Range: 0 1
     // @Increment: 0.1
     // @User: Advanced
-    AP_GROUPINFO("BOOST_SCALE",  37, AP_MotorsMulticopter,  _boost_scale, 0),
+    AP_GROUPINFO("REAR_MAX",  37, AP_MotorsMulticopter,  _rear_max, 0.25),
+
+    // @Param: PITCH_SCALE
+    // @DisplayName: Motor boost scale
+    // @Description: This is a scaling factor for vehicles with a vertical booster motor used for extra lift. It is used with electric multicopters that have an internal combusion booster motor for longer endurance. The output to the BoostThrottle servo function is set to the current motor thottle times this scaling factor. A higher scaling factor will put more of the load on the booster motor. A value of 1 will set the BoostThrottle equal to the main throttle.
+    // @Range: 0 1
+    // @Increment: 0.1
+    // @User: Advanced
+    AP_GROUPINFO("PITCH_SCALE",  38, AP_MotorsMulticopter,  _pitch_scale, 1),
 
     // 38 RESERVED for BAT_POW_MAX
     
@@ -238,8 +246,8 @@ void AP_MotorsMulticopter::output()
 // output booster throttle, if any
 void AP_MotorsMulticopter::output_boost_throttle(void)
 {
-    if (_boost_scale > 0) {
-        float throttle = constrain_float(get_throttle() * _boost_scale, 0, 1);
+    if (_rear_max > 0) {
+        float throttle = constrain_float(get_throttle() * _rear_max, 0, 1);
         SRV_Channels::set_output_scaled(SRV_Channel::k_boost_throttle, throttle*1000);        
     }
 }
