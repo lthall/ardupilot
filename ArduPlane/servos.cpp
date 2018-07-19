@@ -504,6 +504,7 @@ void Plane::servos_twin_engine_mix(void)
     }
     SRV_Channels::set_output_scaled(SRV_Channel::k_throttleLeft, throttle_left);
     SRV_Channels::set_output_scaled(SRV_Channel::k_throttleRight, throttle_right);
+    SRV_Channels::set_output_scaled(SRV_Channel::k_throttleTop, 0.0f);
 
 }
 

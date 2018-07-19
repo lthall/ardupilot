@@ -20,8 +20,9 @@ public:
     // set frame class (i.e. quad, hexa, heli) and type (i.e. x, plus)
     void set_frame_class_and_type(motor_frame_class frame_class, motor_frame_type frame_type) {}
     void set_update_rate( uint16_t speed_hz ) {}
+    void enable() {}
 
-    virtual void output_test_seq(uint8_t motor_seq, int16_t pwm) override {}
+    void output_test(uint8_t motor_seq, int16_t pwm) {}
 
     // output_to_motors - sends output to named servos
     void output_to_motors();
@@ -34,8 +35,13 @@ protected:
     void output_armed_stabilizing();
 
     // calculated outputs
-    float _aileron;  // -1..1
-    float _elevator; // -1..1
-    float _rudder;   // -1..1
-    float _throttle; // 0..1
+    float   _aileron;  // -1..1
+    float   _elevator; // -1..1
+    float   _rudder;   // -1..1
+    float   _throttle; // 0..1
+    float   _deflection_yaw;   // -1..1
+    float   _deflection_pitch;   // -1..1
+    float   _thrust_right; // 0..1
+    float   _thrust_rear; // 0..1
+    float   _thrust_left; // 0..1
 };
