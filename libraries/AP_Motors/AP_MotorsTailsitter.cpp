@@ -137,8 +137,9 @@ void AP_MotorsTailsitter::output_armed_stabilizing()
 
     _throttle_avg_max = constrain_float(_throttle_avg_max, _throttle, _throttle_thrust_max);
 
-    if(_throttle < MIN(MAX(pitch_thrust, yaw_thrust), _throttle_avg_max)){
-        _throttle = MIN(MAX(pitch_thrust, yaw_thrust), _throttle_avg_max);
+    float thrust_actuator_min = MIN(MAX(fabsf(pitch_thrust), fabsf(yaw_thrust)), _throttle_avg_max);
+    if(_throttle < thrust_actuator_min){
+        _throttle = thrust_actuator_min;
         limit.throttle_lower = true;
     }
 
@@ -191,7 +192,7 @@ void AP_MotorsTailsitter::output_armed_stabilizing()
     // add scaled roll, pitch, constrained yaw and throttle for each motor
     _thrust_right = thrust_out + rpy_scale*_thrust_right;
     _thrust_left = thrust_out + rpy_scale*_thrust_left;
-    _thrust_rear = constrain_float(_boost_scale*(thrust_out + _thrust_rear), 0.0f, 1.0f);
+    _thrust_rear = _boost_scale*(thrust_out + _thrust_rear);
 
     // constrain all outputs to 0.0f to 1.0f
     // test code should be run with these lines commented out as they should not do anything
