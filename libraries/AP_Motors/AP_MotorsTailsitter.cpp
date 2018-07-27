@@ -137,11 +137,11 @@ void AP_MotorsTailsitter::output_armed_stabilizing()
 
     _throttle_avg_max = constrain_float(_throttle_avg_max, _throttle, _throttle_thrust_max);
 
-    float thrust_actuator_min = MIN(MAX(fabsf(pitch_thrust), fabsf(yaw_thrust)), _throttle_avg_max);
-    if(_throttle < thrust_actuator_min){
-        _throttle = thrust_actuator_min;
-        limit.throttle_lower = true;
-    }
+    //float thrust_actuator_min = MIN(MAX(fabsf(pitch_thrust), fabsf(yaw_thrust)), _throttle_avg_max);
+    //if(_throttle < thrust_actuator_min){
+    //    _throttle = thrust_actuator_min;
+    //    limit.throttle_lower = true;
+    //}
 
     _thrust_right = -roll_thrust/2.0f;
     _thrust_left = roll_thrust/2.0f;
