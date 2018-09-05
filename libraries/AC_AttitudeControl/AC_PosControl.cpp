@@ -904,18 +904,18 @@ void AC_PosControl::rate_to_accel_xy(float dt, float ekfNavVelGainScaler)
     }
 
     // feed forward desired acceleration calculation
-    if (dt > 0.0f) {
-    	if (!_flags.freeze_ff_xy) {
-    		_accel_feedforward.x = (_vel_target.x - _vel_last.x)/dt;
-    		_accel_feedforward.y = (_vel_target.y - _vel_last.y)/dt;
-        } else {
-    		// stop the feed forward being calculated during a known discontinuity
-    		_flags.freeze_ff_xy = false;
-    	}
-    } else {
+//    if (dt > 0.0f) {
+//    	if (!_flags.freeze_ff_xy) {
+//    		_accel_feedforward.x = (_vel_target.x - _vel_last.x)/dt;
+//    		_accel_feedforward.y = (_vel_target.y - _vel_last.y)/dt;
+//        } else {
+//    		// stop the feed forward being calculated during a known discontinuity
+//    		_flags.freeze_ff_xy = false;
+//    	}
+//    } else {
     	_accel_feedforward.x = 0.0f;
     	_accel_feedforward.y = 0.0f;
-    }
+//    }
 
     // store this iteration's velocities for the next iteration
     _vel_last.x = _vel_target.x;
