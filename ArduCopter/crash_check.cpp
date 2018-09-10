@@ -7,7 +7,7 @@
 
 // Code to detect a thrust loss main ArduCopter code
 #define THRUST_LOSS_CHECK_TRIGGER_SEC         1     // 1 second decent while level and high throttle indictes thrust loss
-#define THRUST_LOSS_CHECK_ANGLE_DEVIATION_CD  150   // we can't expect to maintain altitude beyond 15 degrees on all aircraft
+#define THRUST_LOSS_CHECK_ANGLE_DEVIATION_CD  1500  // we can't expect to maintain altitude beyond 15 degrees on all aircraft
 #define THRUST_LOSS_CHECK_MINIMUM_THROTTLE    0.9f  // we can expect to maintain altitude above 90 % throttle
 
 // crash_check - disarms motors if a crash has been detected
