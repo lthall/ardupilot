@@ -287,6 +287,21 @@ void AP_MotorsMatrix::output_armed_stabilizing()
             _thrust_rpyt_out[i] = constrain_float(_thrust_rpyt_out[i], 0.0f, 1.0f);
         }
     }
+
+    float thst_ratio_lower = constrain_float(_thst_ratio_lower, 0.5f, 1.5f);
+    if (thst_ratio_lower < 1.0f){
+        for (i=4; i<AP_MOTORS_MAX_NUM_MOTORS; i++) {
+            if (motor_enabled[i]) {
+                _thrust_rpyt_out[i] = constrain_float(_thrust_rpyt_out[i]*(1.0f-fabsf(thst_ratio_lower-1.0f)), 0.0f, 1.0f);
+            }
+        }
+    } else if (thst_ratio_lower > 1.0f){
+        for (i=0; i<4; i++) {
+            if (motor_enabled[i]) {
+                _thrust_rpyt_out[i] = constrain_float(_thrust_rpyt_out[i]*(1.0f-fabsf(thst_ratio_lower-1.0f)), 0.0f, 1.0f);
+            }
+        }
+    }
 }
 
 // output_test - spin a motor at the pwm value specified

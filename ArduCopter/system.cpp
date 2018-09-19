@@ -707,7 +707,6 @@ void Copter::allocate_motors(void)
                 { Parameters::k_param_motors, 32, AP_PARAM_INT16, "SERVO7_TRIM" },
                 { Parameters::k_param_motors, 33, AP_PARAM_INT16, "SERVO7_MIN" },
                 { Parameters::k_param_motors, 34, AP_PARAM_INT16, "SERVO7_MAX" },
-                { Parameters::k_param_motors, 35, AP_PARAM_FLOAT, "MOT_YAW_SV_ANGLE" },
             };
             // we need to use CONVERT_FLAG_FORCE as the SERVO7_* parameters will already be set from RC7_*
             AP_Param::convert_old_parameters(tri_conversion_info, ARRAY_SIZE(tri_conversion_info), AP_Param::CONVERT_FLAG_FORCE);

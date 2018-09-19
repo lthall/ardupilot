@@ -145,14 +145,12 @@ const AP_Param::GroupInfo AP_MotorsMulticopter::var_info[] = {
     // @User: Advanced
     AP_GROUPINFO("SAFE_DISARM", 23, AP_MotorsMulticopter, _disarm_disable_pwm, 0),
 
-    // @Param: YAW_SV_ANGLE
-    // @DisplayName: Yaw Servo Max Lean Angle
-    // @Description: Yaw servo's maximum lean angle
-    // @Range: 5 80
-    // @Units: Degrees
-    // @Increment: 1
-    // @User: Standard
-    AP_GROUPINFO_FRAME("YAW_SV_ANGLE", 35, AP_MotorsMulticopter,  _yaw_servo_angle_max_deg, 30, AP_PARAM_FRAME_TRICOPTER),
+    // @Param: LOWER_RATIO
+    // @DisplayName: Thrust ratio of lower motors
+    // @Description: Thrust ratio of lower motors
+    // @Range: 0.5 1.5
+    // @User: Advanced
+    AP_GROUPINFO("LOWER_RATIO", 35, AP_MotorsMulticopter, _thst_ratio_lower, 1.0f),
 
     // @Param: SPOOL_TIME
     // @DisplayName: Spool up time
