@@ -62,8 +62,9 @@ void AP_MotorsTailsitter::output_to_motors()
             SRV_Channels::set_output_pwm(SRV_Channel::k_throttleLeft,  get_pwm_output_min());
             SRV_Channels::set_output_pwm(SRV_Channel::k_throttleRight, get_pwm_output_min());
             SRV_Channels::set_output_pwm(SRV_Channel::k_throttleTop, get_pwm_output_min());
-            _aileron = -_yaw_radio_passthrough;
-            _elevator = _pitch_radio_passthrough;
+            _aileron = -_deflection_yaw;
+            _elevator = _deflection_pitch;
+            _rudder = 0.0f;
             break;
         case SPIN_WHEN_ARMED:
             // set limits flags
@@ -77,6 +78,7 @@ void AP_MotorsTailsitter::output_to_motors()
             SRV_Channels::set_output_pwm(SRV_Channel::k_throttleTop, calc_spin_up_to_pwm());
             _aileron = -_deflection_yaw;
             _elevator = _deflection_pitch;
+            _rudder = 0.0f;
             break;
         case SPOOL_UP:
         case THROTTLE_UNLIMITED:
@@ -86,9 +88,12 @@ void AP_MotorsTailsitter::output_to_motors()
             limit.yaw = false;
             limit.throttle_lower = false;
             limit.throttle_upper = false;
-            SRV_Channels::set_output_pwm(SRV_Channel::k_throttleLeft,  calc_thrust_to_pwm(_thrust_left));
-            SRV_Channels::set_output_pwm(SRV_Channel::k_throttleRight, calc_thrust_to_pwm(_thrust_right));
-            SRV_Channels::set_output_pwm(SRV_Channel::k_throttleTop, calc_thrust_to_pwm(_thrust_rear));
+            SRV_Channels::set_output_pwm(SRV_Channel::k_throttleLeft,  calc_spin_up_to_pwm());
+            SRV_Channels::set_output_pwm(SRV_Channel::k_throttleRight, calc_spin_up_to_pwm());
+            SRV_Channels::set_output_pwm(SRV_Channel::k_throttleTop, calc_spin_up_to_pwm());
+//            SRV_Channels::set_output_pwm(SRV_Channel::k_throttleLeft,  calc_thrust_to_pwm(_thrust_left));
+//            SRV_Channels::set_output_pwm(SRV_Channel::k_throttleRight, calc_thrust_to_pwm(_thrust_right));
+//            SRV_Channels::set_output_pwm(SRV_Channel::k_throttleTop, calc_thrust_to_pwm(_thrust_rear));
             _aileron = -_deflection_yaw;
             _elevator = _deflection_pitch;
             _rudder = 0.0f;
@@ -97,7 +102,24 @@ void AP_MotorsTailsitter::output_to_motors()
     // outputs are setup here, and written to the HAL by the plane servos loop
     SRV_Channels::set_output_scaled(SRV_Channel::k_aileron,  _aileron*SERVO_OUTPUT_RANGE);
     SRV_Channels::set_output_scaled(SRV_Channel::k_elevator, _elevator*SERVO_OUTPUT_RANGE);
+    SRV_Channels::set_output_scaled(SRV_Channel::k_elevon_left, 0.5*(_elevator-_aileron)*SERVO_OUTPUT_RANGE);
+    SRV_Channels::set_output_scaled(SRV_Channel::k_elevon_right, 0.5*(_elevator+_aileron)*SERVO_OUTPUT_RANGE);
     SRV_Channels::set_output_scaled(SRV_Channel::k_rudder,   _rudder*SERVO_OUTPUT_RANGE);
+
+    float aileron = SRV_Channels::get_output_scaled(SRV_Channel::k_aileron);
+    float elevator = SRV_Channels::get_output_scaled(SRV_Channel::k_elevator);
+    DataFlash_Class::instance()->Log_Write("TEST", "TimeUS,ir,ip,iy,it,dp,dy,e,a,se,sa", "Qffffffffff",
+                                           AP_HAL::micros64(),
+                                           (double)_roll_in,
+                                           (double)_pitch_in,
+                                           (double)_yaw_in,
+                                           (double)_throttle,
+                                           (double)_deflection_pitch,
+                                           (double)_deflection_yaw,
+                                           (double)_elevator,
+                                           (double)_aileron,
+                                           (double)elevator,
+                                           (double)aileron);
 
 #if APM_BUILD_TYPE(APM_BUILD_ArduCopter)
     SRV_Channels::calc_pwm();
@@ -120,7 +142,7 @@ void AP_MotorsTailsitter::output_armed_stabilizing()
     // apply voltage and air pressure compensation
     roll_thrust = _roll_in * get_compensation_gain();
     pitch_thrust = _pitch_in; // this does not use compensation as it is a collective pitch propeller on a governor.
-    yaw_thrust = _yaw_in * get_compensation_gain(); // we scale this so a thrust request of 1.0f will ask for full servo deflection at full rear throttle
+    yaw_thrust = _yaw_in; // we scale this so a thrust request of 1.0f will ask for full servo deflection at full rear throttle
     _throttle = get_throttle() * get_compensation_gain();
 
     float thrust_max = 1.0f;
@@ -200,17 +222,14 @@ void AP_MotorsTailsitter::output_armed_stabilizing()
     _thrust_left = constrain_float(_thrust_left, 0.0f, 1.0f);
     _thrust_rear = constrain_float(_thrust_rear, 0.0f, 1.0f);
 
-    // limit thrust out for calculation of actuator gains
-    float thrust_out_actuator = constrain_float(thrust_out, 0.1f, 1.0f);
-
-    _deflection_yaw = yaw_thrust/thrust_out_actuator;
+    _deflection_yaw = yaw_thrust;
 
     if (fabsf(_deflection_yaw) > 1.0f) {
         limit.yaw = true;
         _deflection_yaw = constrain_float(_deflection_yaw, -1.0f, 1.0f);
     }
 
-    _deflection_pitch = pitch_thrust/thrust_out_actuator;
+    _deflection_pitch = pitch_thrust;
 
     if (fabsf(_deflection_pitch) > 1.0f) {
         limit.roll_pitch = true;
