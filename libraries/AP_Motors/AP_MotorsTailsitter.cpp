@@ -88,12 +88,9 @@ void AP_MotorsTailsitter::output_to_motors()
             limit.yaw = false;
             limit.throttle_lower = false;
             limit.throttle_upper = false;
-            SRV_Channels::set_output_pwm(SRV_Channel::k_throttleLeft,  calc_spin_up_to_pwm());
-            SRV_Channels::set_output_pwm(SRV_Channel::k_throttleRight, calc_spin_up_to_pwm());
-            SRV_Channels::set_output_pwm(SRV_Channel::k_throttleTop, calc_spin_up_to_pwm());
-//            SRV_Channels::set_output_pwm(SRV_Channel::k_throttleLeft,  calc_thrust_to_pwm(_thrust_left));
-//            SRV_Channels::set_output_pwm(SRV_Channel::k_throttleRight, calc_thrust_to_pwm(_thrust_right));
-//            SRV_Channels::set_output_pwm(SRV_Channel::k_throttleTop, calc_thrust_to_pwm(_thrust_rear));
+            SRV_Channels::set_output_pwm(SRV_Channel::k_throttleLeft,  calc_thrust_to_pwm(_thrust_left));
+            SRV_Channels::set_output_pwm(SRV_Channel::k_throttleRight, calc_thrust_to_pwm(_thrust_right));
+            SRV_Channels::set_output_pwm(SRV_Channel::k_throttleTop, calc_thrust_to_pwm(_thrust_rear));
             _aileron = -_deflection_yaw;
             _elevator = _deflection_pitch;
             _rudder = 0.0f;
@@ -105,21 +102,6 @@ void AP_MotorsTailsitter::output_to_motors()
     SRV_Channels::set_output_scaled(SRV_Channel::k_elevon_left, 0.5*(_elevator-_aileron)*SERVO_OUTPUT_RANGE);
     SRV_Channels::set_output_scaled(SRV_Channel::k_elevon_right, 0.5*(_elevator+_aileron)*SERVO_OUTPUT_RANGE);
     SRV_Channels::set_output_scaled(SRV_Channel::k_rudder,   _rudder*SERVO_OUTPUT_RANGE);
-
-    float aileron = SRV_Channels::get_output_scaled(SRV_Channel::k_aileron);
-    float elevator = SRV_Channels::get_output_scaled(SRV_Channel::k_elevator);
-    DataFlash_Class::instance()->Log_Write("TEST", "TimeUS,ir,ip,iy,it,dp,dy,e,a,se,sa", "Qffffffffff",
-                                           AP_HAL::micros64(),
-                                           (double)_roll_in,
-                                           (double)_pitch_in,
-                                           (double)_yaw_in,
-                                           (double)_throttle,
-                                           (double)_deflection_pitch,
-                                           (double)_deflection_yaw,
-                                           (double)_elevator,
-                                           (double)_aileron,
-                                           (double)elevator,
-                                           (double)aileron);
 
 #if APM_BUILD_TYPE(APM_BUILD_ArduCopter)
     SRV_Channels::calc_pwm();
@@ -166,10 +148,6 @@ void AP_MotorsTailsitter::output_armed_stabilizing()
     //    limit.throttle_lower = true;
     //}
 
-    _thrust_right = -roll_thrust/2.0f;
-    _thrust_left = roll_thrust/2.0f;
-    _thrust_rear = -pitch_thrust;
-
     // calculate throttle that gives most possible room for yaw (range 1000 ~ 2000) which is the lower of:
     //      1. 0.5f - (rpy_low+rpy_high)/2.0 - this would give the maximum possible room margin above the highest motor and below the lowest
     //      2. the higher of:
@@ -213,9 +191,9 @@ void AP_MotorsTailsitter::output_armed_stabilizing()
     thrust_out = _throttle_avg_max + thr_adj;
 
     // add scaled roll, pitch, constrained yaw and throttle for each motor
-    _thrust_right = thrust_out + rpy_scale*_thrust_right;
-    _thrust_left = thrust_out + rpy_scale*_thrust_left;
-    _thrust_rear = constrain_float(_boost_scale*(thrust_out + _thrust_rear), 0.0f, 1.0f);
+    _thrust_right = thrust_out - 0.5f * rpy_scale * roll_thrust;
+    _thrust_left = thrust_out + 0.5f * rpy_scale * roll_thrust;
+    _thrust_rear = constrain_float(thrust_out, 0.0f, _rear_max) - _rear_max * pitch_thrust;
 
     // constrain all outputs to 0.0f to 1.0f
     // test code should be run with these lines commented out as they should not do anything
@@ -230,7 +208,7 @@ void AP_MotorsTailsitter::output_armed_stabilizing()
         _deflection_yaw = constrain_float(_deflection_yaw, -1.0f, 1.0f);
     }
 
-    _deflection_pitch = pitch_thrust;
+    _deflection_pitch = pitch_thrust * _pitch_scale;
 
     if (fabsf(_deflection_pitch) > 1.0f) {
         limit.roll_pitch = true;

@@ -167,8 +167,9 @@ protected:
     // time to spool motors to min throttle
     AP_Float            _spool_up_time;
 
-    // scaling for booster motor throttle
-    AP_Float            _boost_scale;
+    // scaling for pitch motor throttle and elevator
+    AP_Float            _rear_max;
+    AP_Float            _pitch_scale;
     
     // motor output variables
     bool                motor_enabled[AP_MOTORS_MAX_NUM_MOTORS];    // true if motor is enabled
