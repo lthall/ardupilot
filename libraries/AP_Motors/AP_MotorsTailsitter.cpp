@@ -99,8 +99,6 @@ void AP_MotorsTailsitter::output_to_motors()
     // outputs are setup here, and written to the HAL by the plane servos loop
     SRV_Channels::set_output_scaled(SRV_Channel::k_aileron,  _aileron*SERVO_OUTPUT_RANGE);
     SRV_Channels::set_output_scaled(SRV_Channel::k_elevator, _elevator*SERVO_OUTPUT_RANGE);
-    SRV_Channels::set_output_scaled(SRV_Channel::k_elevon_left, 0.5*(_elevator-_aileron)*SERVO_OUTPUT_RANGE);
-    SRV_Channels::set_output_scaled(SRV_Channel::k_elevon_right, 0.5*(_elevator+_aileron)*SERVO_OUTPUT_RANGE);
     SRV_Channels::set_output_scaled(SRV_Channel::k_rudder,   _rudder*SERVO_OUTPUT_RANGE);
 
 #if APM_BUILD_TYPE(APM_BUILD_ArduCopter)
@@ -141,12 +139,11 @@ void AP_MotorsTailsitter::output_armed_stabilizing()
 
     _throttle_avg_max = constrain_float(_throttle_avg_max, _throttle, _throttle_thrust_max);
 
-
-    //float thrust_actuator_min = MIN(MAX(fabsf(pitch_thrust), fabsf(yaw_thrust)), _throttle_avg_max);
-    //if(_throttle < thrust_actuator_min){
-    //    _throttle = thrust_actuator_min;
-    //    limit.throttle_lower = true;
-    //}
+//    float thrust_actuator_min = MIN(MAX(fabsf(pitch_thrust), fabsf(yaw_thrust)), _throttle_avg_max);
+//    if(_throttle < thrust_actuator_min){
+//        _throttle = thrust_actuator_min;
+//        limit.throttle_lower = true;
+//    }
 
     // calculate throttle that gives most possible room for yaw (range 1000 ~ 2000) which is the lower of:
     //      1. 0.5f - (rpy_low+rpy_high)/2.0 - this would give the maximum possible room margin above the highest motor and below the lowest
@@ -193,7 +190,7 @@ void AP_MotorsTailsitter::output_armed_stabilizing()
     // add scaled roll, pitch, constrained yaw and throttle for each motor
     _thrust_right = thrust_out - 0.5f * rpy_scale * roll_thrust;
     _thrust_left = thrust_out + 0.5f * rpy_scale * roll_thrust;
-    _thrust_rear = constrain_float(thrust_out, 0.0f, _rear_max) - _rear_max * pitch_thrust;
+    _thrust_rear = constrain_float(_rear_max * MIN(_throttle, thrust_out) / _throttle_hover, 0.0f, _rear_max) - _rear_max * pitch_thrust;
 
     // constrain all outputs to 0.0f to 1.0f
     // test code should be run with these lines commented out as they should not do anything
@@ -201,18 +198,19 @@ void AP_MotorsTailsitter::output_armed_stabilizing()
     _thrust_left = constrain_float(_thrust_left, 0.0f, 1.0f);
     _thrust_rear = constrain_float(_thrust_rear, 0.0f, 1.0f);
 
-    _deflection_yaw = yaw_thrust;
-
-    if (fabsf(_deflection_yaw) > 1.0f) {
-        limit.yaw = true;
-        _deflection_yaw = constrain_float(_deflection_yaw, -1.0f, 1.0f);
-    }
-
     _deflection_pitch = pitch_thrust * _pitch_scale;
 
     if (fabsf(_deflection_pitch) > 1.0f) {
         limit.roll_pitch = true;
         _deflection_pitch = constrain_float(_deflection_pitch, -1.0f, 1.0f);
+    }
+
+    _deflection_yaw = yaw_thrust;
+
+    float yaw_headroom = MAX(1.0f-fabsf(_deflection_pitch),(float)_yaw_headroom/1000.0f);
+    if (fabsf(_deflection_yaw) > yaw_headroom) {
+        limit.yaw = true;
+        _deflection_yaw = constrain_float(_deflection_yaw, -yaw_headroom, yaw_headroom);
     }
 }
 
