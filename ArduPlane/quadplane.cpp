@@ -44,7 +44,7 @@ const AP_Param::GroupInfo QuadPlane::var_info[] = {
     // @Range: 50 500
     // @Increment: 10
     // @User: Standard
-    AP_GROUPINFO("VELZ_MAX", 18, QuadPlane, pilot_velocity_z_max, 250),
+    AP_GROUPINFO("VELZ_MAX", 18, QuadPlane, pilot_velocity_z_up, 250),
     
     // @Param: ACCEL_Z
     // @DisplayName: Pilot vertical acceleration
@@ -122,7 +122,14 @@ const AP_Param::GroupInfo QuadPlane::var_info[] = {
     // @User: Standard
     AP_GROUPINFO("LAND_FINAL_ALT", 27, QuadPlane, land_final_alt, 6),
 
-    // 28 was used by THR_MID
+    // @Param: VELZ_DN
+    // @DisplayName: Pilot maximum descent speed
+    // @Description: The maximum vertical descent velocity the pilot may request in cm/s
+    // @Units: cm/s
+    // @Range: 50 500
+    // @Increment: 10
+    // @User: Standard
+    AP_GROUPINFO("VELZ_DN", 28, QuadPlane, pilot_velocity_z_dn, 250),
 
     // @Param: TRAN_PIT_MAX
     // @DisplayName: Transition max pitch
@@ -755,7 +762,7 @@ void QuadPlane::run_z_controller(void)
         pos_control->set_desired_velocity_z(inertial_nav.get_velocity_z());
 
         // initialize vertical speeds and leash lengths
-        pos_control->set_speed_z(-pilot_velocity_z_max, pilot_velocity_z_max);
+        pos_control->set_speed_z(-pilot_velocity_z_dn, pilot_velocity_z_up);
         pos_control->set_accel_z(pilot_accel_z);
         
         // it has been two seconds since we last ran the Z
@@ -790,7 +797,7 @@ void QuadPlane::check_attitude_relax(void)
 void QuadPlane::init_hover(void)
 {
     // initialize vertical speeds and leash lengths
-    pos_control->set_speed_z(-pilot_velocity_z_max, pilot_velocity_z_max);
+    pos_control->set_speed_z(-pilot_velocity_z_dn, pilot_velocity_z_up);
     pos_control->set_accel_z(pilot_accel_z);
 
     // initialise position and desired velocity
@@ -823,7 +830,7 @@ void QuadPlane::hold_hover(float target_climb_rate)
     motors->set_desired_spool_state(AP_Motors::DESIRED_THROTTLE_UNLIMITED);
 
     // initialize vertical speeds and acceleration
-    pos_control->set_speed_z(-pilot_velocity_z_max, pilot_velocity_z_max);
+    pos_control->set_speed_z(-pilot_velocity_z_dn, pilot_velocity_z_up);
     pos_control->set_accel_z(pilot_accel_z);
 
     // call attitude controller
@@ -855,7 +862,7 @@ void QuadPlane::init_loiter(void)
     loiter_nav->init_target();
 
     // initialize vertical speed and acceleration
-    pos_control->set_speed_z(-pilot_velocity_z_max, pilot_velocity_z_max);
+    pos_control->set_speed_z(-pilot_velocity_z_dn, pilot_velocity_z_up);
     pos_control->set_accel_z(pilot_accel_z);
 
     // initialise position and desired velocity
@@ -982,7 +989,7 @@ void QuadPlane::control_loiter()
     motors->set_desired_spool_state(AP_Motors::DESIRED_THROTTLE_UNLIMITED);
 
     // initialize vertical speed and acceleration
-    pos_control->set_speed_z(-pilot_velocity_z_max, pilot_velocity_z_max);
+    pos_control->set_speed_z(-pilot_velocity_z_dn, pilot_velocity_z_up);
     pos_control->set_accel_z(pilot_accel_z);
 
     // process pilot's roll and pitch input
@@ -1085,7 +1092,12 @@ float QuadPlane::get_pilot_desired_climb_rate_cms(void)
     }
     uint16_t dead_zone = plane.channel_throttle->get_dead_zone();
     uint16_t trim = (plane.channel_throttle->get_radio_max() + plane.channel_throttle->get_radio_min())/2;
-    return pilot_velocity_z_max * plane.channel_throttle->pwm_to_angle_dz_trim(dead_zone, trim) / 100.0f;
+    float vel_z_norm = plane.channel_throttle->pwm_to_angle_dz_trim(dead_zone, trim) / 100.0f;
+    if(vel_z_norm >= 0.0f){
+        return pilot_velocity_z_up * vel_z_norm;
+    } else {
+        return pilot_velocity_z_dn * vel_z_norm;
+    }
 }
 
 
@@ -1980,7 +1992,7 @@ void QuadPlane::setup_target_position(void)
     last_loiter_ms = now;
     
     // setup vertical speed and acceleration
-    pos_control->set_speed_z(-pilot_velocity_z_max, pilot_velocity_z_max);
+    pos_control->set_speed_z(-pilot_velocity_z_dn, pilot_velocity_z_up);
     pos_control->set_accel_z(pilot_accel_z);
 }
 
@@ -2132,7 +2144,7 @@ bool QuadPlane::do_vtol_takeoff(const AP_Mission::Mission_Command& cmd)
     loiter_nav->init_target();
 
     // initialize vertical speed and acceleration
-    pos_control->set_speed_z(-pilot_velocity_z_max, pilot_velocity_z_max);
+    pos_control->set_speed_z(-pilot_velocity_z_dn, pilot_velocity_z_up);
     pos_control->set_accel_z(pilot_accel_z);
 
     // initialise position and desired velocity

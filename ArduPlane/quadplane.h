@@ -144,7 +144,8 @@ private:
     AC_Loiter *loiter_nav;
     
     // maximum vertical velocity the pilot may request
-    AP_Int16 pilot_velocity_z_max;
+    AP_Int16 pilot_velocity_z_up;
+    AP_Int16 pilot_velocity_z_dn;
 
     // vertical acceleration the pilot may request
     AP_Int16 pilot_accel_z;
