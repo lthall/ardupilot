@@ -41,6 +41,7 @@ protected:
     float   _deflection_yaw;   // -1..1
     float   _deflection_pitch;   // -1..1
     float   _thrust_right; // 0..1
-    float   _thrust_rear; // 0..1
     float   _thrust_left; // 0..1
+    float   _thrust_rear; // 0..1
+    float   _thrust_front; // 0..1
 };

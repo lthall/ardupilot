@@ -43,6 +43,7 @@ AP_MotorsTailsitter::AP_MotorsTailsitter(uint16_t loop_rate, uint16_t speed_hz) 
     SRV_Channels::set_rc_frequency(SRV_Channel::k_throttleLeft, speed_hz);
     SRV_Channels::set_rc_frequency(SRV_Channel::k_throttleRight, speed_hz);
     SRV_Channels::set_rc_frequency(SRV_Channel::k_throttleTop, speed_hz);
+    SRV_Channels::set_rc_frequency(SRV_Channel::k_throttleBot, speed_hz);
 }
 
 void AP_MotorsTailsitter::output_to_motors()
@@ -62,6 +63,7 @@ void AP_MotorsTailsitter::output_to_motors()
             SRV_Channels::set_output_pwm(SRV_Channel::k_throttleLeft,  get_pwm_output_min());
             SRV_Channels::set_output_pwm(SRV_Channel::k_throttleRight, get_pwm_output_min());
             SRV_Channels::set_output_pwm(SRV_Channel::k_throttleTop, get_pwm_output_min());
+            SRV_Channels::set_output_pwm(SRV_Channel::k_throttleBot, get_pwm_output_min());
             _aileron = -_deflection_yaw;
             _elevator = _deflection_pitch;
             _rudder = 0.0f;
@@ -76,6 +78,7 @@ void AP_MotorsTailsitter::output_to_motors()
             SRV_Channels::set_output_pwm(SRV_Channel::k_throttleLeft,  calc_spin_up_to_pwm());
             SRV_Channels::set_output_pwm(SRV_Channel::k_throttleRight, calc_spin_up_to_pwm());
             SRV_Channels::set_output_pwm(SRV_Channel::k_throttleTop, calc_spin_up_to_pwm());
+            SRV_Channels::set_output_pwm(SRV_Channel::k_throttleBot, calc_spin_up_to_pwm());
             _aileron = -_deflection_yaw;
             _elevator = _deflection_pitch;
             _rudder = 0.0f;
@@ -91,6 +94,7 @@ void AP_MotorsTailsitter::output_to_motors()
             SRV_Channels::set_output_pwm(SRV_Channel::k_throttleLeft,  calc_thrust_to_pwm(_thrust_left));
             SRV_Channels::set_output_pwm(SRV_Channel::k_throttleRight, calc_thrust_to_pwm(_thrust_right));
             SRV_Channels::set_output_pwm(SRV_Channel::k_throttleTop, calc_thrust_to_pwm(_thrust_rear));
+            SRV_Channels::set_output_pwm(SRV_Channel::k_throttleBot, calc_thrust_to_pwm(_thrust_rear));
             _aileron = -_deflection_yaw;
             _elevator = _deflection_pitch;
             _rudder = 0.0f;
@@ -191,12 +195,14 @@ void AP_MotorsTailsitter::output_armed_stabilizing()
     _thrust_right = thrust_out - 0.5f * rpy_scale * roll_thrust;
     _thrust_left = thrust_out + 0.5f * rpy_scale * roll_thrust;
     _thrust_rear = constrain_float(_rear_max * MIN(_throttle, thrust_out) / _throttle_hover, 0.0f, _rear_max) - _rear_max * pitch_thrust;
+    _thrust_front = constrain_float(_rear_max * MIN(_throttle, thrust_out) / _throttle_hover, 0.0f, _rear_max) + _rear_max * pitch_thrust;
 
     // constrain all outputs to 0.0f to 1.0f
     // test code should be run with these lines commented out as they should not do anything
     _thrust_right = constrain_float(_thrust_right, 0.0f, 1.0f);
     _thrust_left = constrain_float(_thrust_left, 0.0f, 1.0f);
     _thrust_rear = constrain_float(_thrust_rear, 0.0f, 1.0f);
+    _thrust_front = constrain_float(_thrust_front, 0.0f, 1.0f);
 
     _deflection_pitch = pitch_thrust * _pitch_scale;
 

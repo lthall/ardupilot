@@ -512,15 +512,18 @@ void Plane::servos_twin_engine_mix(void)
             SRV_Channels::set_output_limit(SRV_Channel::k_throttleLeft, SRV_Channel::SRV_CHANNEL_LIMIT_ZERO_PWM);
             SRV_Channels::set_output_limit(SRV_Channel::k_throttleRight, SRV_Channel::SRV_CHANNEL_LIMIT_ZERO_PWM);
             SRV_Channels::set_output_scaled(SRV_Channel::k_throttleTop, SRV_Channel::SRV_CHANNEL_LIMIT_ZERO_PWM);
+            SRV_Channels::set_output_scaled(SRV_Channel::k_throttleBot, SRV_Channel::SRV_CHANNEL_LIMIT_ZERO_PWM);
         } else {
             SRV_Channels::set_output_scaled(SRV_Channel::k_throttleLeft, 0);
             SRV_Channels::set_output_scaled(SRV_Channel::k_throttleRight, 0);
             SRV_Channels::set_output_scaled(SRV_Channel::k_throttleTop, 0);
+            SRV_Channels::set_output_scaled(SRV_Channel::k_throttleBot, 0);
         }
     } else {
         SRV_Channels::set_output_scaled(SRV_Channel::k_throttleLeft, throttle_left);
         SRV_Channels::set_output_scaled(SRV_Channel::k_throttleRight, throttle_right);
         SRV_Channels::set_output_scaled(SRV_Channel::k_throttleTop, 0);
+        SRV_Channels::set_output_scaled(SRV_Channel::k_throttleBot, 0);
     }
 }
 

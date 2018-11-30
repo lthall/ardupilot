@@ -122,6 +122,7 @@ public:
         k_dspoilerRight2        = 87,           ///< differential spoiler 2 (right wing)
         k_winch                 = 88,
         k_throttleTop           = 89,
+        k_throttleBot           = 90,
         k_nr_aux_servo_functions         ///< This must be the last enum value (only add new values _before_ this one)
     } Aux_servo_function_t;
 
