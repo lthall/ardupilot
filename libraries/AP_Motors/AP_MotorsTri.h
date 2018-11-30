@@ -7,11 +7,15 @@
 #include <SRV_Channel/SRV_Channel.h>
 #include "AP_MotorsMulticopter.h"
 
-// tail servo uses channel 7
-#define AP_MOTORS_CH_TRI_YAW    CH_7
+#define AP_MOTORS_CH_TRI_REAR    CH_3
+#define AP_MOTORS_CH_TRI_GVNR    CH_4
+#define AP_MOTORS_CH_TRI_YAW1    CH_5
+#define AP_MOTORS_CH_TRI_YAW2    CH_6
+#define AP_MOTORS_CH_TRI_YAW3    CH_7
+#define AP_MOTORS_CH_TRI_YAW4    CH_8
 
-#define AP_MOTORS_TRI_SERVO_RANGE_DEG_MIN   5   // minimum angle movement of tail servo in degrees
-#define AP_MOTORS_TRI_SERVO_RANGE_DEG_MAX   80  // maximum angle movement of tail servo in degrees
+#define AP_MOTORS_SERVO_INPUT_RANGE    4500    // input of -4500 will cause servos to their minimum (i.e. radio_min), +4500 will move them to their maximum (i.e. radio_max)
+
 
 /// @class      AP_MotorsTri
 class AP_MotorsTri : public AP_MotorsMulticopter {
@@ -42,27 +46,24 @@ public:
 
     // get_motor_mask - returns a bitmask of which outputs are being used for motors or servos (1 means being used)
     //  this can be used to ensure other pwm outputs (i.e. for servos) do not conflict
-    uint16_t            get_motor_mask() override;
+    virtual uint16_t    get_motor_mask();
 
-    // output a thrust to all motors that match a given motor
-    // mask. This is used to control tiltrotor motors in forward
-    // flight. Thrust is in the range 0 to 1
-    void                output_motor_mask(float thrust, uint8_t mask) override;
-    
 protected:
     // output - sends commands to the motors
     void                output_armed_stabilizing();
 
     // call vehicle supplied thrust compensation if set
     void                thrust_compensation(void) override;
-    
-    // calc_yaw_radio_output - calculate final radio output for yaw channel
-    int16_t             calc_yaw_radio_output(float yaw_input, float yaw_input_max);        // calculate radio output for yaw servo, typically in range of 1100-1900
 
     // parameters
 
-    SRV_Channel     *_yaw_servo; // yaw output channel
-    float           _pivot_angle;                       // Angle of yaw pivot
+    SRV_Channel     *_rear_servo;  // elevator output channel
+    SRV_Channel     *_gvnr_servo;  // elevator govner output channel
+    SRV_Channel     *_yaw1_servo; // yaw output channel
+    SRV_Channel     *_yaw2_servo; // yaw output channel
+    SRV_Channel     *_yaw3_servo; // yaw output channel
+    SRV_Channel     *_yaw4_servo; // yaw output channel
+    float           _deflection_yaw;
     float           _thrust_right;
     float           _thrust_rear;
     float           _thrust_left;
