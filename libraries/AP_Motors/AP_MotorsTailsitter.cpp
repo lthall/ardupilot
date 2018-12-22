@@ -228,14 +228,14 @@ void AP_MotorsTailsitter::output_armed_stabilizing()
     yaw_thrust = yaw_thrust * thrust_sin * 0.5f;     // input of 1 is full deflection at 50% thrust
 
     // Calculate thrust vectors
-    thrust_left.y = 0.5*constrain_float(pitch_thrust - yaw_thrust, -1, 1);
-    thrust_right.y = 0.5*constrain_float(pitch_thrust + yaw_thrust, -1, 1);
+    thrust_left.y = pitch_thrust - yaw_thrust;
+    thrust_right.y = pitch_thrust + yaw_thrust;
 
-    float thrust_left_up_min = thrust_left.y/thrust_tan;
+    float thrust_left_up_min = fabs(thrust_left.y/thrust_tan);
     float thrust_left_up_max = safe_sqrt(1.0f-sq(thrust_left.y));
-    float thrust_right_up_min = thrust_right.y/thrust_tan;
+    float thrust_right_up_min = fabs(thrust_right.y/thrust_tan);
     float thrust_right_up_max = safe_sqrt(1.0f-sq(thrust_right.y));
-    float roll_thrust_max;
+    float roll_thrust_max = 0.0f;
     float throttle_thrust_min_rpy;
     float throttle_thrust_max_rpy;
 
@@ -251,7 +251,7 @@ void AP_MotorsTailsitter::output_armed_stabilizing()
     }
     else if(is_negative(roll_thrust)) {
         roll_thrust_max = thrust_right_up_max - thrust_left_up_min;
-        if(roll_thrust < roll_thrust_max) {
+        if(roll_thrust < -roll_thrust_max) {
             roll_thrust = -roll_thrust_max;
             limit.roll_pitch = true;
         }
