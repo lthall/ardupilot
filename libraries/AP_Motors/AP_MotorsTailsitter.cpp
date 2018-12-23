@@ -246,8 +246,8 @@ void AP_MotorsTailsitter::output_armed_stabilizing()
             roll_thrust = roll_thrust_max;
             limit.roll_pitch = true;
         }
-        throttle_thrust_min_rpy = thrust_right_up_min + roll_thrust_max/2;
-        throttle_thrust_max_rpy = thrust_left_up_max - roll_thrust_max/2;
+        throttle_thrust_min_rpy = thrust_right_up_min + roll_thrust/2;
+        throttle_thrust_max_rpy = thrust_left_up_max - roll_thrust/2;
     }
     else if(is_negative(roll_thrust)) {
         roll_thrust_max = thrust_right_up_max - thrust_left_up_min;
@@ -255,12 +255,11 @@ void AP_MotorsTailsitter::output_armed_stabilizing()
             roll_thrust = -roll_thrust_max;
             limit.roll_pitch = true;
         }
-        throttle_thrust_min_rpy = thrust_left_up_min - roll_thrust_max/2;
-        throttle_thrust_max_rpy = thrust_right_up_max + roll_thrust_max/2;
-    } else  {
-        throttle_thrust_min_rpy = MIN(thrust_left_up_min, thrust_right_up_min);
-        throttle_thrust_max_rpy = MAX(thrust_left_up_max,thrust_right_up_max);
+        throttle_thrust_min_rpy = thrust_left_up_min - roll_thrust/2;
+        throttle_thrust_max_rpy = thrust_right_up_max + roll_thrust/2;
     }
+    throttle_thrust_min_rpy = MAX(thrust_left_up_min, thrust_right_up_min);
+    throttle_thrust_max_rpy = MIN(thrust_left_up_max,thrust_right_up_max);
 
     throttle_thrust = get_throttle() * compensation_gain;
     throttle_avg_max = _throttle_avg_max * compensation_gain;
