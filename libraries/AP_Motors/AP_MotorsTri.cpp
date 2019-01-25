@@ -108,12 +108,12 @@ void AP_MotorsTri::output_to_motors()
             // sends output to motors when armed but not flying
             rc_write(AP_MOTORS_MOT_1, calc_spin_up_to_pwm());
             rc_write(AP_MOTORS_MOT_2, calc_spin_up_to_pwm());
-            rc_write(AP_MOTORS_CH_TRI_REAR, -_pitch_radio_passthrough * (1.0f - _spin_up_ratio) * AP_MOTORS_COAX_SERVO_INPUT_RANGE);
+            rc_write_angle(AP_MOTORS_CH_TRI_REAR, -_pitch_radio_passthrough * (1.0f - _spin_up_ratio) * AP_MOTORS_COAX_SERVO_INPUT_RANGE);
             rc_write(AP_MOTORS_CH_TRI_GVNR, _gvnr_servo->get_trim());
-            rc_write(AP_MOTORS_CH_TRI_YAW1, _yaw_radio_passthrough * (1.0f - _spin_up_ratio) * AP_MOTORS_COAX_SERVO_INPUT_RANGE);
-            rc_write(AP_MOTORS_CH_TRI_YAW2, _yaw_radio_passthrough * (1.0f - _spin_up_ratio) * AP_MOTORS_COAX_SERVO_INPUT_RANGE);
-            rc_write(AP_MOTORS_CH_TRI_YAW3, -_yaw_radio_passthrough * (1.0f - _spin_up_ratio) * AP_MOTORS_COAX_SERVO_INPUT_RANGE);
-            rc_write(AP_MOTORS_CH_TRI_YAW4, -_yaw_radio_passthrough * (1.0f - _spin_up_ratio) * AP_MOTORS_COAX_SERVO_INPUT_RANGE);
+            rc_write_angle(AP_MOTORS_CH_TRI_YAW1, _yaw_radio_passthrough * (1.0f - _spin_up_ratio) * AP_MOTORS_COAX_SERVO_INPUT_RANGE);
+            rc_write_angle(AP_MOTORS_CH_TRI_YAW2, _yaw_radio_passthrough * (1.0f - _spin_up_ratio) * AP_MOTORS_COAX_SERVO_INPUT_RANGE);
+            rc_write_angle(AP_MOTORS_CH_TRI_YAW3, -_yaw_radio_passthrough * (1.0f - _spin_up_ratio) * AP_MOTORS_COAX_SERVO_INPUT_RANGE);
+            rc_write_angle(AP_MOTORS_CH_TRI_YAW4, -_yaw_radio_passthrough * (1.0f - _spin_up_ratio) * AP_MOTORS_COAX_SERVO_INPUT_RANGE);
             break;
         case SPOOL_UP:
         case THROTTLE_UNLIMITED:
@@ -121,12 +121,12 @@ void AP_MotorsTri::output_to_motors()
             // set motor output based on thrust requests
             rc_write(AP_MOTORS_MOT_1, calc_thrust_to_pwm(_thrust_right));
             rc_write(AP_MOTORS_MOT_2, calc_thrust_to_pwm(_thrust_left));
-            rc_write(AP_MOTORS_CH_TRI_REAR, _thrust_rear * AP_MOTORS_COAX_SERVO_INPUT_RANGE);
+            rc_write_angle(AP_MOTORS_CH_TRI_REAR, _thrust_rear * AP_MOTORS_COAX_SERVO_INPUT_RANGE);
             rc_write(AP_MOTORS_CH_TRI_GVNR, _gvnr_servo->get_trim());
-            rc_write(AP_MOTORS_CH_TRI_YAW1, _deflection_yaw * AP_MOTORS_COAX_SERVO_INPUT_RANGE);
-            rc_write(AP_MOTORS_CH_TRI_YAW2, _deflection_yaw * AP_MOTORS_COAX_SERVO_INPUT_RANGE);
-            rc_write(AP_MOTORS_CH_TRI_YAW3, -_deflection_yaw * AP_MOTORS_COAX_SERVO_INPUT_RANGE);
-            rc_write(AP_MOTORS_CH_TRI_YAW4, -_deflection_yaw * AP_MOTORS_COAX_SERVO_INPUT_RANGE);
+            rc_write_angle(AP_MOTORS_CH_TRI_YAW1, _deflection_yaw * AP_MOTORS_COAX_SERVO_INPUT_RANGE);
+            rc_write_angle(AP_MOTORS_CH_TRI_YAW2, _deflection_yaw * AP_MOTORS_COAX_SERVO_INPUT_RANGE);
+            rc_write_angle(AP_MOTORS_CH_TRI_YAW3, -_deflection_yaw * AP_MOTORS_COAX_SERVO_INPUT_RANGE);
+            rc_write_angle(AP_MOTORS_CH_TRI_YAW4, -_deflection_yaw * AP_MOTORS_COAX_SERVO_INPUT_RANGE);
             break;
     }
 }
