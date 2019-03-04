@@ -216,12 +216,6 @@ void AP_MotorsMatrix::output_armed_stabilizing()
         }
     }
 
-    // check for roll and pitch saturation
-    if (rp_high-rp_low > 1.0f || throttle_avg_max < -rp_low) {
-        // Full range is being used by roll and pitch.
-        limit.roll_pitch = true;
-    }
-
     // calculate the highest allowed average thrust that will provide maximum control range
     throttle_thrust_best_rpy = MIN(0.5f, throttle_avg_max);
 
@@ -265,7 +259,7 @@ void AP_MotorsMatrix::output_armed_stabilizing()
     if (rpy_high-rpy_low > 1.0f) {
         rpy_scale = 1.0f / (rpy_high-rpy_low);
     }
-    if (is_negative(rpy_low)) {
+    if (throttle_avg_max < -rpy_low) {
         rpy_scale = MIN(rpy_scale, -throttle_avg_max / rpy_low);
     }
 
