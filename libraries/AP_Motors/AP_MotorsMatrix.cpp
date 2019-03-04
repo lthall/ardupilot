@@ -197,11 +197,11 @@ void AP_MotorsMatrix::output_armed_stabilizing()
         if (motor_enabled[i]) {
             // calculate the thrust outputs for roll and pitch
             _thrust_rpyt_out[i] = roll_thrust * _roll_factor[i] + pitch_thrust * _pitch_factor[i];
-            // record lowest roll+pitch command
+            // record lowest roll + pitch command
             if (_thrust_rpyt_out[i] < rp_low) {
                 rp_low = _thrust_rpyt_out[i];
             }
-            // record highest roll+pitch command
+            // record highest roll + pitch command
             if (_thrust_rpyt_out[i] > rp_high && (!_thrust_boost || i != _motor_lost_index)) {
                 rp_high = _thrust_rpyt_out[i];
             }
@@ -210,9 +210,9 @@ void AP_MotorsMatrix::output_armed_stabilizing()
 
     // include the lost motor scaled by _thrust_boost_ratio
     if (_thrust_boost && motor_enabled[_motor_lost_index]) {
-        // record highest roll+pitch command
+        // record highest roll + pitch command
         if (_thrust_rpyt_out[_motor_lost_index] > rp_high) {
-            rp_high = _thrust_boost_ratio*rp_high + (1.0f-_thrust_boost_ratio)*_thrust_rpyt_out[_motor_lost_index];
+            rp_high = _thrust_boost_ratio * rp_high + (1.0f - _thrust_boost_ratio) * _thrust_rpyt_out[_motor_lost_index];
         }
     }
 
@@ -222,8 +222,8 @@ void AP_MotorsMatrix::output_armed_stabilizing()
     // calculate the maximum yaw control that can be used
     // todo: make _yaw_headroom 0 to 1
     yaw_allowed = (float)_yaw_headroom / 1000.0f;
-    yaw_allowed = _thrust_boost_ratio*0.5f + (1.0f - _thrust_boost_ratio) * yaw_allowed;
-    yaw_allowed = MAX(MIN(throttle_thrust_best_rpy+rp_low, 1.0f - (throttle_thrust_best_rpy + rp_high)), yaw_allowed);
+    yaw_allowed = _thrust_boost_ratio * 0.5f + (1.0f - _thrust_boost_ratio) * yaw_allowed;
+    yaw_allowed = MAX(MIN(throttle_thrust_best_rpy + rp_low, 1.0f - (throttle_thrust_best_rpy + rp_high)), yaw_allowed);
     if (fabsf(yaw_thrust) > yaw_allowed) {
         // not all commanded yaw can be used
         yaw_thrust = constrain_float(yaw_thrust, -yaw_allowed, yaw_allowed);
@@ -237,11 +237,11 @@ void AP_MotorsMatrix::output_armed_stabilizing()
         if (motor_enabled[i]) {
             _thrust_rpyt_out[i] = _thrust_rpyt_out[i] + yaw_thrust * _yaw_factor[i];
 
-            // record lowest roll+pitch+yaw command
+            // record lowest roll + pitch + yaw command
             if (_thrust_rpyt_out[i] < rpy_low) {
                 rpy_low = _thrust_rpyt_out[i];
             }
-            // record highest roll+pitch+yaw command
+            // record highest roll + pitch + yaw command
             if (_thrust_rpyt_out[i] > rpy_high && (!_thrust_boost || i != _motor_lost_index)) {
                 rpy_high = _thrust_rpyt_out[i];
             }
@@ -249,15 +249,15 @@ void AP_MotorsMatrix::output_armed_stabilizing()
     }
     // include the lost motor scaled by _thrust_boost_ratio
     if (_thrust_boost) {
-        // record highest roll+pitch+yaw command
+        // record highest roll + pitch + yaw command
         if (_thrust_rpyt_out[_motor_lost_index] > rpy_high && motor_enabled[_motor_lost_index]) {
-            rpy_high = _thrust_boost_ratio*rpy_high + (1.0f-_thrust_boost_ratio)*_thrust_rpyt_out[_motor_lost_index];
+            rpy_high = _thrust_boost_ratio * rpy_high + (1.0f - _thrust_boost_ratio) * _thrust_rpyt_out[_motor_lost_index];
         }
     }
 
     // calculate any scaling needed to make the combined thrust outputs fit within the output range
-    if (rpy_high-rpy_low > 1.0f) {
-        rpy_scale = 1.0f / (rpy_high-rpy_low);
+    if (rpy_high - rpy_low > 1.0f) {
+        rpy_scale = 1.0f / (rpy_high - rpy_low);
     }
     if (throttle_avg_max < -rpy_low) {
         rpy_scale = MIN(rpy_scale, -throttle_avg_max / rpy_low);
