@@ -906,6 +906,7 @@ private:
 #if MODE_SPORT_ENABLED == ENABLED
     ModeSport mode_sport;
 #endif
+    ModeSystemId mode_systemid;
 #if ADSB_ENABLED == ENABLED
     ModeAvoidADSB mode_avoid_adsb;
 #endif

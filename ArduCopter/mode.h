@@ -86,6 +86,7 @@ protected:
     virtual bool requires_GPS() const = 0;
     virtual bool has_manual_throttle() const = 0;
     virtual bool allows_arming(bool from_gcs) const = 0;
+    virtual bool stop_attitude_logging() const { return false; }
 
     virtual bool is_landing() const { return false; }
     virtual bool landing_gear_should_be_deployed() const { return false; }
@@ -1064,6 +1065,74 @@ private:
 };
 #endif
 
+class ModeSystemId : public Mode {
+
+public:
+    // need a constructor for parameters
+    ModeSystemId(void);
+
+    bool init(bool ignore_checks) override;
+    void run() override;
+
+    bool requires_GPS() const override { return false; }
+    bool has_manual_throttle() const override { return true; }
+    bool allows_arming(bool from_gcs) const override { return false; };
+    bool is_autopilot() const override { return false; }
+    bool stop_attitude_logging() const override { return true; }
+
+    static const struct AP_Param::GroupInfo var_info[];
+    void        setMagnitude(float input) {magnitude = input;}
+
+protected:
+
+    const char *name() const override { return "SYSTEMID"; }
+    const char *name4() const override { return "SYSI"; }
+
+private:
+    void        log_data();
+    float       waveform(float time);
+
+    enum AxisType {
+        NONE = 0,               // none
+        INPUT_ROLL = 1,         // angle input roll axis is being excited
+        INPUT_PITCH = 2,        // angle pitch axis is being excited
+        INPUT_YAW = 3,          // angle yaw axis is being excited
+        RECOVER_ROLL = 4,       // angle roll axis is being excited
+        RECOVER_PITCH = 5,      // angle pitch axis is being excited
+        RECOVER_YAW = 6,        // angle yaw axis is being excited
+        DISTURBANCE_ROLL = 7,   // ? roll axis is being excited
+        DISTURBANCE_PITCH = 8,  // ? pitch axis is being excited
+        DISTURBANCE_YAW = 9,    // ? yaw axis is being excited
+        RATE_ROLL = 10,         // rate roll axis is being excited
+        RATE_PITCH = 11,        // rate pitch axis is being excited
+        RATE_YAW = 12,          // rate yaw axis is being excited
+        MIX_ROLL = 13,          // mixer roll axis is being excited
+        MIX_PITCH = 14,         // mixer pitch axis is being excited
+        MIX_YAW = 15,           // mixer pitch axis is being excited
+        MIX_THROTTLE = 16,      // mixer throttle axis is being excited
+    };
+
+    AP_Int8     systemID_axis;  // Controls which axis are being excited
+    AP_Float    magnitude;      // Magnitude of chirp waveform
+    AP_Float    fStart;         // Frequency at the start of the chirp
+    AP_Float    fStop;          // Frequency at the end of the chirp
+    AP_Float    tFadeIn;        // Time to reach maximum amplitude of chirp
+    AP_Float    tConst;         // Time at constant frequency before chirp starts
+    AP_Float    tRec;           // Time taken to complete the chirp waveform
+    AP_Float    tFadeOut;       // Time to reach zero amplitude after chirp finishes
+
+    bool        orig_bf_feedforward;
+    float       waveformTime = 0.0f;
+    float       waveformSample = 0.0f;
+
+    // System ID states
+    enum SystemIDModeState {
+        SystemID_Stopped,
+        SystemID_Testing
+    };
+
+    SystemIDModeState systemIDState;
+};
 
 class ModeThrow : public Mode {
 

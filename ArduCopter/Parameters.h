@@ -588,6 +588,8 @@ public:
     AP_Scripting scripting;
 #endif // ENABLE_SCRIPTING
 
+    // we need a pointer to the mode for the G2 table
+    void *mode_systemid_ptr;
 };
 
 extern const AP_Param::Info        var_info[];

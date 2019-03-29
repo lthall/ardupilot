@@ -142,6 +142,10 @@ Copter::Mode *Copter::mode_from_mode_num(const uint8_t mode)
             break;
 #endif
 
+        case SYSTEMID:
+            ret = (Copter::Mode *)g2.mode_systemid_ptr;
+            break;
+
 #if OPTFLOW == ENABLED
         case FLOWHOLD:
             ret = (Copter::Mode *)g2.mode_flowhold_ptr;
