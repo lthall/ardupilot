@@ -184,6 +184,24 @@ public:
     // Set z-axis angular velocity in centidegrees/s
     void rate_bf_yaw_target(float rate_cds) { _rate_target_ang_vel.z = radians(rate_cds*0.01f); }
 
+    // Set x-axis system identification angular velocity in degrees/s
+    void rate_bf_roll_sysid(float rate) { _rate_sysid_ang_vel.x = rate; }
+
+    // Set y-axis system identification angular velocity in degrees/s
+    void rate_bf_pitch_sysid(float rate) { _rate_sysid_ang_vel.y = rate; }
+
+    // Set z-axis system identification angular velocity in degrees/s
+    void rate_bf_yaw_sysid(float rate) { _rate_sysid_ang_vel.z = rate; }
+
+    // Set x-axis system identification actuator
+    void actuator_roll_sysid(float command) { _actuator_sysid.x = command; }
+
+    // Set y-axis system identification actuator
+    void actuator_pitch_sysid(float command) { _actuator_sysid.y = command; }
+
+    // Set z-axis system identification actuator
+    void actuator_yaw_sysid(float command) { _actuator_sysid.z = command; }
+
     // Return roll rate step size in radians/s that results in maximum output after 4 time steps
     float max_rate_step_bf_roll();
 
@@ -387,8 +405,19 @@ protected:
     // velocity controller.
     Vector3f            _rate_target_ang_vel;
 
+    // This represents the angular velocity in radians per second in the body frame, used in the angular
+    // velocity controller.
+    Vector3f            _rate_sysid_ang_vel;
+
+    // This represents the angular velocity in radians per second in the body frame, used in the angular
+    // velocity controller.
+    Vector3f            _actuator_sysid;
+
     // This represents a quaternion attitude error in the body frame, used for inertial frame reset handling.
     Quaternion          _attitude_ang_error;
+
+    // The angle between the target thrust vector and the current thrust vector.
+    float               _thrust_angle;
 
     // The angle between the target thrust vector and the current thrust vector.
     float               _thrust_error_angle;
