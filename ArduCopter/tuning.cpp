@@ -230,5 +230,9 @@ void Copter::tuning() {
          break;
          }
 #endif
+
+     case SYSTEM_ID_MAG:
+         copter.mode_systemid.setMagnitude(tuning_value);
+         break;
      }
 }
