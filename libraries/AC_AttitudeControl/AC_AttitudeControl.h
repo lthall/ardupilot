@@ -221,7 +221,7 @@ public:
     float max_angle_step_bf_yaw() { return max_rate_step_bf_yaw()/_p_angle_yaw.kP(); }
 
     // Return angular velocity in radians used in the angular velocity controller
-    Vector3f rate_bf_targets() const { return _rate_target_ang_vel; }
+    Vector3f rate_bf_targets() const { return _rate_target_ang_vel + _rate_sysid_ang_vel; }
 
     // Enable or disable body-frame feed forward
     void bf_feedforward(bool enable_or_disable) { _rate_bf_ff_enabled = enable_or_disable; }
