@@ -1100,16 +1100,13 @@ private:
         RECOVER_ROLL = 4,       // angle roll axis is being excited
         RECOVER_PITCH = 5,      // angle pitch axis is being excited
         RECOVER_YAW = 6,        // angle yaw axis is being excited
-        DISTURBANCE_ROLL = 7,   // ? roll axis is being excited
-        DISTURBANCE_PITCH = 8,  // ? pitch axis is being excited
-        DISTURBANCE_YAW = 9,    // ? yaw axis is being excited
-        RATE_ROLL = 10,         // rate roll axis is being excited
-        RATE_PITCH = 11,        // rate pitch axis is being excited
-        RATE_YAW = 12,          // rate yaw axis is being excited
-        MIX_ROLL = 13,          // mixer roll axis is being excited
-        MIX_PITCH = 14,         // mixer pitch axis is being excited
-        MIX_YAW = 15,           // mixer pitch axis is being excited
-        MIX_THROTTLE = 16,      // mixer throttle axis is being excited
+        RATE_ROLL = 7,          // rate roll axis is being excited
+        RATE_PITCH = 8,         // rate pitch axis is being excited
+        RATE_YAW = 9,           // rate yaw axis is being excited
+        MIX_ROLL = 10,          // mixer roll axis is being excited
+        MIX_PITCH = 11,         // mixer pitch axis is being excited
+        MIX_YAW = 12,           // mixer pitch axis is being excited
+        MIX_THROTTLE = 13,      // mixer throttle axis is being excited
     };
 
     AP_Int8     systemID_axis;  // Controls which axis are being excited

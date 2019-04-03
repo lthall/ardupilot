@@ -196,12 +196,6 @@ void Copter::ModeSystemId::run()
                     target_yaw_rate += waveformSample*100.0f;
                     attitude_control->bf_feedforward(false);
                     break;
-                case DISTURBANCE_ROLL:
-                    break;
-                case DISTURBANCE_PITCH:
-                    break;
-                case DISTURBANCE_YAW:
-                    break;
                 case RATE_ROLL:
                     attitude_control->rate_bf_roll_sysid(radians(waveformSample));
                     break;
