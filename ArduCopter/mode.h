@@ -1081,7 +1081,7 @@ public:
     bool stop_attitude_logging() const override { return true; }
 
     static const struct AP_Param::GroupInfo var_info[];
-    void        setMagnitude(float input) {magnitude = input;}
+    void        setMagnitudeScale(float input) {magnitude_scale = input;}
 
 protected:
 
@@ -1121,6 +1121,7 @@ private:
     bool        orig_bf_feedforward;
     float       waveformTime = 0.0f;
     float       waveformSample = 0.0f;
+    float       magnitude_scale = 1.0f;
 
     // System ID states
     enum SystemIDModeState {

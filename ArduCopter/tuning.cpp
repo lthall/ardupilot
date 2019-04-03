@@ -232,7 +232,7 @@ void Copter::tuning() {
 #endif
 
      case SYSTEM_ID_MAG:
-         copter.mode_systemid.setMagnitude(tuning_value);
+         copter.mode_systemid.setMagnitudeScale(control_in / 1000.0f);
          break;
      }
 }

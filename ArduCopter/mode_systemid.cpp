@@ -89,6 +89,7 @@ bool Copter::ModeSystemId::init(bool ignore_checks)
 
     orig_bf_feedforward = attitude_control->get_bf_feedforward();
     waveformTime = 0.0f;
+    magnitude_scale = 0.0f;
     systemIDState = SystemID_Testing;
 
     gcs().send_text(MAV_SEVERITY_INFO, "SystemID Starting: axis=%d", (unsigned)systemID_axis);
@@ -282,14 +283,14 @@ float Copter::ModeSystemId::waveform(float time)
 
     if(time <= tFadeIn) {
         window = 0.5 - 0.5 * cosf(M_PI * time / tFadeIn);
-        output = window * magnitude * sinf(wMin * time - wMin * (tFadeIn + tConst));
+        output = window * magnitude_scale * magnitude * sinf(wMin * time - wMin * (tFadeIn + tConst));
     } else if(time <= tFadeIn + tConst) {
-        output = magnitude * sinf(wMin * time - wMin * (tFadeIn + tConst));
+        output = magnitude_scale * magnitude * sinf(wMin * time - wMin * (tFadeIn + tConst));
     }else if (time <= tFadeIn + tConst + tRec) {
-        output = magnitude * sinf((wMin * tRec / B) * (expf(B * (time - (tFadeIn + tConst)) / tRec) - 1));
+        output = magnitude_scale * magnitude * sinf((wMin * tRec / B) * (expf(B * (time - (tFadeIn + tConst)) / tRec) - 1));
     } else if (time <= tFadeIn + tConst + tRec + tFadeOut) {
         window = 0.5 - 0.5 * cosf(M_PI * (time - (tFadeIn + tConst + tRec)) / tFadeOut + M_PI);
-        output = window * magnitude * sinf(wMax * time + theta_end);
+        output = window * magnitude_scale * magnitude * sinf(wMax * time + theta_end);
     } else {
         output = 0.0f;
     }
