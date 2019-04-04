@@ -1122,6 +1122,7 @@ private:
     float       waveformTime = 0.0f;
     float       waveformSample = 0.0f;
     float       magnitude_scale = 1.0f;
+    float       waveformFreqRads;           // Frequency at the start of the chirp
 
     // System ID states
     enum SystemIDModeState {

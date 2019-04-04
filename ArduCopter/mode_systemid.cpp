@@ -251,13 +251,14 @@ void Copter::ModeSystemId::log_data()
 
     AP::logger().Write(
         "SIDI",
-        "TimeUS,Time,Targ,Gx,Gy,Gz,Ax,Ay,Az",
-        "ss-kkkooo",
-        "F--------",
-        "Qffffffff",
+        "TimeUS,Time,Targ,F,Gx,Gy,Gz,Ax,Ay,Az",
+        "ss-zkkkooo",
+        "F---------",
+        "Qfffffffff",
         AP_HAL::micros64(),
         (double)waveformTime,
         (double)waveformSample,
+        (double)waveformFreqRads / (2 * M_PI),
         (double)(degrees(delta_angle.x / delta_angle_dt)),
         (double)(degrees(delta_angle.y / delta_angle_dt)),
         (double)(degrees(delta_angle.z / delta_angle_dt)),
@@ -283,16 +284,21 @@ float Copter::ModeSystemId::waveform(float time)
 
     if(time <= tFadeIn) {
         window = 0.5 - 0.5 * cosf(M_PI * time / tFadeIn);
+        waveformFreqRads = wMin;
         output = window * magnitude_scale * magnitude * sinf(wMin * time - wMin * (tFadeIn + tConst));
     } else if(time <= tFadeIn + tConst) {
+        waveformFreqRads = wMin;
         output = magnitude_scale * magnitude * sinf(wMin * time - wMin * (tFadeIn + tConst));
     }else if (time <= tFadeIn + tConst + tRec) {
+        waveformFreqRads = wMin * expf(B * (time - (tFadeIn + tConst)) / tRec);
         output = magnitude_scale * magnitude * sinf((wMin * tRec / B) * (expf(B * (time - (tFadeIn + tConst)) / tRec) - 1));
     } else if (time <= tFadeIn + tConst + tRec + tFadeOut) {
         window = 0.5 - 0.5 * cosf(M_PI * (time - (tFadeIn + tConst + tRec)) / tFadeOut + M_PI);
+        waveformFreqRads = wMax;
         output = window * magnitude_scale * magnitude * sinf(wMax * time + theta_end);
     } else {
         output = 0.0f;
+        waveformFreqRads = wMax;
     }
     return output;
 }
