@@ -15,15 +15,14 @@ const AP_Param::GroupInfo Copter::ModeSystemId::var_info[] = {
 
     // @Param: _MAG
     // @DisplayName: Chirp Magnitude
-    // @Description: Magnitude of chirp waveform
-    // @Range: 1 100
+    // @Description: Magnitude of chirp waveform in deg, deg/s and 0-1 for mixer outputs.
     // @User: Standard
     AP_GROUPINFO("_MAG", 2, Copter::ModeSystemId, magnitude, 15),
 
     // @Param: _F_START_HZ
     // @DisplayName: Start Frequency
     // @Description: Frequency at the start of the chirp
-    // @Range: 0.1 100
+    // @Range: 0.01 100
     // @Units: Hz
     // @User: Standard
     AP_GROUPINFO("_F_START_HZ", 3, Copter::ModeSystemId, fStart, 0.5f),
@@ -31,7 +30,7 @@ const AP_Param::GroupInfo Copter::ModeSystemId::var_info[] = {
     // @Param: _F_STOP_HZ
     // @DisplayName: Stop Frequency
     // @Description: Frequency at the end of the chirp
-    // @Range: 0.1 100
+    // @Range: 0.01 100
     // @Units: Hz
     // @User: Standard
     AP_GROUPINFO("_F_STOP_HZ", 4, Copter::ModeSystemId, fStop, 40),
