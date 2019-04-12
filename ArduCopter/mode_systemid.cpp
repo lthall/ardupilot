@@ -15,13 +15,13 @@ const AP_Param::GroupInfo Copter::ModeSystemId::var_info[] = {
 
     // @Param: _MAG
     // @DisplayName: Chirp Magnitude
-    // @Description: Magnitude of chirp waveform in deg, deg/s and 0-1 for mixer outputs.
+    // @Description: Magnitude of sweep in deg, deg/s and 0-1 for mixer outputs.
     // @User: Standard
     AP_GROUPINFO("_MAG", 2, Copter::ModeSystemId, magnitude, 15),
 
     // @Param: _F_START_HZ
     // @DisplayName: Start Frequency
-    // @Description: Frequency at the start of the chirp
+    // @Description: Frequency at the start of the sweep
     // @Range: 0.01 100
     // @Units: Hz
     // @User: Standard
@@ -29,7 +29,7 @@ const AP_Param::GroupInfo Copter::ModeSystemId::var_info[] = {
 
     // @Param: _F_STOP_HZ
     // @DisplayName: Stop Frequency
-    // @Description: Frequency at the end of the chirp
+    // @Description: Frequency at the end of the sweep
     // @Range: 0.01 100
     // @Units: Hz
     // @User: Standard
@@ -37,35 +37,27 @@ const AP_Param::GroupInfo Copter::ModeSystemId::var_info[] = {
 
     // @Param: _T_FADE_IN
     // @DisplayName: Fade in time
-    // @Description: Time to reach maximum amplitude of chirp
+    // @Description: Time to reach maximum amplitude of sweep
     // @Range: 0 20
     // @Units: seconds
     // @User: Standard
     AP_GROUPINFO("_T_FADE_IN", 5, Copter::ModeSystemId, tFadeIn, 15),
 
-    // @Param: _T_CONST
-    // @DisplayName: Constant frequency time
-    // @Description: Time at constant frequency before chirp starts
-    // @Range: 0 5
-    // @Units: seconds
-    // @User: Standard
-    AP_GROUPINFO("_T_CONST", 6, Copter::ModeSystemId, tConst, 1),
-
     // @Param: _T_REC
-    // @DisplayName: Chirp length
-    // @Description: Time taken to complete the chirp waveform
+    // @DisplayName: Total Sweep length
+    // @Description: Time taken to complete the sweep
     // @Range: 0 255
     // @Units: seconds
     // @User: Standard
-    AP_GROUPINFO("_T_REC", 7, Copter::ModeSystemId, tRec, 70),
+    AP_GROUPINFO("_T_REC", 6, Copter::ModeSystemId, tRec, 70),
 
     // @Param: _T_FADE_OUT
     // @DisplayName: Fade out time
-    // @Description: Time to reach zero amplitude after chirp finishes
+    // @Description: Time to reach zero amplitude at the end of the sweep
     // @Range: 0 5
     // @Units: seconds
     // @User: Standard
-    AP_GROUPINFO("_T_FADE_OUT", 8, Copter::ModeSystemId, tFadeOut, 2),
+    AP_GROUPINFO("_T_FADE_OUT", 7, Copter::ModeSystemId, tFadeOut, 2),
 
     AP_GROUPEND
 };
@@ -89,6 +81,7 @@ bool Copter::ModeSystemId::init(bool ignore_checks)
     orig_bf_feedforward = attitude_control->get_bf_feedforward();
     waveformTime = 0.0f;
     magnitude_scale = 0.0f;
+    tConst = 2.0f / fStart; // Two full cycles at the starting frequency
     systemIDState = SystemID_Testing;
 
     gcs().send_text(MAV_SEVERITY_INFO, "SystemID Starting: axis=%d", (unsigned)systemID_axis);
@@ -279,25 +272,31 @@ float Copter::ModeSystemId::waveform(float time)
     float output;
 
     float B = logf(wMax / wMin);
-    float theta_end = (wMin * tRec / B)*(expf(B) - 1);
 
-    if(time <= tFadeIn) {
+    if(time <= 0.0f) {
+        window = 0.0f;
+    } else if (time <= tFadeIn) {
         window = 0.5 - 0.5 * cosf(M_PI * time / tFadeIn);
-        waveformFreqRads = wMin;
-        output = window * magnitude_scale * magnitude * sinf(wMin * time - wMin * (tFadeIn + tConst));
-    } else if(time <= tFadeIn + tConst) {
-        waveformFreqRads = wMin;
-        output = magnitude_scale * magnitude * sinf(wMin * time - wMin * (tFadeIn + tConst));
-    }else if (time <= tFadeIn + tConst + tRec) {
-        waveformFreqRads = wMin * expf(B * (time - (tFadeIn + tConst)) / tRec);
-        output = magnitude_scale * magnitude * sinf((wMin * tRec / B) * (expf(B * (time - (tFadeIn + tConst)) / tRec) - 1));
-    } else if (time <= tFadeIn + tConst + tRec + tFadeOut) {
-        window = 0.5 - 0.5 * cosf(M_PI * (time - (tFadeIn + tConst + tRec)) / tFadeOut + M_PI);
-        waveformFreqRads = wMax;
-        output = window * magnitude_scale * magnitude * sinf(wMax * time + theta_end);
+    } else if (time <= tRec - tFadeOut) {
+        window = 1.0;
+    } else if (time <= tRec) {
+        window = 0.5 - 0.5 * cosf(M_PI * (time - (tRec - tFadeOut)) / tFadeOut + M_PI);
     } else {
+        window = 0.0;
+    }
+
+    if(time <= 0.0f) {
+        waveformFreqRads = wMin;
         output = 0.0f;
+    } else if (time <= tConst) {
+        waveformFreqRads = wMin;
+        output = window * magnitude_scale * magnitude * sinf(wMin * time - wMin * tConst);
+    } else if (time <= tRec) {
+        waveformFreqRads = wMin * expf(B * (time - tConst) / (tRec - tConst));
+        output = window * magnitude_scale * magnitude * sinf((wMin * (tRec - tConst) / B) * (expf(B * (time - tConst) / (tRec - tConst)) - 1));
+    } else {
         waveformFreqRads = wMax;
+        output = 0.0f;
     }
     return output;
 }

@@ -1114,7 +1114,6 @@ private:
     AP_Float    fStart;         // Frequency at the start of the chirp
     AP_Float    fStop;          // Frequency at the end of the chirp
     AP_Float    tFadeIn;        // Time to reach maximum amplitude of chirp
-    AP_Float    tConst;         // Time at constant frequency before chirp starts
     AP_Float    tRec;           // Time taken to complete the chirp waveform
     AP_Float    tFadeOut;       // Time to reach zero amplitude after chirp finishes
 
@@ -1122,7 +1121,8 @@ private:
     float       waveformTime = 0.0f;
     float       waveformSample = 0.0f;
     float       magnitude_scale = 1.0f;
-    float       waveformFreqRads;           // Frequency at the start of the chirp
+    float       waveformFreqRads;       // Frequency at the start of the chirp
+    float       tConst;                 // Time at constant frequency before chirp starts
 
     // System ID states
     enum SystemIDModeState {
