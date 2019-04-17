@@ -256,10 +256,15 @@ void AC_AttitudeControl_Multi::rate_controller_run()
     update_throttle_rpy_mix();
 
     Vector3f gyro_latest = _ahrs.get_gyro_latest();
-    _motors.set_yaw_ff(get_rate_yaw_pid().get_ff(_rate_target_ang_vel.z));
+
     _motors.set_roll(get_rate_roll_pid().update_all(gyro_latest.x, _rate_target_ang_vel.x, _motors.limit.roll_pitch));
+    _motors.set_roll_ff(get_rate_roll_pid().get_ff());
+
     _motors.set_pitch(get_rate_pitch_pid().update_all(gyro_latest.y, _rate_target_ang_vel.y, _motors.limit.roll_pitch));
+    _motors.set_pitch_ff(get_rate_pitch_pid().get_ff());
+
     _motors.set_yaw(get_rate_yaw_pid().update_all(gyro_latest.z, _rate_target_ang_vel.z, _motors.limit.yaw));
+    _motors.set_yaw_ff(get_rate_yaw_pid().get_ff());
 
     control_monitor_update();
 }
