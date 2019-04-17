@@ -76,8 +76,7 @@ void Tracker::update_pitch_position_servo()
     // PITCH2SRV_IMAX   4000.000000
 
     // calculate new servo position
-    g.pidPitch2Srv.set_input_filter_all(nav_status.angle_error_pitch);
-    int32_t new_servo_out = SRV_Channels::get_output_scaled(SRV_Channel::k_tracker_pitch) + g.pidPitch2Srv.get_pid();
+    int32_t new_servo_out = SRV_Channels::get_output_scaled(SRV_Channel::k_tracker_pitch) + g.pidYaw2Srv.update_error(nav_status.angle_error_yaw);
 
     // position limit pitch servo
     if (new_servo_out <= pitch_min_cd) {
@@ -131,8 +130,7 @@ void Tracker::update_pitch_cr_servo(float pitch)
     int32_t pitch_min_cd = g.pitch_min*100;
     int32_t pitch_max_cd = g.pitch_max*100;
     if ((pitch>pitch_min_cd) && (pitch<pitch_max_cd)) {
-        g.pidPitch2Srv.set_input_filter_all(nav_status.angle_error_pitch);
-        SRV_Channels::set_output_scaled(SRV_Channel::k_tracker_pitch, g.pidPitch2Srv.get_pid());
+        SRV_Channels::set_output_scaled(SRV_Channel::k_tracker_pitch, g.pidPitch2Srv.update_error(nav_status.angle_error_pitch));
     }
 }
 
@@ -198,8 +196,7 @@ void Tracker::update_yaw_position_servo()
       right direction
      */
 
-    g.pidYaw2Srv.set_input_filter_all(nav_status.angle_error_yaw);
-    float servo_change = g.pidYaw2Srv.get_pid();
+    float servo_change = g.pidYaw2Srv.update_error(nav_status.angle_error_yaw);
     servo_change = constrain_float(servo_change, -18000, 18000);
     float new_servo_out = constrain_float(SRV_Channels::get_output_scaled(SRV_Channel::k_tracker_yaw) + servo_change, -18000, 18000);
 
@@ -250,6 +247,5 @@ void Tracker::update_yaw_onoff_servo(float yaw)
  */
 void Tracker::update_yaw_cr_servo(float yaw)
 {
-    g.pidYaw2Srv.set_input_filter_all(nav_status.angle_error_yaw);
-    SRV_Channels::set_output_scaled(SRV_Channel::k_tracker_yaw, -g.pidYaw2Srv.get_pid());
+    SRV_Channels::set_output_scaled(SRV_Channel::k_tracker_yaw, -g.pidYaw2Srv.update_error(nav_status.angle_error_yaw));
 }
