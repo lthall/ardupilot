@@ -300,36 +300,18 @@ float AR_AttitudeControl::get_steering_out_rate(float desired_rate, bool motor_l
         _desired_turn_rate = constrain_float(_desired_turn_rate, -steer_rate_max_rad, steer_rate_max_rad);
     }
 
-    // Calculate the steering rate error (rad/sec)
-    // We do this in earth frame to allow for rover leaning over in hard corners
-    const float rate_error = (_desired_turn_rate - _ahrs.get_yaw_rate_earth());
-
     // set PID's dt
     _steer_rate_pid.set_dt(dt);
 
-    // record desired rate for logging purposes only
-    _steer_rate_pid.set_desired_rate(_desired_turn_rate);
-
-    // pass error to PID controller
-    _steer_rate_pid.set_input_filter_all(rate_error);
+    // Calculate the steering rate error (rad/sec)
+    // We do this in earth frame to allow for rover leaning over in hard corners
+    const float pid = _steer_rate_pid.update_all(_desired_turn_rate, _ahrs.get_yaw_rate_earth(), (motor_limit_left || motor_limit_right));
 
     // get feed-forward
-    const float ff = _steer_rate_pid.get_ff(_desired_turn_rate);
-
-    // get p
-    const float p = _steer_rate_pid.get_p();
-
-    // get i unless non-skid-steering rover at low speed or steering output has hit a limit
-    float i = _steer_rate_pid.get_integrator();
-    if ((is_negative(rate_error) && !motor_limit_left) || (is_positive(rate_error) && !motor_limit_right)) {
-        i = _steer_rate_pid.get_i();
-    }
-
-    // get d
-    const float d = _steer_rate_pid.get_d();
+    const float ff = _steer_rate_pid.get_ff();
 
     // constrain and return final output
-    return (ff + p + i + d);
+    return (ff + pid);
 }
 
 // get latest desired turn rate in rad/sec (recorded during calls to get_steering_out_rate)
@@ -394,26 +376,10 @@ float AR_AttitudeControl::get_throttle_out_speed(float desired_speed, bool motor
     _throttle_speed_pid.set_dt(dt);
 
     // calculate speed error and pass to PID controller
-    const float speed_error = desired_speed - speed;
-    _throttle_speed_pid.set_input_filter_all(speed_error);
-
-    // record desired speed for logging purposes only
-    _throttle_speed_pid.set_desired_rate(desired_speed);
+    const float pid = _throttle_speed_pid.update_all(desired_speed, speed, (_throttle_limit_low || _throttle_limit_high));
 
     // get feed-forward
-    const float ff = _throttle_speed_pid.get_ff(desired_speed);
-
-    // get p
-    const float p = _throttle_speed_pid.get_p();
-
-    // get i unless moving at low speed or motors have hit a limit
-    float i = _throttle_speed_pid.get_integrator();
-    if ((is_negative(speed_error) && !motor_limit_low && !_throttle_limit_low) || (is_positive(speed_error) && !motor_limit_high && !_throttle_limit_high)) {
-        i = _throttle_speed_pid.get_i();
-    }
-
-    // get d
-    const float d = _throttle_speed_pid.get_d();
+    const float ff = _throttle_speed_pid.get_ff();
 
     // calculate base throttle (protect against divide by zero)
     float throttle_base = 0.0f;
@@ -422,7 +388,7 @@ float AR_AttitudeControl::get_throttle_out_speed(float desired_speed, bool motor
     }
 
     // calculate final output
-    float throttle_out = (ff+p+i+d+throttle_base);
+    float throttle_out = (ff + pid + throttle_base);
 
     // clear local limit flags used to stop i-term build-up as we stop reversed outputs going to motors
     _throttle_limit_low = false;
@@ -510,17 +476,8 @@ float AR_AttitudeControl::get_throttle_out_from_pitch(float desired_pitch, bool 
     }
     _balance_last_ms = now;
 
-    // calculate pitch error
-    const float pitch_error = desired_pitch - _ahrs.pitch;
-
-    // pitch error is given as input to PID contoller
-    _pitch_to_throttle_pid.set_input_filter_all(pitch_error);
-
-    // record desired speed for logging purposes only
-    _pitch_to_throttle_pid.set_desired_rate(desired_pitch);
-
     // return output of PID controller
-    return constrain_float(_pitch_to_throttle_pid.get_pid(), -1.0f, +1.0f);
+    return constrain_float(_pitch_to_throttle_pid.update_all(desired_pitch, _ahrs.pitch), -1.0f, +1.0f);
 }
 
 // get forward speed in m/s (earth-frame horizontal velocity but only along vehicle x-axis).  returns true on success
