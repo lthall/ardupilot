@@ -514,7 +514,7 @@ void Copter::ModeAutoTune::autotune_attitude_control()
             target_angle = constrain_float(ToDeg(attitude_control->max_angle_step_bf_roll())*100.0f, AUTOTUNE_TARGET_MIN_ANGLE_RLLPIT_CD, AUTOTUNE_TARGET_ANGLE_RLLPIT_CD);
             start_rate = ToDeg(ahrs.get_gyro().x) * 100.0f;
             start_angle = ahrs.roll_sensor;
-            rotation_rate_filt.set_cutoff_frequency(attitude_control->get_rate_roll_pid().filt_hz()*2.0f);
+            rotation_rate_filt.set_cutoff_frequency(attitude_control->get_rate_roll_pid().filt_D_hz()*2.0f);
             if ((tune_type == SP_DOWN) || (tune_type == SP_UP)) {
                 rotation_rate_filt.reset(start_rate);
             } else {
@@ -526,7 +526,7 @@ void Copter::ModeAutoTune::autotune_attitude_control()
             target_angle = constrain_float(ToDeg(attitude_control->max_angle_step_bf_pitch())*100.0f, AUTOTUNE_TARGET_MIN_ANGLE_RLLPIT_CD, AUTOTUNE_TARGET_ANGLE_RLLPIT_CD);
             start_rate = ToDeg(ahrs.get_gyro().y) * 100.0f;
             start_angle = ahrs.pitch_sensor;
-            rotation_rate_filt.set_cutoff_frequency(attitude_control->get_rate_pitch_pid().filt_hz()*2.0f);
+            rotation_rate_filt.set_cutoff_frequency(attitude_control->get_rate_pitch_pid().filt_D_hz()*2.0f);
             if ((tune_type == SP_DOWN) || (tune_type == SP_UP)) {
                 rotation_rate_filt.reset(start_rate);
             } else {
@@ -920,11 +920,11 @@ void Copter::ModeAutoTune::backup_gains_and_initialise()
     orig_yaw_rp = attitude_control->get_rate_yaw_pid().kP();
     orig_yaw_ri = attitude_control->get_rate_yaw_pid().kI();
     orig_yaw_rd = attitude_control->get_rate_yaw_pid().kD();
-    orig_yaw_rLPF = attitude_control->get_rate_yaw_pid().filt_hz();
+    orig_yaw_rLPF = attitude_control->get_rate_yaw_pid().filt_E_hz();
     orig_yaw_accel = attitude_control->get_accel_yaw_max();
     orig_yaw_sp = attitude_control->get_angle_yaw_p().kP();
     tune_yaw_rp = attitude_control->get_rate_yaw_pid().kP();
-    tune_yaw_rLPF = attitude_control->get_rate_yaw_pid().filt_hz();
+    tune_yaw_rLPF = attitude_control->get_rate_yaw_pid().filt_E_hz();
     tune_yaw_sp = attitude_control->get_angle_yaw_p().kP();
     tune_yaw_accel = attitude_control->get_accel_yaw_max();
 
@@ -959,7 +959,7 @@ void Copter::ModeAutoTune::load_orig_gains()
             attitude_control->get_rate_yaw_pid().kP(orig_yaw_rp);
             attitude_control->get_rate_yaw_pid().kI(orig_yaw_ri);
             attitude_control->get_rate_yaw_pid().kD(orig_yaw_rd);
-            attitude_control->get_rate_yaw_pid().filt_hz(orig_yaw_rLPF);
+            attitude_control->get_rate_yaw_pid().filt_E_hz(orig_yaw_rLPF);
             attitude_control->get_angle_yaw_p().kP(orig_yaw_sp);
             attitude_control->set_accel_yaw_max(orig_yaw_accel);
         }
@@ -997,7 +997,7 @@ void Copter::ModeAutoTune::load_tuned_gains()
             attitude_control->get_rate_yaw_pid().kP(tune_yaw_rp);
             attitude_control->get_rate_yaw_pid().kI(tune_yaw_rp*AUTOTUNE_YAW_PI_RATIO_FINAL);
             attitude_control->get_rate_yaw_pid().kD(0.0f);
-            attitude_control->get_rate_yaw_pid().filt_hz(tune_yaw_rLPF);
+            attitude_control->get_rate_yaw_pid().filt_E_hz(tune_yaw_rLPF);
             attitude_control->get_angle_yaw_p().kP(tune_yaw_sp);
             attitude_control->set_accel_yaw_max(tune_yaw_accel);
         }
@@ -1027,7 +1027,7 @@ void Copter::ModeAutoTune::load_intra_test_gains()
         attitude_control->get_rate_yaw_pid().kP(orig_yaw_rp);
         attitude_control->get_rate_yaw_pid().kI(orig_yaw_rp*AUTOTUNE_PI_RATIO_FOR_TESTING);
         attitude_control->get_rate_yaw_pid().kD(orig_yaw_rd);
-        attitude_control->get_rate_yaw_pid().filt_hz(orig_yaw_rLPF);
+        attitude_control->get_rate_yaw_pid().filt_E_hz(orig_yaw_rLPF);
         attitude_control->get_angle_yaw_p().kP(orig_yaw_sp);
     }
 }
@@ -1053,7 +1053,7 @@ void Copter::ModeAutoTune::load_twitch_gains()
             attitude_control->get_rate_yaw_pid().kP(tune_yaw_rp);
             attitude_control->get_rate_yaw_pid().kI(tune_yaw_rp*0.01f);
             attitude_control->get_rate_yaw_pid().kD(0.0f);
-            attitude_control->get_rate_yaw_pid().filt_hz(tune_yaw_rLPF);
+            attitude_control->get_rate_yaw_pid().filt_E_hz(tune_yaw_rLPF);
             attitude_control->get_angle_yaw_p().kP(tune_yaw_sp);
             break;
     }
@@ -1122,7 +1122,7 @@ void Copter::ModeAutoTune::save_tuning_gains()
             attitude_control->get_rate_yaw_pid().kP(tune_yaw_rp);
             attitude_control->get_rate_yaw_pid().kI(tune_yaw_rp*AUTOTUNE_YAW_PI_RATIO_FINAL);
             attitude_control->get_rate_yaw_pid().kD(0.0f);
-            attitude_control->get_rate_yaw_pid().filt_hz(tune_yaw_rLPF);
+            attitude_control->get_rate_yaw_pid().filt_E_hz(tune_yaw_rLPF);
             attitude_control->get_rate_yaw_pid().save_gains();
 
             // stabilize yaw
@@ -1136,7 +1136,7 @@ void Copter::ModeAutoTune::save_tuning_gains()
             orig_yaw_rp = attitude_control->get_rate_yaw_pid().kP();
             orig_yaw_ri = attitude_control->get_rate_yaw_pid().kI();
             orig_yaw_rd = attitude_control->get_rate_yaw_pid().kD();
-            orig_yaw_rLPF = attitude_control->get_rate_yaw_pid().filt_hz();
+            orig_yaw_rLPF = attitude_control->get_rate_yaw_pid().filt_E_hz();
             orig_yaw_sp = attitude_control->get_angle_yaw_p().kP();
             orig_yaw_accel = attitude_control->get_accel_pitch_max();
         }
