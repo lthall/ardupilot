@@ -51,7 +51,7 @@ void loop()
         RC_Channels::read_input(); // poll the radio for new values
         radio_in = RC_Channels::get_radio_in(0);
         error = radio_in - radio_trim;
-        pid.set_input_filter_all(error);
+        pid.update_error(error);
         control_P = pid.get_p();
         control_I = pid.get_i();
         control_D = pid.get_d();
