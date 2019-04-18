@@ -32,7 +32,7 @@ const AP_Param::GroupInfo AC_PID::var_info[] = {
     // @DisplayName: PID Input filter frequency in Hz
     // @Description: Input filter frequency in Hz
     // @Units: Hz
-    AP_GROUPINFO("D_FILT", 6, AC_PID, _filt_D_hz, AC_PID_FILT_HZ_DEFAULT),
+    AP_GROUPINFO("DFLT", 6, AC_PID, _filt_D_hz, AC_PID_FILT_HZ_DEFAULT),
 
     // @Param: FF
     // @DisplayName: FF FeedForward Gain
@@ -43,13 +43,13 @@ const AP_Param::GroupInfo AC_PID::var_info[] = {
     // @DisplayName: PID Input filter frequency in Hz
     // @Description: Input filter frequency in Hz
     // @Units: Hz
-    AP_GROUPINFO("T_FILT", 8, AC_PID, _filt_T_hz, AC_PID_FILT_HZ_DEFAULT),
+    AP_GROUPINFO("TFLT", 8, AC_PID, _filt_T_hz, AC_PID_FILT_HZ_DEFAULT),
 
     // @Param: FILT
     // @DisplayName: PID Input filter frequency in Hz
     // @Description: Input filter frequency in Hz
     // @Units: Hz
-    AP_GROUPINFO("E_FILT", 9, AC_PID, _filt_E_hz, AC_PID_FILT_HZ_DEFAULT),
+    AP_GROUPINFO("EFLT", 9, AC_PID, _filt_E_hz, AC_PID_FILT_HZ_DEFAULT),
     
     AP_GROUPEND
 };
