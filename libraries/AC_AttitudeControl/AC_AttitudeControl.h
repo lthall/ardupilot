@@ -309,7 +309,7 @@ protected:
     float rate_target_to_motor_pitch(float rate_actual_rads, float rate_target_rads);
 
     // Run the yaw angular velocity PID controller and return the output
-    virtual float rate_target_to_motor_yaw(float rate_actual_rads, float rate_target_rads);
+    virtual float rate_target_to_motor_yaw(float rate_actual_rads, float rate_target_rads) { return 0;}
 
     // Return angle in radians to be added to roll angle. Used by heli to counteract
     // tail rotor thrust in hover. Overloaded by AC_Attitude_Heli to return angle.
