@@ -34,8 +34,8 @@ void setup()
 void loop()
 {
     // setup (unfortunately must be done here as we cannot create a global AC_PID object)
-    AC_PID pid(TEST_P, TEST_I, TEST_D, TEST_IMAX * 100, TEST_FILTER, TEST_DT);
-    AC_HELI_PID heli_pid(TEST_P, TEST_I, TEST_D, TEST_IMAX * 100, TEST_FILTER, TEST_DT, TEST_INITIAL_FF);
+    AC_PID pid(TEST_P, TEST_I, TEST_D, TEST_IMAX * 100, 0.0f, 0.0f, TEST_FILTER, TEST_DT);
+    AC_HELI_PID heli_pid(TEST_P, TEST_I, TEST_D, TEST_IMAX * 100, 0.0f, 0.0f, TEST_FILTER, TEST_DT, TEST_INITIAL_FF);
     uint16_t radio_in;
     uint16_t radio_trim;
     int16_t error;
