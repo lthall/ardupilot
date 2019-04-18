@@ -32,7 +32,7 @@ const AP_Param::GroupInfo AC_PID::var_info[] = {
     // @DisplayName: PID Input filter frequency in Hz
     // @Description: Input filter frequency in Hz
     // @Units: Hz
-    AP_GROUPINFO("DFLT", 6, AC_PID, _filt_D_hz, AC_PID_FILT_HZ_DEFAULT),
+    AP_GROUPINFO("FLTD", 6, AC_PID, _filt_D_hz, AC_PID_FILT_HZ_DEFAULT),
 
     // @Param: FF
     // @DisplayName: FF FeedForward Gain
@@ -43,13 +43,13 @@ const AP_Param::GroupInfo AC_PID::var_info[] = {
     // @DisplayName: PID Input filter frequency in Hz
     // @Description: Input filter frequency in Hz
     // @Units: Hz
-    AP_GROUPINFO("TFLT", 8, AC_PID, _filt_T_hz, AC_PID_FILT_HZ_DEFAULT),
+    AP_GROUPINFO("FLTT", 8, AC_PID, _filt_T_hz, AC_PID_FILT_HZ_DEFAULT),
 
     // @Param: FILT
     // @DisplayName: PID Input filter frequency in Hz
     // @Description: Input filter frequency in Hz
     // @Units: Hz
-    AP_GROUPINFO("EFLT", 9, AC_PID, _filt_E_hz, AC_PID_FILT_HZ_DEFAULT),
+    AP_GROUPINFO("FLTE", 9, AC_PID, _filt_E_hz, AC_PID_FILT_HZ_DEFAULT),
     
     AP_GROUPEND
 };
@@ -90,27 +90,18 @@ void AC_PID::set_dt(float dt)
 void AC_PID::filt_T_hz(float hz)
 {
     _filt_T_hz.set(fabsf(hz));
-
-    // sanity check _filt_hz
-    _filt_T_hz = MAX(_filt_T_hz, AC_PID_FILT_HZ_MIN);
 }
 
 // filt_hz - set input filter hz
 void AC_PID::filt_E_hz(float hz)
 {
     _filt_E_hz.set(fabsf(hz));
-
-    // sanity check _filt_hz
-    _filt_E_hz = MAX(_filt_E_hz, AC_PID_FILT_HZ_MIN);
 }
 
 // filt_hz - set input filter hz
 void AC_PID::filt_D_hz(float hz)
 {
     _filt_D_hz.set(fabsf(hz));
-
-    // sanity check _filt_hz
-    _filt_D_hz = MAX(_filt_D_hz, AC_PID_FILT_HZ_MIN);
 }
 
 //  update_all - set target and measured inputs to PID controller and calculate outputs
@@ -133,7 +124,7 @@ float AC_PID::update_all(float target, float measurement, bool limit)
     } else {
         float error_last = _error;
         _target += get_filt_T_alpha() * (target - _target);
-        _error += get_filt_E_alpha() * (_target - measurement);
+        _error += get_filt_E_alpha() * ((_target - measurement)-_error);
 
         // calculate and filter derivative
         if (_dt > 0.0f) {
@@ -145,7 +136,7 @@ float AC_PID::update_all(float target, float measurement, bool limit)
     // update filter and calculate derivative
     update_i(limit);
 
-    _pid_info.desired = 0.0f;
+    _pid_info.target = _target;
     _pid_info.P = (_error * _kp);
     _pid_info.I = _integrator;
     _pid_info.D = (_derivative * _kd);
@@ -185,7 +176,7 @@ float AC_PID::update_error(float error, bool limit)
     // update filter and calculate derivative
     update_i(limit);
 
-    _pid_info.desired = 0.0f;
+    _pid_info.target = 0.0f;
     _pid_info.P = (_error * _kp);
     _pid_info.I = _integrator;
     _pid_info.D = (_derivative * _kd);

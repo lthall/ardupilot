@@ -10,7 +10,6 @@
 #include <DataFlash/DataFlash.h>
 
 #define AC_PID_FILT_HZ_DEFAULT  20.0f   // default input filter frequency
-#define AC_PID_FILT_HZ_MIN      0.01f   // minimum input filter frequency
 
 /// @class	AC_PID
 /// @brief	Copter PID control class
