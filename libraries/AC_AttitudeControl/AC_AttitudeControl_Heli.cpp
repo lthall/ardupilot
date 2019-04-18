@@ -283,56 +283,27 @@ void AC_AttitudeControl_Heli::update_althold_lean_angle_max(float throttle_in)
 // rate_bf_to_motor_roll_pitch - ask the rate controller to calculate the motor outputs to achieve the target rate in radians/second
 void AC_AttitudeControl_Heli::rate_bf_to_motor_roll_pitch(const Vector3f &rate_rads, float rate_roll_target_rads, float rate_pitch_target_rads)
 {
-    float roll_pd, roll_i, roll_ff;             // used to capture pid values
-    float pitch_pd, pitch_i, pitch_ff;          // used to capture pid values
-    float rate_roll_error_rads, rate_pitch_error_rads;    // simply target_rate - current_rate
+    float roll_pid, roll_ff;             // used to capture pid values
+    float pitch_pid, pitch_ff;          // used to capture pid values
     float roll_out, pitch_out;
 
-    // calculate error
-    rate_roll_error_rads = rate_roll_target_rads - rate_rads.x;
-    rate_pitch_error_rads = rate_pitch_target_rads - rate_rads.y;
-
-    // pass error to PID controller
-    _pid_rate_roll.set_input_filter_all(rate_roll_error_rads);
-    _pid_rate_roll.set_desired_rate(rate_roll_target_rads);
-    _pid_rate_pitch.set_input_filter_all(rate_pitch_error_rads);
-    _pid_rate_pitch.set_desired_rate(rate_pitch_target_rads);
-
-    // call p and d controllers
-    roll_pd = _pid_rate_roll.get_p() + _pid_rate_roll.get_d();
-    pitch_pd = _pid_rate_pitch.get_p() + _pid_rate_pitch.get_d();
-
-    // get roll i term
-    roll_i = _pid_rate_roll.get_integrator();
-
-    // update i term as long as we haven't breached the limits or the I term will certainly reduce
-    if (!_flags_heli.limit_roll || ((roll_i>0&&rate_roll_error_rads<0)||(roll_i<0&&rate_roll_error_rads>0))){
-		if (_flags_heli.leaky_i){
-			roll_i = _pid_rate_roll.get_leaky_i(AC_ATTITUDE_HELI_RATE_INTEGRATOR_LEAK_RATE);
-		}else{
-			roll_i = _pid_rate_roll.get_i();
-		}
+    if (_flags_heli.leaky_i){
+        _pid_rate_roll.get_leaky_i(AC_ATTITUDE_HELI_RATE_INTEGRATOR_LEAK_RATE);
     }
+    roll_pid = _pid_rate_roll.update_all(rate_roll_target_rads, rate_rads.x, _flags_heli.limit_roll);
 
-    // get pitch i term
-    pitch_i = _pid_rate_pitch.get_integrator();
-
-    // update i term as long as we haven't breached the limits or the I term will certainly reduce
-    if (!_flags_heli.limit_pitch || ((pitch_i>0&&rate_pitch_error_rads<0)||(pitch_i<0&&rate_pitch_error_rads>0))){
-		if (_flags_heli.leaky_i) {
-			pitch_i = _pid_rate_pitch.get_leaky_i(AC_ATTITUDE_HELI_RATE_INTEGRATOR_LEAK_RATE);
-		}else{
-			pitch_i = _pid_rate_pitch.get_i();
-		}
+    if (_flags_heli.leaky_i){
+        _pid_rate_pitch.get_leaky_i(AC_ATTITUDE_HELI_RATE_INTEGRATOR_LEAK_RATE);
     }
+    pitch_pid = _pid_rate_pitch.update_all(rate_pitch_target_rads, rate_rads.y, _flags_heli.limit_pitch);
     
     // For legacy reasons, we convert to centi-degrees before inputting to the feedforward
     roll_ff = roll_feedforward_filter.apply(_pid_rate_roll.get_ff(rate_roll_target_rads), _dt);
     pitch_ff = pitch_feedforward_filter.apply(_pid_rate_pitch.get_ff(rate_pitch_target_rads), _dt);
 
     // add feed forward and final output
-    roll_out = roll_pd + roll_i + roll_ff;
-    pitch_out = pitch_pd + pitch_i + pitch_ff;
+    roll_out = roll_pid + roll_ff;
+    pitch_out = pitch_pid + pitch_ff;
 
     // constrain output and update limit flags
     if (fabsf(roll_out) > AC_ATTITUDE_RATE_RP_CONTROLLER_OUT_MAX) {
@@ -358,7 +329,10 @@ void AC_AttitudeControl_Heli::rate_bf_to_motor_roll_pitch(const Vector3f &rate_r
     // It does assume that the rotor aerodynamics and mechanics are essentially symmetrical about the main shaft, which is a generally valid assumption. 
     if (_piro_comp_enabled){
 
-        int32_t         piro_roll_i, piro_pitch_i;            // used to hold I-terms while doing piro comp
+        float   piro_roll_i, piro_pitch_i;            // used to hold I-terms while doing piro comp
+
+        float roll_i = _pid_rate_roll.get_integrator();
+        float pitch_i = _pid_rate_pitch.get_integrator();
 
         piro_roll_i  = roll_i;
         piro_pitch_i = pitch_i;
@@ -371,8 +345,8 @@ void AC_AttitudeControl_Heli::rate_bf_to_motor_roll_pitch(const Vector3f &rate_r
         roll_i      = piro_roll_i * yawratevector.x - piro_pitch_i * yawratevector.y;
         pitch_i     = piro_pitch_i * yawratevector.x + piro_roll_i * yawratevector.y;
 
-        _pid_rate_pitch.set_integrator(pitch_i);
         _pid_rate_roll.set_integrator(roll_i);
+        _pid_rate_pitch.set_integrator(pitch_i);
     }
 
 }
@@ -380,37 +354,16 @@ void AC_AttitudeControl_Heli::rate_bf_to_motor_roll_pitch(const Vector3f &rate_r
 // rate_bf_to_motor_yaw - ask the rate controller to calculate the motor outputs to achieve the target rate in radians/second
 float AC_AttitudeControl_Heli::rate_target_to_motor_yaw(float rate_yaw_actual_rads, float rate_target_rads)
 {
-    float pd,i,vff;     // used to capture pid values for logging
-    float rate_error_rads;       // simply target_rate - current_rate
+    float pid, vff;     // used to capture pid values for logging
     float yaw_out;
-
-    // calculate error and call pid controller
-    rate_error_rads  = rate_target_rads - rate_yaw_actual_rads;
-
-    // pass error to PID controller
-    _pid_rate_yaw.set_input_filter_all(rate_error_rads);
-    _pid_rate_yaw.set_desired_rate(rate_target_rads);
-
-    // get p and d
-    pd = _pid_rate_yaw.get_p() + _pid_rate_yaw.get_d();
-
-    // get i term
-    i = _pid_rate_yaw.get_integrator();
-
-    // update i term as long as we haven't breached the limits or the I term will certainly reduce
-    if (!_flags_heli.limit_yaw || ((i>0&&rate_error_rads<0)||(i<0&&rate_error_rads>0))) {
-        if (((AP_MotorsHeli&)_motors).rotor_runup_complete()) {
-            i = _pid_rate_yaw.get_i();
-        } else {
-            i = ((AC_HELI_PID&)_pid_rate_yaw).get_leaky_i(AC_ATTITUDE_HELI_RATE_INTEGRATOR_LEAK_RATE);    // If motor is not running use leaky I-term to avoid excessive build-up
-        }
-    }
     
+    pid = _pid_rate_yaw.update_all(rate_target_rads, rate_yaw_actual_rads, _flags_heli.limit_yaw);
+
     // For legacy reasons, we convert to centi-degrees before inputting to the feedforward
     vff = yaw_velocity_feedforward_filter.apply(_pid_rate_yaw.get_ff(rate_target_rads), _dt);
     
     // add feed forward
-    yaw_out = pd + i + vff;
+    yaw_out = pid + vff;
 
     // constrain output and update limit flag
     if (fabsf(yaw_out) > AC_ATTITUDE_RATE_YAW_CONTROLLER_OUT_MAX) {
