@@ -87,6 +87,10 @@ void AP_MotorsMatrix::output_to_motors()
                     }
                 }
             }
+            rc_write_angle(AP_MOTORS_MOT_9, _yaw_radio_passthrough * 4500);
+            rc_write_angle(AP_MOTORS_MOT_10, _yaw_radio_passthrough * 4500);
+            rc_write_angle(AP_MOTORS_MOT_11, _yaw_radio_passthrough * 4500);
+            rc_write_angle(AP_MOTORS_MOT_12, _yaw_radio_passthrough * 4500);
             break;
         }
         case SPIN_WHEN_ARMED:
@@ -106,6 +110,10 @@ void AP_MotorsMatrix::output_to_motors()
                     motor_out[i] = calc_thrust_to_pwm(_thrust_rpyt_out[i]);
                 }
             }
+            rc_write_angle(AP_MOTORS_MOT_9, constrain_float(_wing_yaw, -1.0f, 1.0f) * 4500);
+            rc_write_angle(AP_MOTORS_MOT_10, constrain_float(_wing_yaw, -1.0f, 1.0f) * 4500);
+            rc_write_angle(AP_MOTORS_MOT_11, constrain_float(_wing_yaw, -1.0f, 1.0f) * 4500);
+            rc_write_angle(AP_MOTORS_MOT_12, constrain_float(_wing_yaw, -1.0f, 1.0f) * 4500);
             break;
     }
 
@@ -161,6 +169,9 @@ void AP_MotorsMatrix::output_armed_stabilizing()
     yaw_thrust = _yaw_in * compensation_gain;
     throttle_thrust = get_throttle() * compensation_gain;
     throttle_avg_max = _throttle_avg_max * compensation_gain;
+
+    float wing_scale = constrain_float(get_throttle() / _throttle_hover, 1.0f, 4.0f);
+    _wing_yaw = _yaw_in_ff / safe_sqrt(wing_scale) + _yaw_in / wing_scale;
 
     // sanity check throttle is above zero and below current limited throttle
     if (throttle_thrust <= 0.0f) {
@@ -445,6 +456,15 @@ void AP_MotorsMatrix::setup_motors(motor_frame_class frame_class, motor_frame_ty
                 default:
                     // quad frame class does not support this frame type
                     break;
+            }
+
+            // make sure 6 output channels are mapped
+            for (uint8_t i=8; i<12; i++) {
+                add_motor_num(CH_1+i);
+            }
+            // setup actuator scaling
+            for (uint8_t i=8; i<12; i++) {
+                SRV_Channels::set_angle(SRV_Channels::get_motor_function(i), 4500);
             }
             break;  // quad
 
