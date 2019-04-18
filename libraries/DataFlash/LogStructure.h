@@ -664,12 +664,12 @@ struct PACKED log_Attitude {
 struct PACKED log_PID {
     LOG_PACKET_HEADER;
     uint64_t time_us;
-    float   desired;
+    float   target;
+    float   error;
     float   P;
     float   I;
     float   D;
     float   FF;
-    float   AFF;
 };
 
 struct PACKED log_Current {
