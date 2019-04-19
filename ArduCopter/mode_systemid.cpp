@@ -39,7 +39,7 @@ const AP_Param::GroupInfo Copter::ModeSystemId::var_info[] = {
     // @DisplayName: Fade in time
     // @Description: Time to reach maximum amplitude of sweep
     // @Range: 0 20
-    // @Units: seconds
+    // @Units: s
     // @User: Standard
     AP_GROUPINFO("_T_FADE_IN", 5, Copter::ModeSystemId, tFadeIn, 15),
 
@@ -47,7 +47,7 @@ const AP_Param::GroupInfo Copter::ModeSystemId::var_info[] = {
     // @DisplayName: Total Sweep length
     // @Description: Time taken to complete the sweep
     // @Range: 0 255
-    // @Units: seconds
+    // @Units: s
     // @User: Standard
     AP_GROUPINFO("_T_REC", 6, Copter::ModeSystemId, tRec, 70),
 
@@ -55,7 +55,7 @@ const AP_Param::GroupInfo Copter::ModeSystemId::var_info[] = {
     // @DisplayName: Fade out time
     // @Description: Time to reach zero amplitude at the end of the sweep
     // @Range: 0 5
-    // @Units: seconds
+    // @Units: s
     // @User: Standard
     AP_GROUPINFO("_T_FADE_OUT", 7, Copter::ModeSystemId, tFadeOut, 2),
 
