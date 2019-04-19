@@ -201,7 +201,7 @@ void Copter::send_pid_tuning(mavlink_channel_t chan)
     if (g.gcs_pid_mask & 1) {
         const DataFlash_Class::PID_Info &pid_info = attitude_control->get_rate_roll_pid().get_pid_info();
         mavlink_msg_pid_tuning_send(chan, PID_TUNING_ROLL,
-                                    pid_info.desired*0.01f,
+                                    pid_info.target*0.01f,
                                     degrees(gyro.x),
                                     pid_info.FF*0.01f,
                                     pid_info.P*0.01f,
@@ -214,7 +214,7 @@ void Copter::send_pid_tuning(mavlink_channel_t chan)
     if (g.gcs_pid_mask & 2) {
         const DataFlash_Class::PID_Info &pid_info = attitude_control->get_rate_pitch_pid().get_pid_info();
         mavlink_msg_pid_tuning_send(chan, PID_TUNING_PITCH,
-                                    pid_info.desired*0.01f,
+                                    pid_info.target*0.01f,
                                     degrees(gyro.y),
                                     pid_info.FF*0.01f,
                                     pid_info.P*0.01f,
@@ -227,7 +227,7 @@ void Copter::send_pid_tuning(mavlink_channel_t chan)
     if (g.gcs_pid_mask & 4) {
         const DataFlash_Class::PID_Info &pid_info = attitude_control->get_rate_yaw_pid().get_pid_info();
         mavlink_msg_pid_tuning_send(chan, PID_TUNING_YAW,
-                                    pid_info.desired*0.01f,
+                                    pid_info.target*0.01f,
                                     degrees(gyro.z),
                                     pid_info.FF*0.01f,
                                     pid_info.P*0.01f,
@@ -240,7 +240,7 @@ void Copter::send_pid_tuning(mavlink_channel_t chan)
     if (g.gcs_pid_mask & 8) {
         const DataFlash_Class::PID_Info &pid_info = copter.pos_control->get_accel_z_pid().get_pid_info();
         mavlink_msg_pid_tuning_send(chan, PID_TUNING_ACCZ,
-                                    pid_info.desired*0.01f,
+                                    pid_info.target*0.01f,
                                     -(ahrs.get_accel_ef_blended().z + GRAVITY_MSS),
                                     pid_info.FF*0.01f,
                                     pid_info.P*0.01f,

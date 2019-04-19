@@ -335,7 +335,7 @@ void Plane::send_pid_info(const mavlink_channel_t chan, const DataFlash_Class::P
         return;
     }
      mavlink_msg_pid_tuning_send(chan, axis,
-                                 pid_info->desired,
+                                 pid_info->target,
                                  achieved,
                                  pid_info->FF,
                                  pid_info->P,
