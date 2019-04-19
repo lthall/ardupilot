@@ -185,7 +185,7 @@ void Rover::send_pid_tuning(mavlink_channel_t chan)
     if (g.gcs_pid_mask & 1) {
         pid_info = &g2.attitude_control.get_steering_rate_pid().get_pid_info();
         mavlink_msg_pid_tuning_send(chan, PID_TUNING_STEER,
-                                    degrees(pid_info->desired),
+                                    degrees(pid_info->target),
                                     degrees(ahrs.get_yaw_rate_earth()),
                                     pid_info->FF,
                                     pid_info->P,
@@ -201,7 +201,7 @@ void Rover::send_pid_tuning(mavlink_channel_t chan)
         float speed = 0.0f;
         g2.attitude_control.get_forward_speed(speed);
         mavlink_msg_pid_tuning_send(chan, PID_TUNING_ACCZ,
-                                    pid_info->desired,
+                                    pid_info->target,
                                     speed,
                                     0,
                                     pid_info->P,
@@ -216,7 +216,7 @@ void Rover::send_pid_tuning(mavlink_channel_t chan)
     if (g.gcs_pid_mask & 4) {
         pid_info = &g2.attitude_control.get_pitch_to_throttle_pid().get_pid_info();
         mavlink_msg_pid_tuning_send(chan, PID_TUNING_PITCH,
-                                    pid_info->desired,
+                                    pid_info->target,
                                     ahrs.pitch,
                                     0,
                                     pid_info->P,
