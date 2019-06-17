@@ -1784,6 +1784,14 @@ void AP_InertialSensor::update_harmonic_notch_freq_hz(float scaled_freq) {
     }
 }
 
+// Update the harmonic notch frequency
+void AP_InertialSensor::update_harmonic_notch_freq_hz(float scaled_freq) {
+    // When disarmed, throttle is zero
+    if (is_positive(scaled_freq)) {
+        _calculated_harmonic_notch_freq_hz = scaled_freq;
+    }
+}
+
 /*
     set and save accelerometer bias along with trim calculation
 */
