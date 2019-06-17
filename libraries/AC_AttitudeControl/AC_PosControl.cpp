@@ -608,6 +608,11 @@ void AC_PosControl::run_z_controller()
 
     // send throttle to attitude controller with angle boost
     _attitude_control.set_throttle_out(thr_out, true, POSCONTROL_THROTTLE_CUTOFF_FREQ);
+
+    float error_ratio = _vel_error.z/_speed_down_cms;
+
+    _vel_z_control_ratio += _dt*0.1f*(0.5-error_ratio);
+    _vel_z_control_ratio = constrain_float(_vel_z_control_ratio, 0.0f, 2.0f);
 }
 
 ///
