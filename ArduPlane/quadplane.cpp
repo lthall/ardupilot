@@ -1290,7 +1290,7 @@ void QuadPlane::update_transition(void)
         plane.rollController.reset_I();
 
         // give full authority to attitude control
-        attitude_control->set_throttle_mix_max();
+        attitude_control->set_throttle_mix_max(1.0f);
         break;
     }
         
@@ -1402,7 +1402,7 @@ void QuadPlane::update(void)
         assisted_flight = false;
         
         // give full authority to attitude control
-        attitude_control->set_throttle_mix_max();
+        attitude_control->set_throttle_mix_max(1.0f);
 
         // run low level rate controllers
         run_rate_controller();
