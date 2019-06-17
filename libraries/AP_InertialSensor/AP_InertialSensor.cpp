@@ -453,6 +453,10 @@ const AP_Param::GroupInfo AP_InertialSensor::var_info[] = {
     // @Bitmask: 0:FirstIMU,1:SecondIMU,2:ThirdIMU
     AP_GROUPINFO("ENABLE_MASK",  40, AP_InertialSensor, _enable_mask, 0x7F),
 
+    // @Group: DNTCH_
+    // @Path: ../Filter/DynamicNotchFilter.cpp
+    AP_SUBGROUPINFO(_dynamic_notch_filter, "DNTCH_",  41, AP_InertialSensor, DynamicNotchFilterParams),
+
     /*
       NOTE: parameter indexes have gaps above. When adding new
       parameters check for conflicts carefully
@@ -471,9 +475,14 @@ AP_InertialSensor::AP_InertialSensor() :
     }
     _singleton = this;
     AP_Param::setup_object_defaults(this, var_info);
+
+    // This is not user configurable, but start with a reasonable default.
+    _dynamic_notch_filter.set_center_freq_hz(_notch_filter.center_freq_hz());
+
     for (uint8_t i=0; i<INS_MAX_INSTANCES; i++) {
         _gyro_cal_ok[i] = true;
         _accel_max_abs_offsets[i] = 3.5f;
+        _gyro_dynamic_notch_filter[i].create(_dynamic_notch_filter.harmonics());
     }
     for (uint8_t i=0; i<INS_VIBRATION_CHECK_INSTANCES; i++) {
         _accel_vibe_floor_filter[i].set_cutoff_frequency(AP_INERTIAL_SENSOR_ACCEL_VIBE_FLOOR_FILT_HZ);

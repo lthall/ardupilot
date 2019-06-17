@@ -24,7 +24,7 @@
 #include <AP_Math/AP_Math.h>
 #include <Filter/LowPassFilter2p.h>
 #include <Filter/LowPassFilter.h>
-#include <Filter/NotchFilter.h>
+#include <Filter/DynamicNotchFilter.h>
 
 class AP_InertialSensor_Backend;
 class AuxiliaryBus;
@@ -410,6 +410,10 @@ private:
     // optional notch filter on gyro
     NotchFilterParams _notch_filter;
     NotchFilterVector3f _gyro_notch_filter[INS_MAX_INSTANCES];
+
+    // optional dynamic notch filter on gyro
+    DynamicNotchFilterParams _dynamic_notch_filter;
+    DynamicNotchFilterVector3f _gyro_dynamic_notch_filter[INS_MAX_INSTANCES];
 
     // Most recent gyro reading
     Vector3f _gyro[INS_MAX_INSTANCES];
