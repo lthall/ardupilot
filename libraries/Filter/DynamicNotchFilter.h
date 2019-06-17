@@ -24,42 +24,45 @@
 #include <cmath>
 #include <inttypes.h>
 #include <AP_Param/AP_Param.h>
+#include "NotchFilter.h"
 
 
 template <class T>
-class NotchFilter {
+class DynamicNotchFilter {
 public:
     // set parameters
+    void create(uint8_t harmonics);
     void init(float sample_freq_hz, float center_freq_hz, float bandwidth_hz, float attenuation_dB);
     T apply(const T &sample);
     void reset();
+    void update(float center_freq_hz);
 
 private:
-    bool initialised;
-    float b0, b1, b2, a1, a2, a0_inv;
-    T ntchsig, ntchsig1, ntchsig2, signal2, signal1;
+    NotchFilter<T>*  filters;
+    float sample_freq_hz;
+    float bandwidth_hz;
+    float attenuation_dB;
+    uint8_t harmonics;
 };
 
 /*
   notch filter enable and filter parameters
  */
-class NotchFilterParams {
+class DynamicNotchFilterParams : public NotchFilterParams {
 public:
-    NotchFilterParams(void);
+    DynamicNotchFilterParams(void);
+    void set_center_freq_hz(uint16_t center_freq_hz) { _center_freq_hz.set(center_freq_hz); }
+    uint8_t harmonics(void) const { return _harmonics; }
+    uint16_t min_freq_hz(void) const { return _min_freq_hz; }
+    uint16_t max_freq_hz(void) const { return _max_freq_hz; }
     static const struct AP_Param::GroupInfo var_info[];
 
-    uint16_t center_freq_hz(void) const { return _center_freq_hz; }
-    uint16_t bandwidth_hz(void) const { return _bandwidth_hz; }
-    float attenuation_dB(void) const { return _attenuation_dB; }
-    uint8_t enabled(void) const { return _enable; }
-    
-protected:
-    AP_Int8 _enable;
-    AP_Int16 _center_freq_hz;
-    AP_Int16 _bandwidth_hz;
-    AP_Float _attenuation_dB;
+private:
+    AP_Int8 _harmonics;
+    AP_Int16 _min_freq_hz;
+    AP_Int16 _max_freq_hz;
 };
 
-typedef NotchFilter<float> NotchFilterFloat;
-typedef NotchFilter<Vector3f> NotchFilterVector3f;
+typedef DynamicNotchFilter<float> DynamicNotchFilterFloat;
+typedef DynamicNotchFilter<Vector3f> DynamicNotchFilterVector3f;
 
