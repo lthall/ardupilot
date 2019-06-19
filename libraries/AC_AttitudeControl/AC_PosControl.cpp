@@ -595,7 +595,7 @@ void AC_PosControl::run_z_controller()
 
     // reset target altitude if this controller has just been engaged
     if (_flags.reset_accel_to_throttle) {
-        _pid_accel_z.set_integrator(_attitude_control.get_throttle_in()*1000.0f);
+        _pid_accel_z.set_integrator((_attitude_control.get_throttle_in() - _motors.get_throttle_hover())*1000.0f);
         _flags.reset_accel_to_throttle = false;
     }
 
