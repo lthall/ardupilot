@@ -82,14 +82,14 @@ const AP_Param::GroupInfo DynamicNotchFilterParams::var_info[] = {
 
     // @Param: ENABLE
     // @DisplayName: Enable
-    // @Description: Enable notch filter
+    // @Description: Enable dynamic notch filter
     // @Values: 0:Disabled,1:Enabled
     // @User: Advanced
     AP_GROUPINFO_FLAGS("ENABLE", 1, DynamicNotchFilterParams, _enable, 0, AP_PARAM_FLAG_ENABLE),
 
     // @Param: BW
     // @DisplayName: Bandwidth
-    // @Description: Notch bandwidth in Hz
+    // @Description: Dynamic notch bandwidth in Hz
     // @Range: 5 100
     // @Units: Hz
     // @User: Advanced
@@ -97,7 +97,7 @@ const AP_Param::GroupInfo DynamicNotchFilterParams::var_info[] = {
 
     // @Param: ATT
     // @DisplayName: Attenuation
-    // @Description: Notch attenuation in dB
+    // @Description: Dynamic notch attenuation in dB
     // @Range: 5 30
     // @Units: dB
     // @User: Advanced
@@ -112,7 +112,7 @@ const AP_Param::GroupInfo DynamicNotchFilterParams::var_info[] = {
 
     // @Param: MINHZ
     // @DisplayName: Minimum Frequency
-    // @Description: Notch minimum`center frequency in Hz
+    // @Description: Dynamic notch minimum center frequency in Hz
     // @Range: 10 400
     // @Units: Hz
     // @User: Advanced
@@ -120,7 +120,7 @@ const AP_Param::GroupInfo DynamicNotchFilterParams::var_info[] = {
 
     // @Param: MAXHZ
     // @DisplayName: Maximum Frequency
-    // @Description: Notch maximum`center frequency in Hz
+    // @Description: Dynamic notch maximum center frequency in Hz
     // @Range: 200 800
     // @Units: Hz
     // @User: Advanced

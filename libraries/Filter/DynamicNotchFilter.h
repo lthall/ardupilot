@@ -14,12 +14,6 @@
  */
 #pragma once
 
-/*
-  notch filter with settable sample rate, center frequency, bandwidth and attenuation
-
-  Design by Leonard Hall
- */
-
 #include <AP_Math/AP_Math.h>
 #include <cmath>
 #include <inttypes.h>
