@@ -723,8 +723,9 @@ struct PACKED log_Attitude {
 struct PACKED log_PID {
     LOG_PACKET_HEADER;
     uint64_t time_us;
-    float   desired;
+    float   target;
     float   actual;
+    float   error;
     float   P;
     float   I;
     float   D;
@@ -1223,10 +1224,10 @@ struct PACKED log_Arm_Disarm {
 #define MAG_UNITS "sGGGGGGGGG-s"
 #define MAG_MULTS "FCCCCCCCCC-F"
 
-#define PID_LABELS "TimeUS,Des,Act,P,I,D,FF"
-#define PID_FMT    "Qffffff"
-#define PID_UNITS  "s------"
-#define PID_MULTS  "F------"
+#define PID_LABELS "TimeUS,Des,Act,Err,P,I,D,FF"
+#define PID_FMT    "Qfffffff"
+#define PID_UNITS  "s-------"
+#define PID_MULTS  "F-------"
 
 #define QUAT_LABELS "TimeUS,Q1,Q2,Q3,Q4"
 #define QUAT_FMT    "Qffff"

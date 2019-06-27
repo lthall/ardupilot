@@ -779,8 +779,9 @@ void AP_Logger::Write_PID(uint8_t msg_type, const PID_Info &info)
     struct log_PID pkt = {
         LOG_PACKET_HEADER_INIT(msg_type),
         time_us         : AP_HAL::micros64(),
-        desired         : info.desired,
+        target          : info.target,
         actual          : info.actual,
+        error           : info.error,
         P               : info.P,
         I               : info.I,
         D               : info.D,
