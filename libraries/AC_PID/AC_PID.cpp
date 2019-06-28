@@ -5,61 +5,60 @@
 #include "AC_PID.h"
 
 const AP_Param::GroupInfo AC_PID::var_info[] = {
-    // @Param: P
-    // @DisplayName: PID Proportional Gain
-    // @Description: P Gain which produces an output value that is proportional to the current error value
-    AP_GROUPINFO("P", 0, AC_PID, _kp, 0),
+// @Param: P
+// @DisplayName: PID Proportional Gain
+// @Description: P Gain which produces an output value that is proportional to the current error value
+AP_GROUPINFO("P", 0, AC_PID, _kp, 0),
 
-    // @Param: I
-    // @DisplayName: PID Integral Gain
-    // @Description: I Gain which produces an output that is proportional to both the magnitude and the duration of the error
-    AP_GROUPINFO("I", 1, AC_PID, _ki, 0),
+// @Param: I
+// @DisplayName: PID Integral Gain
+// @Description: I Gain which produces an output that is proportional to both the magnitude and the duration of the error
+AP_GROUPINFO("I", 1, AC_PID, _ki, 0),
 
-    // @Param: D
-    // @DisplayName: PID Derivative Gain
-    // @Description: D Gain which produces an output that is proportional to the rate of change of the error
-    AP_GROUPINFO("D", 2, AC_PID, _kd, 0),
+// @Param: D
+// @DisplayName: PID Derivative Gain
+// @Description: D Gain which produces an output that is proportional to the rate of change of the error
+AP_GROUPINFO("D", 2, AC_PID, _kd, 0),
 
-    // 3 was for uint16 IMAX
-    // 4 is used by TradHeli for FF
+// 3 was for uint16 IMAX
+// 4 is used by TradHeli for FF
 
-    // @Param: IMAX
-    // @DisplayName: PID Integral Maximum
-    // @Description: The maximum/minimum value that the I term can output
-    AP_GROUPINFO("IMAX", 5, AC_PID, _kimax, 0),
+// @Param: IMAX
+// @DisplayName: PID Integral Maximum
+// @Description: The maximum/minimum value that the I term can output
+AP_GROUPINFO("IMAX", 5, AC_PID, _kimax, 0),
 
-    // @Param: FLTD
-    // @DisplayName: PID D term filter frequency in Hz
-    // @Description: Input filter frequency in Hz
-    // @Units: Hz
-    AP_GROUPINFO("FLTD", 6, AC_PID, _filt_D_hz, AC_PID_DFILT_HZ_DEFAULT),
+// @Param: FLTD
+// @DisplayName: PID D term filter frequency in Hz
+// @Description: Input filter frequency in Hz
+// @Units: Hz
+AP_GROUPINFO("FLTD", 6, AC_PID, _filt_D_hz, AC_PID_DFILT_HZ_DEFAULT),
 
-    // @Param: FF
-    // @DisplayName: FF FeedForward Gain
-    // @Description: FF Gain which produces an output value that is proportional to the demanded input
-    AP_GROUPINFO("FF", 7, AC_PID, _kff, 0),
+// @Param: FF
+// @DisplayName: FF FeedForward Gain
+// @Description: FF Gain which produces an output value that is proportional to the demanded input
+AP_GROUPINFO("FF", 7, AC_PID, _kff, 0),
 
-    // @Param: FILT
-    // @DisplayName: PID Target filter frequency in Hz
-    // @Description: Target filter frequency in Hz
-    // @Units: Hz
-    AP_GROUPINFO("FLTT", 8, AC_PID, _filt_T_hz, AC_PID_TFILT_HZ_DEFAULT),
+// @Param: FILT
+// @DisplayName: PID Target filter frequency in Hz
+// @Description: Target filter frequency in Hz
+// @Units: Hz
+AP_GROUPINFO("FLTT", 8, AC_PID, _filt_T_hz, AC_PID_TFILT_HZ_DEFAULT),
 
-    // @Param: FLTE
-    // @DisplayName: PID Error filter frequency in Hz
-    // @Description: Error filter frequency in Hz
-    // @Units: Hz
-    AP_GROUPINFO("FLTE", 9, AC_PID, _filt_E_hz, AC_PID_EFILT_HZ_DEFAULT),
-    
-    AP_GROUPEND
-};
+// @Param: FLTE
+// @DisplayName: PID Error filter frequency in Hz
+// @Description: Error filter frequency in Hz
+// @Units: Hz
+AP_GROUPINFO("FLTE", 9, AC_PID, _filt_E_hz, AC_PID_EFILT_HZ_DEFAULT),
+
+AP_GROUPEND };
 
 // Constructor
 AC_PID::AC_PID(float initial_p, float initial_i, float initial_d, float initial_ff, float initial_imax, float initial_filt_T_hz, float initial_filt_E_hz, float initial_filt_D_hz, float dt) :
-    _dt(dt),
-    _integrator(0.0f),
-    _error(0.0f),
-    _derivative(0.0f)
+                _dt(dt),
+                _integrator(0.0f),
+                _error(0.0f),
+                _derivative(0.0f)
 {
     // load parameter values from eeprom
     AP_Param::setup_object_defaults(this, var_info);
@@ -124,7 +123,7 @@ float AC_PID::update_all(float target, float measurement, bool limit)
     } else {
         float error_last = _error;
         _target += get_filt_T_alpha() * (target - _target);
-        _error += get_filt_E_alpha() * ((_target - measurement)-_error);
+        _error += get_filt_E_alpha() * ((_target - measurement) - _error);
 
         // calculate and filter derivative
         if (_dt > 0.0f) {
@@ -192,10 +191,10 @@ float AC_PID::update_error(float error, bool limit)
 //  If the limit flag is set the integral is only allowed to shrink
 void AC_PID::update_i(bool limit)
 {
-    if(!is_zero(_ki) && is_positive(_dt)) {
+    if (!is_zero(_ki) && is_positive(_dt)) {
         // Ensure that integrator can only be reduced if the output is saturated
         if (!limit || ((is_positive(_integrator) && is_negative(_error)) || (is_negative(_integrator) && is_positive(_error)))) {
-            _integrator += ((float)_error * _ki) * _dt;
+            _integrator += ((float) _error * _ki) * _dt;
             _integrator = constrain_float(_integrator, -_kimax, _kimax);
         }
     } else {
@@ -264,7 +263,7 @@ void AC_PID::save_gains()
 }
 
 /// Overload the function call operator to permit easy initialisation
-void AC_PID::operator() (float p_val, float i_val, float d_val, float ff_val, float imax_val, float input_filt_T_hz, float input_filt_E_hz, float input_filt_D_hz, float dt)
+void AC_PID::operator()(float p_val, float i_val, float d_val, float ff_val, float imax_val, float input_filt_T_hz, float input_filt_E_hz, float input_filt_D_hz, float dt)
 {
     _kp = p_val;
     _ki = i_val;
@@ -303,7 +302,7 @@ float AC_PID::get_filt_alpha(float filt_hz) const
     }
 
     // calculate alpha
-    float rc = 1/(M_2PI*filt_hz);
+    float rc = 1 / (M_2PI * filt_hz);
     return _dt / (_dt + rc);
 }
 
