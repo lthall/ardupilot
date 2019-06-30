@@ -101,8 +101,8 @@ void AP_MotorsTailsitter::output_to_motors()
     }
 
     // Always output to tilt servos
-    SRV_Channels::set_output_scaled(SRV_Channel::k_tiltMotorLeft, _tilt_left*SERVO_OUTPUT_RANGE);
-    SRV_Channels::set_output_scaled(SRV_Channel::k_tiltMotorRight, _tilt_right*SERVO_OUTPUT_RANGE);
+    SRV_Channels::set_output_scaled(SRV_Channel::k_tiltMotorLeft, _tilt_left * SERVO_OUTPUT_RANGE);
+    SRV_Channels::set_output_scaled(SRV_Channel::k_tiltMotorRight, _tilt_right * SERVO_OUTPUT_RANGE);
 
 }
 
@@ -153,11 +153,11 @@ void AP_MotorsTailsitter::output_armed_stabilizing()
     }
 
     // calculate left and right throttle outputs
-    _thrust_left  = throttle_thrust + roll_thrust*0.5f;
-    _thrust_right = throttle_thrust - roll_thrust*0.5f;
+    _thrust_left = throttle_thrust + roll_thrust * 0.5f;
+    _thrust_right = throttle_thrust - roll_thrust * 0.5f;
 
     // if max thrust is more than one reduce average throttle
-    thrust_max = MAX(_thrust_right,_thrust_left);
+    thrust_max = MAX(_thrust_right, _thrust_left);
     if (thrust_max > 1.0f) {
         thr_adj = 1.0f - thrust_max;
         limit.throttle_upper = true;
@@ -165,12 +165,12 @@ void AP_MotorsTailsitter::output_armed_stabilizing()
     }
 
     // Add adjustment to reduce average throttle
-    _thrust_left  = constrain_float(_thrust_left  + thr_adj, 0.0f, 1.0f);
+    _thrust_left = constrain_float(_thrust_left + thr_adj, 0.0f, 1.0f);
     _thrust_right = constrain_float(_thrust_right + thr_adj, 0.0f, 1.0f);
     _throttle = throttle_thrust + thr_adj;
 
     // thrust vectoring
-    _tilt_left  = pitch_thrust - yaw_thrust;
+    _tilt_left = pitch_thrust - yaw_thrust;
     _tilt_right = pitch_thrust + yaw_thrust;
 }
 
