@@ -135,13 +135,16 @@ float AC_PID::update_all(float target, float measurement, bool limit)
     // update filter and calculate derivative
     update_i(limit);
 
+    float P_out = (_error * _kp);
+    float D_out = (_derivative * _kd);
+
     _pid_info.target = _target;
     _pid_info.actual = measurement;
     _pid_info.error = _error;
-    _pid_info.P = (_error * _kp);
-    _pid_info.D = (_derivative * _kd);
+    _pid_info.P = P_out;
+    _pid_info.D = D_out;
 
-    return (_error * _kp) + _integrator + (_derivative * _kd);
+    return P_out + _integrator + D_out;
 }
 
 //  update_error - set error input to PID controller and calculate outputs
@@ -178,13 +181,16 @@ float AC_PID::update_error(float error, bool limit)
     // update filter and calculate derivative
     update_i(limit);
 
+    float P_out = (_error * _kp);
+    float D_out = (_derivative * _kd);
+
     _pid_info.target = 0.0f;
     _pid_info.actual = 0.0f;
     _pid_info.error = _error;
-    _pid_info.P = (_error * _kp);
-    _pid_info.D = (_derivative * _kd);
+    _pid_info.P = P_out;
+    _pid_info.D = D_out;
 
-    return (_error * _kp) + _integrator + (_derivative * _kd);
+    return P_out + _integrator + D_out;
 }
 
 //  update_i - update the integral
@@ -227,8 +233,9 @@ float AC_PID::get_ff()
 // todo: remove function when it is no longer used.
 float AC_PID::get_ff(float target)
 {
-    _pid_info.FF = target * _kff;
-    return target * _kff;
+    float FF_out = (target * _kff);
+    _pid_info.FF = FF_out;
+    return FF_out;
 }
 
 void AC_PID::reset_I()
