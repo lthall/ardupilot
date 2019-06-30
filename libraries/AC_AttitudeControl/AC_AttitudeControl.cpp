@@ -349,9 +349,9 @@ void AC_AttitudeControl::input_euler_angle_roll_pitch_yaw(float euler_roll_angle
 void AC_AttitudeControl::input_euler_rate_yaw_euler_angle_pitch_bf_roll_m(float euler_yaw_rate_cds, float euler_pitch_cd, float body_roll_cd)
 {
     // Convert from centidegrees on public interface to radians
-    float euler_yaw_rate = radians(euler_yaw_rate_cds*0.01f);
+    float euler_yaw_rate = radians(euler_yaw_rate_cds * 0.01f);
     float euler_pitch = radians(constrain_float(euler_pitch_cd * 0.01f, -90.0f, 90.0f));
-    float body_roll   = radians(constrain_float(body_roll_cd   * 0.01f, -90.0f, 90.0f));
+    float body_roll = radians(constrain_float(body_roll_cd * 0.01f, -90.0f, 90.0f));
 
     // Compute attitude error
     Quaternion attitude_vehicle_quat;
@@ -407,9 +407,9 @@ void AC_AttitudeControl::input_euler_rate_yaw_euler_angle_pitch_bf_roll_m(float 
 void AC_AttitudeControl::input_euler_rate_yaw_euler_angle_pitch_bf_roll_p(float euler_yaw_rate_cds, float euler_pitch_cd, float body_roll_cd)
 {
     // Convert from centidegrees on public interface to radians
-    float euler_yaw_rate = radians(euler_yaw_rate_cds*0.01f);
+    float euler_yaw_rate = radians(euler_yaw_rate_cds * 0.01f);
     float euler_pitch = radians(constrain_float(euler_pitch_cd * 0.01f, -90.0f, 90.0f));
-    float body_roll   = radians(constrain_float(body_roll_cd   * 0.01f, -90.0f, 90.0f));
+    float body_roll = radians(constrain_float(body_roll_cd * 0.01f, -90.0f, 90.0f));
 
     const float cpitch = cosf(euler_pitch);
     const float spitch = fabsf(sinf(euler_pitch));
@@ -584,7 +584,7 @@ void AC_AttitudeControl::input_rate_bf_roll_pitch_yaw_3(float roll_rate_bf_cds, 
     }
 
     Vector3f gyro_latest = _ahrs.get_gyro_latest();
-    attitude_ang_error_update_quat.from_axis_angle(Vector3f((_attitude_target_ang_vel.x-gyro_latest.x) * _dt, (_attitude_target_ang_vel.y-gyro_latest.y) * _dt, (_attitude_target_ang_vel.z-gyro_latest.z) * _dt));
+    attitude_ang_error_update_quat.from_axis_angle(Vector3f((_attitude_target_ang_vel.x - gyro_latest.x) * _dt, (_attitude_target_ang_vel.y - gyro_latest.y) * _dt, (_attitude_target_ang_vel.z - gyro_latest.z) * _dt));
     _attitude_ang_error = attitude_ang_error_update_quat * _attitude_ang_error;
 
     // Compute acceleration-limited body frame rates

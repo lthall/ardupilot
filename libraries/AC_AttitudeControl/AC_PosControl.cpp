@@ -582,7 +582,6 @@ void AC_PosControl::run_z_controller()
 
     _accel_target.z += _accel_desired.z;
 
-
     // the following section calculates a desired throttle needed to achieve the acceleration target
     float z_accel_meas;         // actual acceleration
 
@@ -591,7 +590,7 @@ void AC_PosControl::run_z_controller()
 
     // reset target altitude if this controller has just been engaged
     if (_flags.reset_accel_to_throttle) {
-        _pid_accel_z.set_integrator((_attitude_control.get_throttle_in()-_motors.get_throttle_hover())*1000.0f);
+        _pid_accel_z.set_integrator((_attitude_control.get_throttle_in() - _motors.get_throttle_hover()) * 1000.0f);
         _flags.reset_accel_to_throttle = false;
     }
 
@@ -600,7 +599,7 @@ void AC_PosControl::run_z_controller()
         _pid_accel_z.imax(_motors.get_throttle_hover() * 1000.0f);
     }
 
-    float thr_out = _pid_accel_z.update_all(_accel_target.z, z_accel_meas, (_motors.limit.throttle_lower || _motors.limit.throttle_upper)) * 0.001f +_motors.get_throttle_hover();
+    float thr_out = _pid_accel_z.update_all(_accel_target.z, z_accel_meas, (_motors.limit.throttle_lower || _motors.limit.throttle_upper)) * 0.001f + _motors.get_throttle_hover();
 
     // send throttle to attitude controller with angle boost
     _attitude_control.set_throttle_out(thr_out, true, POSCONTROL_THROTTLE_CUTOFF_FREQ);
