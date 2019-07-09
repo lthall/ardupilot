@@ -115,6 +115,7 @@ protected:
     AP_Float _ki;
     AP_Float _kd;
     AP_Float _kff;
+    AP_Float _kfd;
     AP_Float _kimax;
     AP_Float _filt_T_hz;         // PID target filter frequency in Hz
     AP_Float _filt_E_hz;         // PID error filter frequency in Hz
@@ -131,6 +132,7 @@ protected:
     float _target;            // target value to enable filtering
     float _error;             // error value to enable filtering
     float _derivative;        // derivative value to enable filtering
+    float _FF_derivative;     // derivative value to enable filtering
 
     AP_Logger::PID_Info _pid_info;
 };
