@@ -50,6 +50,11 @@ const AP_Param::GroupInfo AC_PID::var_info[] = {
     // @Description: Error filter frequency in Hz
     // @Units: Hz
     AP_GROUPINFO("FLTE", 9, AC_PID, _filt_E_hz, AC_PID_EFILT_HZ_DEFAULT),
+
+    // @Param: FD
+    // @DisplayName: FD FeedForward derivitive Gain
+    // @Description: FF derivitive Gain which produces an output value that is proportional to the demanded input
+    AP_GROUPINFO("FD", 10, AC_PID, _kfd, 0),
     
     AP_GROUPEND
 };
@@ -120,15 +125,18 @@ float AC_PID::update_all(float target, float measurement, bool limit)
         _flags._reset_filter = false;
         _target = target;
         _error = _target - measurement;
+        _FF_derivative = 0.0f;
         _derivative = 0.0f;
     } else {
-        float error_last = _error;
         _target += get_filt_T_alpha() * (target - _target);
-        _error += get_filt_E_alpha() * ((_target - measurement) - _error);
+        float delta_error = get_filt_E_alpha() * ((_target - measurement) - _error);
+        _error += delta_error;
 
         // calculate and filter derivative
         if (_dt > 0.0f) {
-            float derivative = (_error - error_last) / _dt;
+            float FF_derivative = delta_error / _dt;
+            _FF_derivative += get_filt_D_alpha() * (FF_derivative - _FF_derivative);
+            float derivative = delta_error / _dt;
             _derivative += get_filt_D_alpha() * (derivative - _derivative);
         }
     }
@@ -227,8 +235,9 @@ float AC_PID::get_d() const
 
 float AC_PID::get_ff()
 {
-    _pid_info.FF = _target * _kff;
-    return _target * _kff;
+    float FF_out = _target * _kff + _FF_derivative * _kfd;
+    _pid_info.FF = FF_out;
+    return FF_out;
 }
 
 // todo: remove function when it is no longer used.
