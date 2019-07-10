@@ -300,6 +300,7 @@ void AP_MotorsMatrix::output_armed_stabilizing()
             _thrust_rpyt_out[i] = throttle_thrust_best_rpy + thr_adj + (rpy_scale * _thrust_rpyt_out[i]);
         }
     }
+    _throttle_out = (throttle_thrust_best_rpy + thr_adj) / compensation_gain;
 
     // check for failed motor
     check_for_failed_motor(throttle_thrust_best_rpy + thr_adj);
