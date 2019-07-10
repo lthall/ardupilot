@@ -363,3 +363,9 @@ void AC_AttitudeControl_Multi::parameter_sanity_check()
         _thr_mix_max.set_and_save(AC_ATTITUDE_CONTROL_MAX_DEFAULT);
     }
 }
+
+// return a harmonic notch filter center frequency based on the current throttle output
+float AC_AttitudeControl_Multi::get_notch_freq_scaled(float ref_freq, float ref) const
+{
+    return is_zero(ref) ? ref_freq : ref_freq * MAX(1.0f, sqrtf(_motors.get_throttle_out() / ref));
+}
