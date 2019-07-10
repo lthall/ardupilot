@@ -244,7 +244,10 @@ protected:
     uint8_t _gyro_notch_enabled(void) const { return _imu._notch_filter.enabled(); }
 
     // return the dynamic notch filter center in Hz for the sample rate
-    uint16_t _gyro_dynamic_notch_center_freq_hz(void) const { return _imu._dynamic_notch_filter.center_freq_hz(); }
+    uint16_t _gyro_dynamic_notch_center_freq_hz(void) const { return _imu.get_gyro_dynamic_notch_center_freq_hz(); }
+
+    // return the dynamic notch filter center in Hz for the sample rate
+    uint8_t _gyro_dynamic_notch_active_scaled_notches(void) const { return _imu._num_active_scaled_notches; }
 
     // return the notch filter bandwidth in Hz for the sample rate
     uint16_t _gyro_dynamic_notch_bandwidth_hz(void) const { return _imu._dynamic_notch_filter.bandwidth_hz(); }

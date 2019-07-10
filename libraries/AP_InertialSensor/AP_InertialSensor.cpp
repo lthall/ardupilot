@@ -476,8 +476,9 @@ AP_InertialSensor::AP_InertialSensor() :
     _singleton = this;
     AP_Param::setup_object_defaults(this, var_info);
 
-    // This is not user configurable, but start with a reasonable default.
-    _dynamic_notch_filter.set_center_freq_hz(_notch_filter.center_freq_hz());
+    // This is not user configurable, but start with the configured default.
+    _calculated_dynamic_notch_freq_hz = _dynamic_notch_filter.center_freq_hz();
+    _num_active_scaled_notches = _dynamic_notch_filter.harmonics();
 
     for (uint8_t i=0; i<INS_MAX_INSTANCES; i++) {
         _gyro_cal_ok[i] = true;

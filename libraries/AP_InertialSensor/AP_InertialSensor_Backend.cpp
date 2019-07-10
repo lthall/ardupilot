@@ -517,7 +517,7 @@ void AP_InertialSensor_Backend::update_gyro(uint8_t instance)
     if (_last_dynamic_notch_center_freq_hz[instance] != _gyro_dynamic_notch_center_freq_hz()) {
         float max_freq = constrain_float(_imu._dynamic_notch_filter.max_freq_hz(), 0.0f, _gyro_raw_sample_rate(instance) * 0.48f);
         float center_freq = constrain_float(_gyro_dynamic_notch_center_freq_hz(), _imu._dynamic_notch_filter.min_freq_hz(), max_freq);
-        _imu._gyro_dynamic_notch_filter[instance].update(center_freq);
+        _imu._gyro_dynamic_notch_filter[instance].update(center_freq, _gyro_dynamic_notch_active_scaled_notches());
         _last_dynamic_notch_center_freq_hz[instance] = _gyro_dynamic_notch_center_freq_hz();
     } 
     // possily update the dynamic notch filter parameters
@@ -525,7 +525,7 @@ void AP_InertialSensor_Backend::update_gyro(uint8_t instance)
         !is_equal(_last_dynamic_notch_attenuation_dB[instance], _gyro_dynamic_notch_attenuation_dB())) {
         float max_freq = constrain_float(_imu._dynamic_notch_filter.max_freq_hz(), 0.0f, _gyro_raw_sample_rate(instance) * 0.48f);
         float center_freq = constrain_float(_gyro_dynamic_notch_center_freq_hz(), _imu._dynamic_notch_filter.min_freq_hz(), max_freq);
-        _imu._gyro_dynamic_notch_filter[instance].init(_gyro_raw_sample_rate(instance), center_freq, _gyro_dynamic_notch_bandwidth_hz(), _gyro_dynamic_notch_attenuation_dB());
+        _imu._gyro_dynamic_notch_filter[instance].init(_gyro_raw_sample_rate(instance), center_freq, _gyro_dynamic_notch_bandwidth_hz(), _gyro_dynamic_notch_attenuation_dB(), _gyro_dynamic_notch_active_scaled_notches());
         _last_dynamic_notch_center_freq_hz[instance] = _gyro_dynamic_notch_center_freq_hz();
         _last_dynamic_notch_bandwidth_hz[instance] = _gyro_dynamic_notch_bandwidth_hz();
         _last_dynamic_notch_attenuation_dB[instance] = _gyro_dynamic_notch_attenuation_dB();

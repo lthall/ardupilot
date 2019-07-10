@@ -202,6 +202,12 @@ public:
     uint8_t get_primary_accel(void) const { return _primary_accel; }
     uint8_t get_primary_gyro(void) const { return _primary_gyro; }
 
+    // Update the dynamic notch frequency
+    void update_dynamic_notch_freq_hz(float scale_factor, uint8_t active_notches) {
+        _calculated_dynamic_notch_freq_hz = MAX(1.0f, _dynamic_notch_filter.center_freq_hz() * scale_factor);
+        _num_active_scaled_notches = active_notches;
+    }
+
     // enable HIL mode
     void set_hil_mode(void) { _hil_mode = true; }
 
@@ -210,6 +216,8 @@ public:
 
     // get the accel filter rate in Hz
     uint16_t get_accel_filter_hz(void) const { return _accel_filter_cutoff; }
+
+    uint16_t get_gyro_dynamic_notch_center_freq_hz(void) const { return _calculated_dynamic_notch_freq_hz; }
 
     // indicate which bit in LOG_BITMASK indicates raw logging enabled
     void set_log_raw_bit(uint32_t log_raw_bit) { _log_raw_bit = log_raw_bit; }
@@ -414,6 +422,8 @@ private:
     // optional dynamic notch filter on gyro
     DynamicNotchFilterParams _dynamic_notch_filter;
     DynamicNotchFilterVector3f _gyro_dynamic_notch_filter[INS_MAX_INSTANCES];
+    uint16_t _calculated_dynamic_notch_freq_hz;
+    uint8_t _num_active_scaled_notches;
 
     // Most recent gyro reading
     Vector3f _gyro[INS_MAX_INSTANCES];
