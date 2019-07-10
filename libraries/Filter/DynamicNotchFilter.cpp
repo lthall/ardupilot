@@ -19,12 +19,12 @@
   initialise filter
  */
 template <class T>
-void DynamicNotchFilter<T>::init(float _sample_freq_hz, float _center_freq_hz, float _bandwidth_hz, float _attenuation_dB)
+void DynamicNotchFilter<T>::init(float _sample_freq_hz, float _center_freq_hz, float _bandwidth_hz, float _attenuation_dB, uint8_t scaled_notches)
 {
     sample_freq_hz = _sample_freq_hz;
     bandwidth_hz = _bandwidth_hz;
     attenuation_dB = _attenuation_dB;
-    for (int i=0; i<harmonics+1; i++) {
+    for (int i=0; i<MIN(scaled_notches, harmonics+1); i++) {
         filters[i].init(sample_freq_hz, _center_freq_hz * (i+1), bandwidth_hz, attenuation_dB);
     }
 }
@@ -40,13 +40,13 @@ void DynamicNotchFilter<T>::create(uint8_t _harmonics)
 }
 
 template <class T>
-void DynamicNotchFilter<T>::update(float center_freq_hz)
+void DynamicNotchFilter<T>::update(float center_freq_hz, uint8_t scaled_notches)
 {
     if (filters == nullptr) {
         return;
     }
 
-    for (int i=0; i<harmonics+1; i++) {
+    for (int i=0; i<MIN(scaled_notches, harmonics+1); i++) {
         filters[i].init(sample_freq_hz, center_freq_hz * (i+1), bandwidth_hz, attenuation_dB);
     }
 }
@@ -87,13 +87,21 @@ const AP_Param::GroupInfo DynamicNotchFilterParams::var_info[] = {
     // @User: Advanced
     AP_GROUPINFO_FLAGS("ENABLE", 1, DynamicNotchFilterParams, _enable, 0, AP_PARAM_FLAG_ENABLE),
 
+    // @Param: BASEHZ
+    // @DisplayName: Base Frequency
+    // @Description: Notch base center frequency in Hz
+    // @Range: 10 400
+    // @Units: Hz
+    // @User: Advanced
+    AP_GROUPINFO("BASEHZ", 2, DynamicNotchFilterParams, _center_freq_hz, 80),
+
     // @Param: BW
     // @DisplayName: Bandwidth
     // @Description: Dynamic notch bandwidth in Hz
     // @Range: 5 100
     // @Units: Hz
     // @User: Advanced
-    AP_GROUPINFO("BW", 2, DynamicNotchFilterParams, _bandwidth_hz, 20),
+    AP_GROUPINFO("BW", 3, DynamicNotchFilterParams, _bandwidth_hz, 20),
 
     // @Param: ATT
     // @DisplayName: Attenuation
@@ -101,14 +109,14 @@ const AP_Param::GroupInfo DynamicNotchFilterParams::var_info[] = {
     // @Range: 5 30
     // @Units: dB
     // @User: Advanced
-    AP_GROUPINFO("ATT", 3, DynamicNotchFilterParams, _attenuation_dB, 15),
+    AP_GROUPINFO("ATT", 4, DynamicNotchFilterParams, _attenuation_dB, 15),
 
     // @Param: HMNCS
     // @DisplayName: Harmonics
     // @Description: Number of harmonic frequencies to add to the filter. This option takes effect on the next reboot.
     // @Range: 0 2
     // @User: Advanced
-    AP_GROUPINFO("HMNCS", 4, DynamicNotchFilterParams, _harmonics, 1),
+    AP_GROUPINFO("HMNCS", 5, DynamicNotchFilterParams, _harmonics, 1),
 
     // @Param: MINHZ
     // @DisplayName: Minimum Frequency
@@ -116,7 +124,7 @@ const AP_Param::GroupInfo DynamicNotchFilterParams::var_info[] = {
     // @Range: 10 400
     // @Units: Hz
     // @User: Advanced
-    AP_GROUPINFO("MINHZ", 5, DynamicNotchFilterParams, _min_freq_hz, 80),
+    AP_GROUPINFO("MINHZ", 6, DynamicNotchFilterParams, _min_freq_hz, 20),
 
     // @Param: MAXHZ
     // @DisplayName: Maximum Frequency
@@ -124,7 +132,7 @@ const AP_Param::GroupInfo DynamicNotchFilterParams::var_info[] = {
     // @Range: 200 800
     // @Units: Hz
     // @User: Advanced
-    AP_GROUPINFO("MAXHZ", 6, DynamicNotchFilterParams, _max_freq_hz, 400),
+    AP_GROUPINFO("MAXHZ", 7, DynamicNotchFilterParams, _max_freq_hz, 400),
     
     AP_GROUPEND
 };

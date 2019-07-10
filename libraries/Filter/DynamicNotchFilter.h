@@ -26,10 +26,10 @@ class DynamicNotchFilter {
 public:
     // set parameters
     void create(uint8_t harmonics);
-    void init(float sample_freq_hz, float center_freq_hz, float bandwidth_hz, float attenuation_dB);
+    void init(float sample_freq_hz, float center_freq_hz, float bandwidth_hz, float attenuation_dB, uint8_t scaled_notches);
     T apply(const T &sample);
     void reset();
-    void update(float center_freq_hz);
+    void update(float center_freq_hz, uint8_t scaled_notches);
 
 private:
     NotchFilter<T>*  filters;
