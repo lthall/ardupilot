@@ -304,7 +304,7 @@ void Copter::throttle_loop()
     update_ground_effect_detector();
 
     // Update dynamic notch filter settings
-    attitude_control->set_notch_freq();
+    update_dynamic_notch();
 }
 
 // update_batt_compass - read battery and compass
