@@ -37,6 +37,8 @@ void Copter::ModeRTL::restart_without_terrain()
 // should be called at 100hz or more
 void Copter::ModeRTL::run(bool disarm_on_land)
 {
+    g2.gripper.release();
+    Log_Write_Event(DATA_GRIPPER_RELEASE);
     // check if we need to move to next state
     if (_state_complete) {
         switch (_state) {
