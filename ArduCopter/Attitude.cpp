@@ -149,6 +149,16 @@ float Copter::get_pilot_desired_climb_rate(float throttle_control)
         desired_rate = 0.0f;
     }
 
+    Vector2f home;
+    float curr_alt;
+    if (ahrs.get_relative_position_NE_home(home)) {
+        float home_distance = home.length();
+        ahrs.get_relative_position_D_home(curr_alt);
+        if (home_distance > fence.get_alt_min_rad() && -curr_alt < fence.get_alt_min()) {
+            desired_rate = g.pilot_speed_up;
+        }
+    }
+
     return desired_rate;
 }
 
