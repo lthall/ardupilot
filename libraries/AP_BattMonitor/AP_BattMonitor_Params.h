@@ -50,5 +50,7 @@ public:
     AP_Float _critical_capacity;        /// capacity level used to trigger a critical battery failsafe
     AP_Int8  _failsafe_low_action;      /// action to preform on a low battery failsafe
     AP_Int8  _failsafe_critical_action; /// action to preform on a critical battery failsafe
+    AP_Float _over_current;             /// current level used to trigger a over current failsafe
+    AP_Int8  _over_current_timeout;     /// timeout in seconds before a low voltage event will be triggered
 
 };

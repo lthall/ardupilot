@@ -403,6 +403,20 @@ AP_BattMonitor::BatteryFailsafe AP_BattMonitor::check_failsafe(const uint8_t ins
         return BatteryFailsafe_Critical;
     }
 
+    // check capacity if current monitoring is enabled
+    if (has_current(instance) && (_params[instance]._over_current > 0) && (_params[instance]._over_current < state[instance].current_amps)) {
+        // this is the first time our voltage has dropped below minimum so start timer
+        if (state[instance].critical_current_start_ms == 0) {
+            state[instance].critical_current_start_ms = now;
+        } else if (_params[instance]._over_current_timeout > 0 &&
+                   now - state[instance].critical_current_start_ms > uint32_t(_params[instance]._over_current_timeout)*1000U) {
+            return BatteryFailsafe_Critical;
+        }
+    } else {
+        // acceptable voltage so reset timer
+        state[instance].critical_current_start_ms = 0;
+    }
+
     if ((voltage_used > 0) && (_params[instance]._low_voltage > 0) && (voltage_used < _params[instance]._low_voltage)) {
         // this is the first time our voltage has dropped below minimum so start timer
         if (state[instance].low_voltage_start_ms == 0) {
