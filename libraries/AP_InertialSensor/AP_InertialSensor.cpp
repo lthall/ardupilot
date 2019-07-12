@@ -478,7 +478,6 @@ AP_InertialSensor::AP_InertialSensor() :
 
     // This is not user configurable, but start with the configured default.
     _calculated_dynamic_notch_freq_hz = _dynamic_notch_filter.center_freq_hz();
-    _num_active_scaled_notches = _dynamic_notch_filter.harmonics();
 
     for (uint8_t i=0; i<INS_MAX_INSTANCES; i++) {
         _gyro_cal_ok[i] = true;

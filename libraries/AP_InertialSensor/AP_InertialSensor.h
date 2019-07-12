@@ -203,9 +203,11 @@ public:
     uint8_t get_primary_gyro(void) const { return _primary_gyro; }
 
     // Update the dynamic notch frequency
-    void update_dynamic_notch_freq_hz(float scale_factor, uint8_t active_notches) {
-        _calculated_dynamic_notch_freq_hz = MAX(1.0f, _dynamic_notch_filter.center_freq_hz() * scale_factor);
-        _num_active_scaled_notches = active_notches;
+    void update_dynamic_notch_freq_hz(float scale_factor) {
+        // When disarmed, throttle is zero
+        if (scale_factor > 0) {
+            _calculated_dynamic_notch_freq_hz = MAX(1.0f, _dynamic_notch_filter.center_freq_hz() * scale_factor);
+        }
     }
 
     // enable HIL mode
@@ -423,7 +425,6 @@ private:
     DynamicNotchFilterParams _dynamic_notch_filter;
     DynamicNotchFilterVector3f _gyro_dynamic_notch_filter[INS_MAX_INSTANCES];
     uint16_t _calculated_dynamic_notch_freq_hz;
-    uint8_t _num_active_scaled_notches;
 
     // Most recent gyro reading
     Vector3f _gyro[INS_MAX_INSTANCES];
