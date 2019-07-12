@@ -15,68 +15,6 @@
 
 #include "DynamicNotchFilter.h"
 
-/*
-  initialise filter
- */
-template <class T>
-void DynamicNotchFilter<T>::init(float _sample_freq_hz, float _center_freq_hz, float _bandwidth_hz, float _attenuation_dB, uint8_t scaled_notches)
-{
-    sample_freq_hz = _sample_freq_hz;
-    bandwidth_hz = _bandwidth_hz;
-    attenuation_dB = _attenuation_dB;
-    for (int i=0; i<MIN(scaled_notches, harmonics+1); i++) {
-        filters[i].init(sample_freq_hz, _center_freq_hz * (i+1), bandwidth_hz, attenuation_dB);
-    }
-}
-
-/*
-  initialise filter
- */
-template <class T>
-void DynamicNotchFilter<T>::create(uint8_t _harmonics)
-{
-    filters = new NotchFilter<T>[_harmonics+1];
-    harmonics = _harmonics;
-}
-
-template <class T>
-void DynamicNotchFilter<T>::update(float center_freq_hz, uint8_t scaled_notches)
-{
-    if (filters == nullptr) {
-        return;
-    }
-
-    for (int i=0; i<MIN(scaled_notches, harmonics+1); i++) {
-        filters[i].init(sample_freq_hz, center_freq_hz * (i+1), bandwidth_hz, attenuation_dB);
-    }
-}
-
-template <class T>
-T DynamicNotchFilter<T>::apply(const T &sample)
-{
-    if (filters == nullptr) {
-        return sample;
-    }
-
-    T output = filters[0].apply(sample);
-    for (int i=1; i<harmonics+1; i++) {
-        output = filters[i].apply(output);
-    }
-    return output;
-}
-
-template <class T>
-void DynamicNotchFilter<T>::reset()
-{
-    if (filters == nullptr) {
-        return;
-    }
-
-    for (int i=0; i<harmonics+1; i++) {
-        filters[i].reset();
-    }
-}
-
 // table of user settable parameters
 const AP_Param::GroupInfo DynamicNotchFilterParams::var_info[] = {
 
@@ -118,24 +56,92 @@ const AP_Param::GroupInfo DynamicNotchFilterParams::var_info[] = {
     // @User: Advanced
     AP_GROUPINFO("HMNCS", 5, DynamicNotchFilterParams, _harmonics, 1),
 
-    // @Param: MINHZ
-    // @DisplayName: Minimum Frequency
-    // @Description: Dynamic notch minimum center frequency in Hz
-    // @Range: 10 400
-    // @Units: Hz
-    // @User: Advanced
-    AP_GROUPINFO("MINHZ", 6, DynamicNotchFilterParams, _min_freq_hz, 20),
-
-    // @Param: MAXHZ
-    // @DisplayName: Maximum Frequency
-    // @Description: Dynamic notch maximum center frequency in Hz
-    // @Range: 200 800
-    // @Units: Hz
-    // @User: Advanced
-    AP_GROUPINFO("MAXHZ", 7, DynamicNotchFilterParams, _max_freq_hz, 400),
-    
     AP_GROUPEND
 };
+
+
+/*
+  initialise filter
+ */
+template <class T>
+void DynamicNotchFilter<T>::init(float _sample_freq_hz, float _center_freq_hz, float _bandwidth_hz, float _attenuation_dB)
+{
+    if (filters == nullptr) {
+        return;
+    }
+
+    sample_freq_hz = _sample_freq_hz;
+    bandwidth_hz = _bandwidth_hz;
+    attenuation_dB = _attenuation_dB;
+
+    // adjust the center frequency to be in the allowable range
+    _center_freq_hz = constrain_float(_center_freq_hz, _bandwidth_hz / 1.98f, sample_freq_hz * 0.48f);
+
+    float octaves = log2f(_center_freq_hz  / (_center_freq_hz - bandwidth_hz/2.0f)) * 2.0f;
+    float A = powf(10, -attenuation_dB/40.0f);
+    float Q = sqrtf(powf(2, octaves)) / (powf(2,octaves) - 1.0f);
+
+    for (int i=0; i<harmonics+1; i++) {
+        filters[i].init(sample_freq_hz, _center_freq_hz * (i+1), octaves, A, Q);
+    }
+    initialised = true;
+}
+
+/*
+  initialise filter
+ */
+template <class T>
+void DynamicNotchFilter<T>::create(uint8_t _harmonics)
+{
+    filters = new NotchFilter<T>[_harmonics+1];
+    harmonics = _harmonics;
+}
+
+template <class T>
+void DynamicNotchFilter<T>::update(float center_freq_hz)
+{
+    if (!initialised) {
+        return;
+    }
+
+    // adjust the center frequency to be in the allowable range
+    center_freq_hz = constrain_float(center_freq_hz, bandwidth_hz / 1.98f, sample_freq_hz * 0.48f);
+
+    float octaves = log2f(center_freq_hz  / (center_freq_hz - bandwidth_hz/2.0f)) * 2.0f;
+    float A = powf(10, -attenuation_dB/40.0f);
+    float Q = sqrtf(powf(2, octaves)) / (powf(2,octaves) - 1.0f);
+
+    for (int i=0; i<harmonics+1; i++) {
+        filters[i].init(sample_freq_hz, center_freq_hz * (i+1), octaves, A, Q);
+    }
+}
+
+template <class T>
+T DynamicNotchFilter<T>::apply(const T &sample)
+{
+    if (!initialised) {
+        return sample;
+    }
+
+    T output = filters[0].apply(sample);
+    for (int i=1; i<harmonics+1; i++) {
+        output = filters[i].apply(output);
+    }
+    return output;
+}
+
+template <class T>
+void DynamicNotchFilter<T>::reset()
+{
+    if (!initialised) {
+        return;
+    }
+
+    for (int i=0; i<harmonics+1; i++) {
+        filters[i].reset();
+    }
+}
+
 
 /*
   a notch filter with enable and filter parameters - constructor

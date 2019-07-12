@@ -26,10 +26,10 @@ class DynamicNotchFilter {
 public:
     // set parameters
     void create(uint8_t harmonics);
-    void init(float sample_freq_hz, float center_freq_hz, float bandwidth_hz, float attenuation_dB, uint8_t scaled_notches);
+    void init(float sample_freq_hz, float center_freq_hz, float bandwidth_hz, float attenuation_dB);
     T apply(const T &sample);
     void reset();
-    void update(float center_freq_hz, uint8_t scaled_notches);
+    void update(float center_freq_hz);
 
 private:
     NotchFilter<T>*  filters;
@@ -37,6 +37,7 @@ private:
     float bandwidth_hz;
     float attenuation_dB;
     uint8_t harmonics;
+    bool initialised;
 };
 
 /*
@@ -47,14 +48,10 @@ public:
     DynamicNotchFilterParams(void);
     void set_center_freq_hz(uint16_t center_freq_hz) { _center_freq_hz.set(center_freq_hz); }
     uint8_t harmonics(void) const { return _harmonics; }
-    uint16_t min_freq_hz(void) const { return _min_freq_hz; }
-    uint16_t max_freq_hz(void) const { return _max_freq_hz; }
     static const struct AP_Param::GroupInfo var_info[];
 
 private:
     AP_Int8 _harmonics;
-    AP_Int16 _min_freq_hz;
-    AP_Int16 _max_freq_hz;
 };
 
 typedef DynamicNotchFilter<float> DynamicNotchFilterFloat;

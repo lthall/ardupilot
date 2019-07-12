@@ -30,7 +30,9 @@ template <class T>
 class NotchFilter {
 public:
     // set parameters
-    void init(float sample_freq_hz, float center_freq_hz, float bandwidth_hz, float attenuation_dB);
+    virtual void init(float sample_freq_hz, float center_freq_hz, float bandwidth_hz, float attenuation_dB);
+    // For use by DynamicNotchFilter
+    void init(float sample_freq_hz, float center_freq_hz, float octaves, float A, float Q);
     T apply(const T &sample);
     void reset();
 
