@@ -77,12 +77,8 @@ void DynamicNotchFilter<T>::init(float _sample_freq_hz, float _center_freq_hz, f
     // adjust the center frequency to be in the allowable range
     _center_freq_hz = constrain_float(_center_freq_hz, _bandwidth_hz / 1.98f, sample_freq_hz * 0.48f);
 
-    float octaves = log2f(_center_freq_hz  / (_center_freq_hz - bandwidth_hz/2.0f)) * 2.0f;
-    float A = powf(10, -attenuation_dB/40.0f);
-    float Q = sqrtf(powf(2, octaves)) / (powf(2,octaves) - 1.0f);
-
     for (int i=0; i<harmonics+1; i++) {
-        filters[i].init(sample_freq_hz, _center_freq_hz * (i+1), octaves, A, Q);
+        filters[i].init(sample_freq_hz, _center_freq_hz * (i+1), bandwidth_hz, attenuation_dB);
     }
     initialised = true;
 }
@@ -107,12 +103,8 @@ void DynamicNotchFilter<T>::update(float center_freq_hz)
     // adjust the center frequency to be in the allowable range
     center_freq_hz = constrain_float(center_freq_hz, bandwidth_hz / 1.98f, sample_freq_hz * 0.48f);
 
-    float octaves = log2f(center_freq_hz  / (center_freq_hz - bandwidth_hz/2.0f)) * 2.0f;
-    float A = powf(10, -attenuation_dB/40.0f);
-    float Q = sqrtf(powf(2, octaves)) / (powf(2,octaves) - 1.0f);
-
     for (int i=0; i<harmonics+1; i++) {
-        filters[i].init(sample_freq_hz, center_freq_hz * (i+1), octaves, A, Q);
+        filters[i].init(sample_freq_hz, center_freq_hz * (i+1));
     }
 }
 

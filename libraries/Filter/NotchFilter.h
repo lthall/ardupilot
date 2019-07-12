@@ -32,13 +32,13 @@ public:
     // set parameters
     virtual void init(float sample_freq_hz, float center_freq_hz, float bandwidth_hz, float attenuation_dB);
     // For use by DynamicNotchFilter
-    void init(float sample_freq_hz, float center_freq_hz, float octaves, float A, float Q);
+    void init(float sample_freq_hz, float center_freq_hz);
     T apply(const T &sample);
     void reset();
 
 private:
     bool initialised;
-    float b0, b1, b2, a1, a2, a0_inv;
+    float b0, b1, b2, a1, a2, a0_inv, A, Q;
     T ntchsig, ntchsig1, ntchsig2, signal2, signal1;
 };
 
