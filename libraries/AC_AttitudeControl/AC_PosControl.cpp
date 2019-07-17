@@ -455,7 +455,7 @@ void AC_PosControl::init_takeoff()
     freeze_ff_z();
 
     // shift difference between last motor out and hover throttle into accelerometer I
-    _pid_accel_z.set_integrator((_motors.get_throttle()-_motors.get_throttle_hover())*1000.0f);
+    _pid_accel_z.set_integrator((_attitude_control.get_throttle_in() - _motors.get_throttle_hover()) * 1000.0f);
 
     // initialise ekf reset handler
     init_ekf_z_reset();
@@ -474,7 +474,9 @@ void AC_PosControl::update_z_controller()
     const uint64_t now_us = AP_HAL::micros64();
     if (now_us - _last_update_z_us > POSCONTROL_ACTIVE_TIMEOUT_US) {
         _flags.reset_rate_to_accel_z = true;
-        _flags.reset_accel_to_throttle = true;
+        _pid_accel_z.set_integrator((_attitude_control.get_throttle_in() - _motors.get_throttle_hover())*1000.0f);
+        _accel_target.z = -(_ahrs.get_accel_ef_blended().z + GRAVITY_MSS) * 100.0f;
+        _pid_accel_z.reset_filter();
     }
     _last_update_z_us = now_us;
 
@@ -593,12 +595,6 @@ void AC_PosControl::run_z_controller()
 
     // Calculate Earth Frame Z acceleration
     z_accel_meas = -(_ahrs.get_accel_ef_blended().z + GRAVITY_MSS) * 100.0f;
-
-    // reset target altitude if this controller has just been engaged
-    if (_flags.reset_accel_to_throttle) {
-        _pid_accel_z.set_integrator((_attitude_control.get_throttle_in() - _motors.get_throttle_hover())*1000.0f);
-        _flags.reset_accel_to_throttle = false;
-    }
 
     // ensure imax is always large enough to overpower hover throttle
     if (_motors.get_throttle_hover() * 1000.0f > _pid_accel_z.imax()) {
