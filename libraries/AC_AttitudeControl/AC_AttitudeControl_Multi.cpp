@@ -295,7 +295,13 @@ void AC_AttitudeControl_Multi::parameter_sanity_check()
 // Update dynamic notch filter frequency
 float AC_AttitudeControl_Multi::get_notch_freq_scaled(float ref_freq, float ref) const
 {
-    float freq = ref_freq * MAX(1.0f, sqrtf(_motors.get_throttle_out() / ref));
+    float freq;
+    if(is_zero(ref)) {
+        freq = ref_freq;
+    } else {
+        freq = ref_freq * MAX(1.0f, sqrtf(_motors.get_throttle_out() / ref));
+    }
+
     DataFlash_Class::instance()->Log_Write("NTCH", "TimeUS,F0,R,Th,F", "Qffff",
                                            AP_HAL::micros64(),
                                            (double)(ref_freq),
