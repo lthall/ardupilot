@@ -36,7 +36,7 @@ void scurves::Cal_T(float tin, float J0)
 
 void scurves::Cal_JS1(float tj, float Jp)
 {
-    float Beta = pi/tj;
+    float Beta = M_PI/tj;
     float Alpha = Jp/2;
     float AT = Alpha*tj;
     float VT = Alpha*(sq(tj)/2 - 2/sq(Beta));
@@ -60,7 +60,7 @@ void scurves::Cal_JS1(float tj, float Jp)
 
 void scurves::Cal_JS2(float tj, float Jp)
 {
-    float Beta = pi/tj;
+    float Beta = M_PI/tj;
     float Alpha = Jp/2;
     float AT = Alpha*tj;
     float VT = Alpha*(sq(tj)/2 - 2/sq(Beta));
@@ -128,22 +128,25 @@ void scurves::Cal_Pos(float tj, float V0, float P0, float Jp, float Ap, float Vp
         if ((Vp <= V0 + 2*Ap*tj) || (Pp <= P0 + 4*V0*tj + 4*Ap*sq(tj))) {
             t4_out = 0;
         } else {
-            t4_out = MIN(-(sq(Ap)/Jp + tj*Ap + V0 - Vp)/Ap, \
-                MAX(-(3*sq(Ap) - 2*sqrtf(powf(Ap,4)/4 + sq(Jp)*sq(V0) + (sq(Ap)*sq(Jp)*sq(tj))/4 - 2*Ap*sq(Jp)*P0 + 2*Ap*sq(Jp)*Pp - sq(Ap)*Jp*V0 + (powf(Ap,3)*Jp*tj)/2 - Ap*sq(Jp)*V0*tj) + 2*Jp*V0 + 3*Ap*Jp*tj)/(2*Ap*Jp), \
-                -(3*sq(Ap) + 2*sqrtf(powf(Ap,4)/4 + sq(Jp)*sq(V0) + (sq(Ap)*sq(Jp)*sq(tj))/4 - 2*Ap*sq(Jp)*P0 + 2*Ap*sq(Jp)*Pp - sq(Ap)*Jp*V0 + (powf(Ap,3)*Jp*tj)/2 - Ap*sq(Jp)*V0*tj) + 2*Jp*V0 + 3*Ap*Jp*tj)/(2*Ap*Jp)) \
-                );
+            t4_out = MIN(-(V0-Vp+Ap*tj+(Ap*Ap)/Jp)/Ap, \
+                    MAX( \
+                        ((Ap*Ap)*(-3.0/2.0)+sqrt((Ap*Ap*Ap*Ap)*(1.0/4.0)+(Jp*Jp)*(V0*V0)+(Ap*Ap)*(Jp*Jp)*(tj*tj)*(1.0/4.0)-Ap*(Jp*Jp)*P0*2.0+Ap*(Jp*Jp)*Pp*2.0-(Ap*Ap)*Jp*V0+(Ap*Ap*Ap)*Jp*tj*(1.0/2.0)-Ap*(Jp*Jp)*V0*tj)-Jp*V0-Ap*Jp*tj*(3.0/2.0))/(Ap*Jp), \
+                        ((Ap*Ap)*(-3.0/2.0)-sqrt((Ap*Ap*Ap*Ap)*(1.0/4.0)+(Jp*Jp)*(V0*V0)+(Ap*Ap)*(Jp*Jp)*(tj*tj)*(1.0/4.0)-Ap*(Jp*Jp)*P0*2.0+Ap*(Jp*Jp)*Pp*2.0-(Ap*Ap)*Jp*V0+(Ap*Ap*Ap)*Jp*tj*(1.0/2.0)-Ap*(Jp*Jp)*V0*tj)-Jp*V0-Ap*Jp*tj*(3.0/2.0))/(Ap*Jp) \
+                        ));
         }
     } else {
-        if ((Vp < sq(Ap)/Jp + tj*Ap + V0) || (Pp < P0 + (powf(Ap,3) + Ap*Jp*(2*V0 + 2*Ap*tj))/sq(Jp) + 2*V0*tj + Ap*sq(tj))) {
+        if ((Vp < V0+Ap*tj+(Ap*Ap)/Jp) || (Pp < P0+1.0/(Jp*Jp)*(Ap*Ap*Ap+Ap*Jp*(V0*2.0+Ap*tj*2.0))+V0*tj*2.0+Ap*(tj*tj))) {
             Ap = MIN(MIN(Ap, \
-                     MAX(-(Jp*(tj + sqrtf((Jp*sq(tj) - 4*V0 + 4*Vp)/Jp)))/2, \
-                     -(Jp*(tj - sqrtf((Jp*sq(tj) - 4*V0 + 4*Vp)/Jp)))/2)), \
-                     ((sq(Jp)*sq(tj))/9 - (2*V0*Jp)/3)/(sqrtf(sq((sq(Jp)*P0)/2 - (sq(Jp)*Pp)/2 + (8*powf(Jp,3)*powf(tj,3))/27 - (Jp*tj*(sq(Jp)*sq(tj) + 2*V0*Jp))/3 + sq(Jp)*V0*tj) - powf(((sq(Jp)*sq(tj))/9 - (2*Jp*V0)/3),3)) - (sq(Jp)*P0)/2 + (sq(Jp)*Pp)/2 - (8*powf(Jp,3)*powf(tj,3))/27 + (Jp*tj*(sq(Jp)*sq(tj) + 2*V0*Jp))/3 - sq(Jp)*V0*tj)^(1/3) - (2*Jp*tj)/3 + ((sq((sq(Jp)*P0)/2 - (sq(Jp)*Pp)/2 + (8*powf(Jp,3)*powf(tj,3))/27 - (Jp*tj*(sq(Jp)*sq(tj) + 2*V0*Jp))/3 + sq(Jp)*V0*tj) - powf(((sq(Jp)*sq(tj))/9 - (2*V0*Jp)/3),3))^(1/2) - (sq(Jp)*P0)/2 + (sq(Jp)*Pp)/2 - (8*powf(Jp,3)*powf(tj,3))/27 + (Jp*tj*(sq(Jp)*sq(tj) + 2*V0*Jp))/3 - sq(Jp)*V0*tj)^(1/3));
+                    MAX( \
+                            Jp*(tj+sqrt((V0*-4.0+Vp*4.0+Jp*(tj*tj))/Jp))*(-1.0/2.0), \
+                            Jp*(tj-sqrt((V0*-4.0+Vp*4.0+Jp*(tj*tj))/Jp))*(-1.0/2.0))), \
+                    Jp*tj*(-2.0/3.0)+((Jp*Jp)*(tj*tj)*(1.0/9.0)-Jp*V0*(2.0/3.0))*1.0/pow(sqrt(pow((Jp*Jp)*P0*(1.0/2.0)-(Jp*Jp)*Pp*(1.0/2.0)+(Jp*Jp*Jp)*(tj*tj*tj)*(8.0/2.7E1)-Jp*tj*((Jp*Jp)*(tj*tj)+Jp*V0*2.0)*(1.0/3.0)+(Jp*Jp)*V0*tj,2.0)-pow((Jp*Jp)*(tj*tj)*(1.0/9.0)-Jp*V0*(2.0/3.0),3.0))-(Jp*Jp)*P0*(1.0/2.0)+(Jp*Jp)*Pp*(1.0/2.0)-(Jp*Jp*Jp)*(tj*tj*tj)*(8.0/2.7E1)+Jp*tj*((Jp*Jp)*(tj*tj)+Jp*V0*2.0)*(1.0/3.0)-(Jp*Jp)*V0*tj,1.0/3.0)+pow(sqrt(pow((Jp*Jp)*P0*(1.0/2.0)-(Jp*Jp)*Pp*(1.0/2.0)+(Jp*Jp*Jp)*(tj*tj*tj)*(8.0/2.7E1)-Jp*tj*((Jp*Jp)*(tj*tj)+Jp*V0*2.0)*(1.0/3.0)+(Jp*Jp)*V0*tj,2.0)-pow((Jp*Jp)*(tj*tj)*(1.0/9.0)-Jp*V0*(2.0/3.0),3.0))-(Jp*Jp)*P0*(1.0/2.0)+(Jp*Jp)*Pp*(1.0/2.0)-(Jp*Jp*Jp)*(tj*tj*tj)*(8.0/2.7E1)+Jp*tj*((Jp*Jp)*(tj*tj)+Jp*V0*2.0)*(1.0/3.0)-(Jp*Jp)*V0*tj,1.0/3.0));
             t4_out = 0;
         } else {
-            t4_out = MIN(-(sq(Ap)/Jp + tj*Ap + V0 - Vp)/Ap, \
-                         MAX(-(3*sq(Ap) - 2*(powf(Ap,4)/4 + sq(Jp)*sq(V0) + (sq(Ap)*sq(Jp)*sq(tj))/4 - 2*Ap*sq(Jp)*P0 + 2*Ap*sq(Jp)*Pp - sq(Ap)*Jp*V0 + (powf(Ap,3)*Jp*tj)/2 - Ap*sq(Jp)*V0*tj)^(1/2) + 2*Jp*V0 + 3*Ap*Jp*tj)/(2*Ap*Jp), \
-                         -(3*sq(Ap) + 2*(powf(Ap,4)/4 + sq(Jp)*sq(V0) + (sq(Ap)*sq(Jp)*sq(tj))/4 - 2*Ap*sq(Jp)*P0 + 2*Ap*sq(Jp)*Pp - sq(Ap)*Jp*V0 + (powf(Ap,3)*Jp*tj)/2 - Ap*sq(Jp)*V0*tj)^(1/2) + 2*Jp*V0 + 3*Ap*Jp*tj)/(2*Ap*Jp)) );
+            t4_out = MIN(-(V0-Vp+Ap*tj+(Ap*Ap)/Jp)/Ap, \
+                    MAX( \
+                            ((Ap*Ap)*(-3.0/2.0)+sqrt((Ap*Ap*Ap*Ap)*(1.0/4.0)+(Jp*Jp)*(V0*V0)+(Ap*Ap)*(Jp*Jp)*(tj*tj)*(1.0/4.0)-Ap*(Jp*Jp)*P0*2.0+Ap*(Jp*Jp)*Pp*2.0-(Ap*Ap)*Jp*V0+(Ap*Ap*Ap)*Jp*tj*(1.0/2.0)-Ap*(Jp*Jp)*V0*tj)-Jp*V0-Ap*Jp*tj*(3.0/2.0))/(Ap*Jp), \
+                            ((Ap*Ap)*(-3.0/2.0)-sqrt((Ap*Ap*Ap*Ap)*(1.0/4.0)+(Jp*Jp)*(V0*V0)+(Ap*Ap)*(Jp*Jp)*(tj*tj)*(1.0/4.0)-Ap*(Jp*Jp)*P0*2.0+Ap*(Jp*Jp)*Pp*2.0-(Ap*Ap)*Jp*V0+(Ap*Ap*Ap)*Jp*tj*(1.0/2.0)-Ap*(Jp*Jp)*V0*tj)-Jp*V0-Ap*Jp*tj*(3.0/2.0))/(Ap*Jp)) );
         }
         t2_out = Ap/Jp - tj;
     }
@@ -152,39 +155,47 @@ void scurves::Cal_Pos(float tj, float V0, float P0, float Jp, float Ap, float Vp
 
 void scurves::runme(float t, float& Jt_out, float& At_out, float& Vt_out, float& Pt_out)
 {
-    pnt = find(t<obj.oT, 1, 'first');
+    jtype_t Jtype;
+    int8_t pnt;
+    float T, Jp, A0, V0, P0;
+
+    for (int8_t i=0; i<num_items; i++) {
+        if (t < oT[i]){
+            pnt = i + 1;
+        }
+    }
     if (pnt == 1) {
-        T = obj.oT(pnt);
+        T = oT(pnt);
         Jtype = 0;
         Jp = 0.0;
-        A0 = obj.oA(pnt);
-        V0 = obj.oV(pnt);
-        P0 = obj.oP(pnt);
-    } else if (isempty(pnt)) {
-        T = obj.oT(end);
+        A0 = oA(pnt);
+        V0 = oV(pnt);
+        P0 = oP(pnt);
+    } else if (pnt == num_items) {
+        T = oT(pnt);
         Jtype = 0;
         Jp = 0.0;
-        A0 = obj.oA(end);
-        V0 = obj.oV(end);
-        P0 = obj.oP(end);
+        A0 = oA(pnt);
+        V0 = oV(pnt);
+        P0 = oP(pnt);
     } else {
-        Jtype = obj.oJtype(pnt);
-        Jp = obj.oJ(pnt);
-        T = obj.oT(pnt-1);
-        A0 = obj.oA(pnt-1);
-        V0 = obj.oV(pnt-1);
-        P0 = obj.oP(pnt-1);
+        Jtype = oJtype(pnt);
+        Jp = oJ(pnt);
+        T = oT(pnt-1);
+        A0 = oA(pnt-1);
+        V0 = oV(pnt-1);
+        P0 = oP(pnt-1);
     }
 
     switch (Jtype) {
         case JTYPE_POSITIVE:
-            [Jt, At, Vt, Pt] = JSegment1(obj, t-T, Jp, A0, V0, P0);
+            JSegment1(t-T, Jp, A0, V0, P0, Jt_out, At_out, Vt_out, Pt_out);
             break;
         case JTYPE_NEGATIVE:
-            [Jt, At, Vt, Pt] = JSegment2(obj, t-T, Jp, A0, V0, P0);
+            JSegment2(t-T, Jp, A0, V0, P0, Jt_out, At_out, Vt_out, Pt_out);
             break;
         default:
-            [Jt, At, Vt, Pt] = JConst(obj, t-T, Jp, A0, V0, P0);
+            JConst(t-T, Jp, A0, V0, P0, Jt_out, At_out, Vt_out, Pt_out);
             break;
     }
 }
@@ -199,9 +210,9 @@ void scurves::JConst(float t, float J0, float A0, float V0, float P0, float& Jt,
 
 void scurves::JSegment1(float t, float Jp, float A0, float V0, float P0, float& Jt, float& At, float& Vt, float& Pt)
 {
-    tj = obj.otj;
-    Alpha = Jp/2;
-    Beta = pi/tj;
+    float tj = otj;
+    float Alpha = Jp/2;
+    float Beta = M_PI/tj;
     Jt = Alpha*(1 - cos(Beta*t));
     At = A0 + Alpha*t - (Alpha/Beta)*sin(Beta*t);
     Vt = V0 + A0*t + (Alpha/2)*t^2 + (Alpha/Beta^2)*cos(Beta*t) - Alpha/Beta^2;
@@ -210,12 +221,12 @@ void scurves::JSegment1(float t, float Jp, float A0, float V0, float P0, float& 
 
 void scurves::JSegment2(float t, float Jp, float A0, float V0, float P0, float& Jt, float& At, float& Vt, float& Pt)
 {
-    tj = obj.otj;
-    Alpha = Jp/2;
-    Beta = pi/tj;
-    AT = Alpha*tj;
-    VT = Alpha*(tj^2/2 - 2/Beta^2);
-    PT = Alpha*((-1/Beta^2)*tj + (1/6)*tj^3);
+    float tj = otj;
+    float Alpha = Jp/2;
+    float Beta = M_PI/tj;
+    float AT = Alpha*tj;
+    float VT = Alpha*(tj^2/2 - 2/Beta^2);
+    float PT = Alpha*((-1/Beta^2)*tj + (1/6)*tj^3);
     Jt = Alpha*(1 - cos(Beta * (t+tj)));
     At = (A0-AT) + Alpha*(t+tj) - (Alpha / Beta) * sin(Beta * (t+tj));
     Vt = (V0-VT) + (A0-AT)*t + 0.5*Alpha*(t+tj)^2 + (Alpha/Beta^2)*cos(Beta*(t+tj)) - Alpha/Beta^2;
