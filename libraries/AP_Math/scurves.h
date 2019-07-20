@@ -15,13 +15,13 @@ public:
     void Cal_JS2(float tj, float Jp);
     void Cal_tj_Jp_Tcj(float tj, float Jp, float Tcj);
 
-    void Cal_Pn(float Pp);
+    void Cal_Pn(float V0, float P0, float Pp);
     void Cal_Pos(float tj, float V0, float P0, float Jp, float Ap, float Vp, float Pp,
                  float& Jp_out, float& t2_out, float& t4_out, float& t6_out);
 
     void runme(float t, float& Jt_out, float& At_out, float& Vt_out, float& Pt_out);
     void JConst(float t, float J0, float A0, float V0, float P0, float& Jt, float& At, float& Vt, float& Pt);
-    void JSegment1(float t, float Jp, float A0, float V0, float P0, float& Jt, float& At, float& Vt, float& Pt)
+    void JSegment1(float t, float Jp, float A0, float V0, float P0, float& Jt, float& At, float& Vt, float& Pt);
     void JSegment2(float t, float Jp, float A0, float V0, float P0, float& Jt, float& At, float& Vt, float& Pt);
 
 private:
