@@ -153,32 +153,32 @@ void scurves::Cal_Pos(float tj, float V0, float P0, float Jp, float Ap, float Vp
 void scurves::runme(float t, float& Jt_out, float& At_out, float& Vt_out, float& Pt_out)
 {
     jtype_t Jtype;
-    int8_t pnt = 0;
-    float T, Jp, A0, V0, P0;
+    int8_t pnt = num_items;
+    float Jp, T0, A0, V0, P0;
 
     for (int8_t i=0; i<num_items; i++) {
-        if (t > oT[i]){
-            pnt = i + 1;
+        if (t < oT[i]){
+            pnt = i;
         }
     }
-    if (pnt == 1) {
-        T = oT[pnt];
+    if (pnt == 0) {
         Jtype = JTYPE_CONSTANT;
         Jp = 0.0f;
+        T0 = oT[pnt];
         A0 = oA[pnt];
         V0 = oV[pnt];
         P0 = oP[pnt];
     } else if (pnt == num_items) {
-        T = oT[pnt];
         Jtype = JTYPE_CONSTANT;
         Jp = 0.0;
-        A0 = oA[pnt];
-        V0 = oV[pnt];
-        P0 = oP[pnt];
+        T0 = oT[pnt-1];
+        A0 = oA[pnt-1];
+        V0 = oV[pnt-1];
+        P0 = oP[pnt-1];
     } else {
         Jtype = oJtype[pnt];
         Jp = oJ[pnt];
-        T = oT[pnt-1];
+        T0 = oT[pnt-1];
         A0 = oA[pnt-1];
         V0 = oV[pnt-1];
         P0 = oP[pnt-1];
@@ -186,13 +186,13 @@ void scurves::runme(float t, float& Jt_out, float& At_out, float& Vt_out, float&
 
     switch (Jtype) {
         case JTYPE_POSITIVE:
-            JSegment1(t-T, Jp, A0, V0, P0, Jt_out, At_out, Vt_out, Pt_out);
+            JSegment1(t-T0, Jp, A0, V0, P0, Jt_out, At_out, Vt_out, Pt_out);
             break;
         case JTYPE_NEGATIVE:
-            JSegment2(t-T, Jp, A0, V0, P0, Jt_out, At_out, Vt_out, Pt_out);
+            JSegment2(t-T0, Jp, A0, V0, P0, Jt_out, At_out, Vt_out, Pt_out);
             break;
         default:
-            JConst(t-T, Jp, A0, V0, P0, Jt_out, At_out, Vt_out, Pt_out);
+            JConst(t-T0, Jp, A0, V0, P0, Jt_out, At_out, Vt_out, Pt_out);
             break;
     }
 }
