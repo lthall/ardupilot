@@ -37,6 +37,7 @@ void Copter::ModeRTL::restart_without_terrain()
 // should be called at 100hz or more
 void Copter::ModeRTL::run(bool disarm_on_land)
 {
+#if GRIPPER_ENABLED == ENABLED
     switch (_state) {
     case RTL_InitialClimb:
     case RTL_ReturnHome:
@@ -54,6 +55,7 @@ void Copter::ModeRTL::run(bool disarm_on_land)
         }
         break;
     }
+#endif
 
     // check if we need to move to next state
     if (_state_complete) {
