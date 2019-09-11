@@ -63,11 +63,11 @@ const AP_Param::GroupInfo HarmonicNotchFilterParams::var_info[] = {
 
     // @Param: REF
     // @DisplayName: Harmonic Notch Filter reference value
-    // @Description: Reference value associated with the specified frequency to facilitate frequency scaling of the Harmonic Notch Filter
+    // @Description: Reference value associated with the specified frequency to facilitate frequency scaling of the Harmonic Notch Filter. A reference value of zero disables dynamic scaling.
     // @User: Advanced
-    // @Range: 0.1 0.9
+    // @Range: 0.0 0.9
     // @RebootRequired: True
-    AP_GROUPINFO("REF", 6, HarmonicNotchFilterParams, _reference, 0.1f),
+    AP_GROUPINFO("REF", 6, HarmonicNotchFilterParams, _reference, 0),
 
     AP_GROUPEND
 };
