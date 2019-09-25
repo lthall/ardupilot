@@ -30,10 +30,11 @@ const AP_Param::GroupInfo AC_Circle::var_info[] = {
 // Note that the Vector/Matrix constructors already implicitly zero
 // their values.
 //
-AC_Circle::AC_Circle(const AP_InertialNav& inav, const AP_AHRS_View& ahrs, AC_PosControl& pos_control) :
+AC_Circle::AC_Circle(const AP_InertialNav& inav, const AP_AHRS_View& ahrs, AC_PosControl& pos_control, const AC_AttitudeControl& attitude_control) :
     _inav(inav),
     _ahrs(ahrs),
     _pos_control(pos_control),
+    _attitude_control(attitude_control),
     _yaw(0.0f),
     _angle(0.0f),
     _angle_total(0.0f),
@@ -115,15 +116,23 @@ void AC_Circle::update()
         dt = 0.0f;
     }
 
-    // ramp angular velocity to maximum
-    if (_angular_vel < _angular_vel_max) {
-        _angular_vel += fabsf(_angular_accel) * dt;
-        _angular_vel = MIN(_angular_vel, _angular_vel_max);
+    if (_velocity_cross < 0.5f * _velocity_max) {
+        // jerk limited increase in acceleration
+        float time = safe_sqrt(2.0f * _velocity_cross / _jerk_max);
+        _velocity_cross = 0.5f * _jerk_max * sq(time + dt);
+        _accel_cross = _jerk_max * (time + dt);
+    } else if (_accel_cross > 0.0f && _velocity_cross < _velocity_max) {
+        // jerk limited decrease in acceleration
+        float time = safe_sqrt(2.0f * (_velocity_max - _velocity_cross) / _jerk_max);
+        _velocity_cross = _velocity_max - 0.5f * _jerk_max * sq(time - dt);
+        _accel_cross = _jerk_max * (time - dt);
+    } else {
+        // constant velocity
+        _velocity_cross = _velocity_max;
+        _accel_cross = 0.0f;
     }
-    if (_angular_vel > _angular_vel_max) {
-        _angular_vel -= fabsf(_angular_accel) * dt;
-        _angular_vel = MAX(_angular_vel, _angular_vel_max);
-    }
+
+    _angular_vel = _velocity_cross / _radius;
 
     // update the target angle and total angle traveled
     float angle_change = _angular_vel * dt;
@@ -131,19 +140,47 @@ void AC_Circle::update()
     _angle = wrap_PI(_angle);
     _angle_total += angle_change;
 
+    float cos_angle = cosf(_angle);
+    float sin_angle = sinf(_angle);
+    float accel_rad = sq(_angular_vel) * _radius;
+
     // if the circle_radius is zero we are doing panorama so no need to update loiter target
     if (!is_zero(_radius)) {
         // calculate target position
-        Vector3f target;
-        target.x = _center.x + _radius * cosf(-_angle);
-        target.y = _center.y - _radius * sinf(-_angle);
-        target.z = _pos_control.get_alt_target();
+        Vector3f pos;
+        pos.x = _center.x + _radius * cos_angle;
+        pos.y = _center.y + _radius * sin_angle;
+        pos.z = _pos_control.get_alt_target();
+
+        Vector3f vel;
+        vel.x = - _velocity_cross * sin_angle;
+        vel.y = _velocity_cross * cos_angle;
+        vel.z = 0.0f;
+
+        Vector3f accel;
+        accel.x = - accel_rad * cos_angle - _accel_cross * sin_angle;
+        accel.y = - accel_rad * sin_angle + _accel_cross * cos_angle;
+        accel.z = 0.0f;
 
         // update position controller target
-        _pos_control.set_xy_target(target.x, target.y);
+        _pos_control.set_xy_target(pos.x, pos.y);
+        _pos_control.set_desired_velocity_xy(vel.x, vel.y);
+        _pos_control.set_desired_accel_xy(accel.x, accel.y);
 
         // heading is from vehicle to center of circle
-        _yaw = get_bearing_cd(_inav.get_position(), _center);
+//        _yaw = get_bearing_cd(_inav.get_position(), _center);
+        _yaw = ToDeg(_angular_vel)*100.0f;
+
+        // write log - save the data.
+        AP::logger().Write("LEN2", "TimeUS,vm,vc,am,ac,ar,y,yd", "Qfffffff",
+                                               AP_HAL::micros64(),
+                                               (double)_velocity_max,
+                                               (double)_velocity_cross,
+                                               (double)_accel_max,
+                                               (double)_accel_cross,
+                                               (double)accel_rad,
+                                               (double)ToDeg(_ahrs.yaw),
+                                               (double)ToDeg(wrap_PI(_angle+M_PI)));
     } else {
         // set target position to center
         Vector3f target;
@@ -205,25 +242,39 @@ void AC_Circle::get_closest_point_on_circle(Vector3f &result)
 void AC_Circle::calc_velocities(bool init_velocity)
 {
     // if we are doing a panorama set the circle_angle to the current heading
+
+    // circle mode angular velocity
+    _angular_vel_max = ToRad(_rate);
+    // limit to max slew rate angular velocity
+    _angular_vel_max = MIN(_angular_vel_max, _attitude_control.get_slew_yaw_rads());
+
     if (_radius <= 0) {
-        _angular_vel_max = ToRad(_rate);
-        _angular_accel = MAX(fabsf(_angular_vel_max),ToRad(AC_CIRCLE_ANGULAR_ACCEL_MIN));  // reach maximum yaw velocity in 1 second
+        _angular_accel = MAX(fabsf(_angular_vel_max), 0.25f * _attitude_control.get_accel_yaw_max_radss());
     }else{
-        // calculate max velocity based on waypoint speed ensuring we do not use more than half our max acceleration for accelerating towards the center of the circle
-        float velocity_max = MIN(_pos_control.get_max_speed_xy(), safe_sqrt(0.5f*_pos_control.get_max_accel_xy()*_radius));
-
-        // angular_velocity in radians per second
-        _angular_vel_max = velocity_max/_radius;
-        _angular_vel_max = constrain_float(ToRad(_rate),-_angular_vel_max,_angular_vel_max);
-
-        // angular_velocity in radians per second
-        _angular_accel = MAX(_pos_control.get_max_accel_xy()/_radius, ToRad(AC_CIRCLE_ANGULAR_ACCEL_MIN));
+        // maximum acceleration set to leave 25% for corrections
+        _accel_max = 0.75 * _pos_control.get_max_accel_xy();
+        // maximum velocity to achieve angular velocity
+        _velocity_max = _angular_vel_max * _radius;
+        // limit velocity by maximum allowable velocity
+        _velocity_max = MIN(_velocity_max, _pos_control.get_max_speed_xy());
+        // limit velocity by maximum allowable radial acceleration
+        _velocity_max = MIN(_velocity_max, safe_sqrt(_accel_max*_radius));
+        // maximum jerk based on 50% roll or pitch angular acceleration
+        _jerk_max = 0.5f * MIN(_attitude_control.get_accel_roll_max_radss(), _attitude_control.get_accel_pitch_max_radss()) * GRAVITY_MSS * 100.0f; // cm/s/s
+        // limit maximum acceleration by maximum radial jerk
+        _accel_max = MIN(_accel_max, _jerk_max * _radius / _velocity_max);
+        // limit jerk to ensure maximum acceleration is not exceeded
+        _jerk_max = MIN(_jerk_max, sq(_accel_max)/_velocity_max);
+        // limit jerk by maximum yaw angular acceleration
+        _jerk_max = MIN(_jerk_max, 0.25f * _attitude_control.get_accel_yaw_max_radss() * _radius);
     }
 
     // initialise angular velocity
     if (init_velocity) {
-        _angular_vel = 0;
+        _angular_vel = 0.0f;
     }
+    _velocity_cross = 0.0f;
+    _accel_cross = 0.0f;
 }
 
 // init_start_angle - sets the starting angle around the circle and initialises the angle_total

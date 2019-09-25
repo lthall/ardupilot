@@ -309,6 +309,9 @@ public:
     // User settable parameters
     static const struct AP_Param::GroupInfo var_info[];
 
+    // Return the yaw slew rate limit in radians/s
+    float get_slew_yaw_rads() const { return radians(_slew_yaw * 0.01f); }
+
 protected:
 
     // Update rate_target_ang_vel using attitude_error_rot_vec_rad
@@ -317,9 +320,6 @@ protected:
     // Return angle in radians to be added to roll angle. Used by heli to counteract
     // tail rotor thrust in hover. Overloaded by AC_Attitude_Heli to return angle.
     virtual float get_roll_trim_rad() { return 0;}
-
-    // Return the yaw slew rate limit in radians/s
-    float get_slew_yaw_rads() { return radians(_slew_yaw * 0.01f); }
 
     // Maximum rate the yaw target can be updated in Loiter, RTL, Auto flight modes
     AP_Float            _slew_yaw;
