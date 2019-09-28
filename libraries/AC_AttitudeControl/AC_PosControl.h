@@ -173,6 +173,12 @@ public:
     void set_accel_xy(float accel_cmss);
     float get_accel_xy() const { return _accel_cms; }
 
+    /// standby_xyz_reset - resets I terms and removes position error
+    ///     This function will let Loiter and Alt Hold continue to operate
+    ///     in the event that the flight controller is in control of the
+    ///     aircraft when in standby.
+    void standby_xyz_reset();
+
     /// set_speed_xy - set horizontal speed maximum in cm/s
     ///     leash length will be recalculated the next time update_xy_controller() is called
     void set_speed_xy(float speed_cms);
