@@ -78,6 +78,7 @@ enum aux_sw_func {
     AUXSW_USER_FUNC1 =          47, // user function #1
     AUXSW_USER_FUNC2 =          48, // user function #2
     AUXSW_USER_FUNC3 =          49, // user function #3
+    AUXSW_STAND_BY =            76, // Standy signal magnitude
     AUXSW_KILL_IMU1  =          100, // kill IMU1
     AUXSW_KILL_IMU2  =          101, // kill IMU2
     AUXSW_SWITCH_MAX,
@@ -394,6 +395,8 @@ enum LoggingParameters {
 #define DATA_WINCH_RELAXED                  68
 #define DATA_WINCH_LENGTH_CONTROL           69
 #define DATA_WINCH_RATE_CONTROL             70
+#define DATA_STAND_BY_ENABLE                74
+#define DATA_STAND_BY_DISABLE               75
 
 // Error message sub systems and error codes
 #define ERROR_SUBSYSTEM_MAIN                1

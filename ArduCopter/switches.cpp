@@ -237,6 +237,7 @@ void Copter::init_aux_switch_function(int8_t ch_option, uint8_t ch_flag)
         case AUXSW_AVOID_PROXIMITY:
         case AUXSW_INVERTED:
         case AUXSW_WINCH_ENABLE:
+        case AUXSW_STAND_BY:
         case AUXSW_RC_OVERRIDE_ENABLE:
         case AUXSW_KILL_IMU1:
         case AUXSW_KILL_IMU2:
@@ -788,6 +789,23 @@ void Copter::do_aux_switch_function(int8_t ch_function, uint8_t ch_flag)
             userhook_auxSwitch3(ch_flag);
             break;
 #endif
+
+        case AUXSW_STAND_BY: {
+            switch (ch_flag) {
+                case AUX_SWITCH_HIGH: {
+                    copter.standby_active = true;
+                    copter.Log_Write_Event(DATA_STAND_BY_ENABLE);
+                    gcs().send_text(MAV_SEVERITY_INFO, "Stand By Enabled");
+                }
+                case AUX_SWITCH_LOW: {
+                    copter.standby_active = false;
+                    copter.Log_Write_Event(DATA_STAND_BY_DISABLE);
+                    gcs().send_text(MAV_SEVERITY_INFO, "Stand By Disabled");
+                    break;
+                }
+            }
+            break;
+        }
     }
 }
 
