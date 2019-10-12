@@ -252,33 +252,57 @@ void AP_MotorsHeli_Quad::move_actuators(float roll_out, float pitch_out, float c
             _collectiveFactor[CH_1+i] * collective_out;
     }
 
-    // see if we need to scale down yaw_out
+    // Correct for coupling to yaw as we cross zero
+    float yaw_coupling = 0.0f;
+    for (uint8_t i=0; i < AP_MOTORS_HELI_QUAD_NUM_MOTORS; i++) {
+        yaw_coupling += fabs(_out[i]) * _yawFactor[CH_1+i];
+    }
+
+    if(fabs(yaw_out) < fabs(collective_out)) {
+        limit.yaw = true;
+    }
+    yaw_out = constrain_float(yaw_out, -fabs(collective_out), fabs(collective_out));
+    if (is_positive(collective_out) ) {
+        yaw_coupling = -2.0f * yaw_coupling + yaw_out;
+    } else {
+        yaw_coupling = -2.0f * yaw_coupling - yaw_out;
+    }
+
+    // now apply the yaw command and yaw coupling correction
     for (uint8_t i=0; i<AP_MOTORS_HELI_QUAD_NUM_MOTORS; i++) {
-        float y = _yawFactor[CH_1+i] * yaw_out;
-        if (_out[i] < 0) {
-            // the slope of the yaw effect changes at zero collective
-            y = -y;
+        _out[i] += _yawFactor[CH_1+i] * yaw_coupling;
+    }
+
+    // add yaw control to thrust outputs
+    float rpt_low = -1.0f;   // lowest thrust value
+    float rpt_high = 1.0f; // highest thrust value
+    for (uint8_t i=0; i < AP_MOTORS_HELI_QUAD_NUM_MOTORS; i++) {
+        // record lowest roll + pitch + yaw command
+        if (_out[i] < rpt_low) {
+            rpt_low = _out[i];
         }
-        if (_out[i] * (_out[i] + y) < 0) {
-            // applying this yaw demand would change the sign of the
-            // collective, which means the yaw would not be applied
-            // evenly. We scale down the overall yaw demand to prevent
-            // it crossing over zero
-            float s = -(_out[i] / y);
-            yaw_out *= s;
+        // record highest roll + pitch + yaw command
+        if (_out[i] > rpt_high) {
+            rpt_high = _out[i];
         }
     }
 
-    // now apply the yaw correction
-    for (uint8_t i=0; i<AP_MOTORS_HELI_QUAD_NUM_MOTORS; i++) {
-        float y = _yawFactor[CH_1+i] * yaw_out;
-        if (_out[i] < 0) {
-            // the slope of the yaw effect changes at zero collective
-            y = -y;
+    float scale = MIN(-1.0 / rpt_low, 1.0 / rpt_high);
+    if(scale < 1.0f){
+        for (uint8_t i=0; i < AP_MOTORS_HELI_QUAD_NUM_MOTORS; i++) {
+            _out[i] = scale * _out[i];
         }
-        _out[i] += y;
+        limit.roll = true;
+        limit.pitch = true;
+        limit.yaw = true;
+        if(rpt_low < -1.0f){
+            limit.throttle_lower = true;
+        }
+        if(rpt_high > 1.0f){
+            limit.throttle_upper = true;
+        }
+        collective_out *= scale;
     }
-
 }
 
 void AP_MotorsHeli_Quad::output_to_motors()
