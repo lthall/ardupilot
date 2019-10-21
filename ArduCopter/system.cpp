@@ -310,8 +310,26 @@ void Copter::startup_INS_ground()
 }
 
 void Copter::update_dynamic_notch() {
-    // Update dynamic notch filter settings
-    ins.update_harmonic_notch_freq_hz(attitude_control->get_notch_freq_scaled(ins.get_gyro_harmonic_notch_center_freq_hz(), ins.get_gyro_harmonic_notch_reference()));
+    const float ref_freq = ins.get_gyro_harmonic_notch_center_freq_hz();
+    const float ref = ins.get_gyro_harmonic_notch_reference();
+
+    if (is_zero(ref)) {
+        ins.update_harmonic_notch_freq_hz(ref_freq);
+        return;
+    }
+#if FRAME_CONFIG == HELI_FRAME
+#if RPM_ENABLED == ENABLED
+    if (rpm_sensor.healthy(0)) {
+        // set the harmonic notch filter frequency from the main rotor rpm
+        ins.update_harmonic_notch_freq_hz(MAX(ref_freq, rpm_sensor.get_rpm(0) * ref / 60.0f));
+    } else {
+        ins.update_harmonic_notch_freq_hz(ref_freq);
+    }
+#endif
+#else
+    // set the harmonic notch filter frequency approximately scaled on motor rpm implied by throttle
+    ins.update_harmonic_notch_freq_hz(ref_freq * MAX(1.0f, sqrtf(motors->get_throttle_out() / ref)));
+#endif
 }
 
 // position_ok - returns true if the horizontal absolute position is ok and home position is set
