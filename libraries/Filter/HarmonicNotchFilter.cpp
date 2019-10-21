@@ -67,7 +67,7 @@ const AP_Param::GroupInfo HarmonicNotchFilterParams::var_info[] = {
     // @User: Advanced
     // @Range: 0.1 0.9
     // @RebootRequired: True
-    AP_GROUPINFO("REF", 6, HarmonicNotchFilterParams, _reference, 0.1f),
+    AP_GROUPINFO("REF", 6, HarmonicNotchFilterParams, _reference, 0),
 
     AP_GROUPEND
 };
