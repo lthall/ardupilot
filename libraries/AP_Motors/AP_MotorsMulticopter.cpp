@@ -212,6 +212,15 @@ const AP_Param::GroupInfo AP_MotorsMulticopter::var_info[] = {
     // @User: Advanced
     AP_GROUPINFO("SAFE_TIME", 42, AP_MotorsMulticopter, _safe_time, AP_MOTORS_SAFE_TIME_DEFAULT),
 
+    // @Param: YAW_SV_TRIM
+    // @DisplayName: Yaw Servo trim Angle
+    // @Description: Yaw servo's trim angle
+    // @Range: 5 80
+    // @Units: deg
+    // @Increment: 1
+    // @User: Standard
+    AP_GROUPINFO_FRAME("YAW_SV_TRIM", 43, AP_MotorsMulticopter, _yaw_servo_angle_trim_deg, 30, AP_PARAM_FRAME_TRICOPTER),
+
     AP_GROUPEND
 };
 
