@@ -172,6 +172,7 @@ protected:
 
     // Maximum lean angle of yaw servo in degrees. This is specific to tricopter
     AP_Float            _yaw_servo_angle_max_deg;
+    AP_Float            _yaw_servo_angle_trim_deg;
 
     // time to spool motors to min throttle
     AP_Float            _spool_up_time;
