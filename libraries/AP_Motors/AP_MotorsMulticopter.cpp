@@ -219,7 +219,7 @@ const AP_Param::GroupInfo AP_MotorsMulticopter::var_info[] = {
     // @Units: deg
     // @Increment: 1
     // @User: Standard
-    AP_GROUPINFO_FRAME("YAW_SV_TRIM", 43, AP_MotorsMulticopter, _yaw_servo_angle_trim_deg, 30, AP_PARAM_FRAME_TRICOPTER),
+    AP_GROUPINFO_FRAME("YAW_SV_TRIM", 43, AP_MotorsMulticopter, _yaw_servo_angle_trim_deg, 0, AP_PARAM_FRAME_TRICOPTER),
 
     AP_GROUPEND
 };
