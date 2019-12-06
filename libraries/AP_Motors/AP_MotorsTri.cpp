@@ -97,7 +97,7 @@ void AP_MotorsTri::output_to_motors()
             rc_write(AP_MOTORS_MOT_1, output_to_pwm(0));
             rc_write(AP_MOTORS_MOT_2, output_to_pwm(0));
             rc_write(AP_MOTORS_MOT_4, output_to_pwm(0));
-            rc_write_angle(AP_MOTORS_CH_TRI_YAW, 0);
+            rc_write_angle(AP_MOTORS_CH_TRI_YAW, _yaw_servo_angle_trim_deg*100);
             break;
         case SpoolState::GROUND_IDLE:
             // sends output to motors when armed but not flying
@@ -107,7 +107,7 @@ void AP_MotorsTri::output_to_motors()
             rc_write(AP_MOTORS_MOT_1, output_to_pwm(_actuator[1]));
             rc_write(AP_MOTORS_MOT_2, output_to_pwm(_actuator[2]));
             rc_write(AP_MOTORS_MOT_4, output_to_pwm(_actuator[4]));
-            rc_write_angle(AP_MOTORS_CH_TRI_YAW, 0);
+            rc_write_angle(AP_MOTORS_CH_TRI_YAW, _yaw_servo_angle_trim_deg*100);
             break;
         case SpoolState::SPOOLING_UP:
         case SpoolState::THROTTLE_UNLIMITED:
@@ -156,7 +156,8 @@ void AP_MotorsTri::output_armed_stabilizing()
     float   rpy_low = 0.0f;             // lowest motor value
     float   rpy_high = 0.0f;            // highest motor value
     float   thr_adj;                    // the difference between the pilot's desired throttle and throttle_thrust_best_rpy
-    float   cos_pivot_angle = cosf(_pivot_angle);
+    float   cos_pivot_angle;
+    cos_pivot_angle = MAX(cosf(_pivot_angle), 0.5f);
 
     SRV_Channels::set_angle(SRV_Channels::get_motor_function(AP_MOTORS_CH_TRI_YAW), _yaw_servo_angle_max_deg*100);
 
@@ -267,7 +268,7 @@ void AP_MotorsTri::output_armed_stabilizing()
     yaw_thrust += throttle_thrust_best_plus_adj * sinf(radians(_yaw_servo_angle_trim_deg));
 
     // calculate angle of yaw pivot
-    _pivot_angle = safe_asin(yaw_thrust / _thrust_rear);
+    _pivot_angle = safe_asin(yaw_thrust / MAX(_throttle_hover / 2.0f, _thrust_rear));
     if (fabsf(_pivot_angle) > radians(_yaw_servo_angle_max_deg)) {
         limit.yaw = true;
         _pivot_angle = constrain_float(_pivot_angle, -radians(_yaw_servo_angle_max_deg), radians(_yaw_servo_angle_max_deg));
