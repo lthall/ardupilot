@@ -794,13 +794,10 @@ void Copter::do_aux_switch_function(int8_t ch_function, uint8_t ch_flag)
             switch (ch_flag) {
                 case AUX_SWITCH_HIGH: {
                     copter.standby_active = true;
-                    copter.Log_Write_Event(DATA_STAND_BY_ENABLE);
-                    gcs().send_text(MAV_SEVERITY_INFO, "Stand By Enabled");
+                    break;
                 }
                 case AUX_SWITCH_LOW: {
                     copter.standby_active = false;
-                    copter.Log_Write_Event(DATA_STAND_BY_DISABLE);
-                    gcs().send_text(MAV_SEVERITY_INFO, "Stand By Disabled");
                     break;
                 }
             }

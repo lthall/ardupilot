@@ -587,6 +587,8 @@ public:
     AP_Follow follow;
 #endif
 
+    AP_Int8 standby_pin;
+
 };
 
 extern const AP_Param::Info        var_info[];
