@@ -23,6 +23,7 @@
 #endif
 #include "AP_Compass_MMC3416.h"
 #include "AP_Compass_MAG3110.h"
+#include "AP_Compass_RM3100.h"
 #include "AP_Compass.h"
 
 extern AP_HAL::HAL& hal;
@@ -686,6 +687,16 @@ void Compass::_probe_external_i2c_compasses(void)
             ADD_BACKEND(DRIVER_IST8310, AP_Compass_IST8310::probe(*this, GET_I2C_DEVICE(i, HAL_COMPASS_IST8310_I2C_ADDR),
                                                                   both_i2c_external, ROTATION_PITCH_180), AP_Compass_IST8310::name, both_i2c_external);
         }
+    }
+
+    // external i2c bus
+    FOREACH_I2C_EXTERNAL(i) {
+        ADD_BACKEND(DRIVER_RM3100, AP_Compass_RM3100::probe(*this, GET_I2C_DEVICE(i, HAL_COMPASS_RM3100_I2C_ADDR),
+                                                            true, ROTATION_NONE), AP_Compass_RM3100::name, true);
+    }
+    FOREACH_I2C_INTERNAL(i) {
+        ADD_BACKEND(DRIVER_RM3100, AP_Compass_RM3100::probe(*this, GET_I2C_DEVICE(i, HAL_COMPASS_RM3100_I2C_ADDR),
+                                                            both_i2c_external, ROTATION_NONE), AP_Compass_RM3100::name, both_i2c_external);
     }
 #endif // HAL_MINIMIZE_FEATURES
 }
