@@ -113,7 +113,7 @@ void AC_PID::filt_D_hz(float hz)
 //  target and error are filtered
 //  the derivative is then calculated and filtered
 //  the integral is then updated based on the setting of the limit flag
-float AC_PID::update_all(float target, float measurement, bool limit)
+float AC_PID::update_all(float target, float measurement, bool limit_neg, bool limit_pos)
 {
     // don't process inf or NaN
     if (!isfinite(target) || !isfinite(measurement)) {
@@ -139,7 +139,7 @@ float AC_PID::update_all(float target, float measurement, bool limit)
     }
 
     // update I term
-    update_i(limit);
+    update_i(limit_neg, limit_pos);
 
     float P_out = (_error * _kp);
     float D_out = (_derivative * _kd);
@@ -185,7 +185,7 @@ float AC_PID::update_error(float error, bool limit)
     }
 
     // update I term
-    update_i(limit);
+    update_i(limit, limit);
 
     float P_out = (_error * _kp);
     float D_out = (_derivative * _kd);
@@ -201,11 +201,11 @@ float AC_PID::update_error(float error, bool limit)
 
 //  update_i - update the integral
 //  If the limit flag is set the integral is only allowed to shrink
-void AC_PID::update_i(bool limit)
+void AC_PID::update_i(bool limit_neg, bool limit_pos)
 {
     if (!is_zero(_ki) && is_positive(_dt)) {
         // Ensure that integrator can only be reduced if the output is saturated
-        if (!limit || ((is_positive(_integrator) && is_negative(_error)) || (is_negative(_integrator) && is_positive(_error)))) {
+        if (!((limit_neg && is_negative(_error)) || (limit_pos && is_positive(_error)))) {
             _integrator += ((float)_error * _ki) * _dt;
             _integrator = constrain_float(_integrator, -_kimax, _kimax);
         }
@@ -227,7 +227,7 @@ float AC_PID::get_i() const
 
 float AC_PID::get_d() const
 {
-    return _kd * _derivative;
+    return _derivative * _kd;
 }
 
 float AC_PID::get_ff()
@@ -326,8 +326,7 @@ void AC_PID::set_integrator(float target, float measurement, float i)
 
 void AC_PID::set_integrator(float error, float i)
 {
-    _integrator = constrain_float(i - error * _kp, -_kimax, _kimax);
-    _pid_info.I = _integrator;
+    set_integrator(i - error * _kp);
 }
 
 void AC_PID::set_integrator(float i)

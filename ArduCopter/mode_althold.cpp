@@ -10,8 +10,7 @@ bool ModeAltHold::init(bool ignore_checks)
 {
     // initialise position and desired velocity
     if (!pos_control->is_active_z()) {
-        pos_control->set_alt_target_to_current_alt();
-        pos_control->set_desired_velocity_z(inertial_nav.get_velocity_z());
+        pos_control->init_D_controller();
     }
 
     return true;
@@ -101,6 +100,6 @@ void ModeAltHold::run()
     attitude_control->input_euler_angle_roll_pitch_euler_rate_yaw(target_roll, target_pitch, target_yaw_rate);
 
     // call z-axis position controller
-    pos_control->update_z_controller();
+    pos_control->update_D_controller();
 
 }

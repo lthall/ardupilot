@@ -17,8 +17,7 @@ bool ModeSmartRTL::init(bool ignore_checks)
 
         // set current target to a reasonable stopping point
         Vector3f stopping_point;
-        pos_control->get_stopping_point_xy(stopping_point);
-        pos_control->get_stopping_point_z(stopping_point);
+        pos_control->get_stopping_point_xyz(stopping_point);
         wp_nav->set_wp_destination(stopping_point);
 
         // initialise yaw to obey user parameter

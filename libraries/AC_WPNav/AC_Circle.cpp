@@ -54,9 +54,9 @@ void AC_Circle::init(const Vector3f& center)
     _center = center;
 
     // initialise position controller (sets target roll angle, pitch angle and I terms based on vehicle current lean angles)
-    _pos_control.set_desired_accel_xy(0.0f,0.0f);
-    _pos_control.set_desired_velocity_xy(0.0f,0.0f);
-    _pos_control.init_xy_controller();
+    _pos_control.set_desired_accel_to_zero_NE();
+    _pos_control.set_desired_vel_to_zero_NE();
+    _pos_control.init_NE_controller();
 
     // set initial position target to reasonable stopping point
     _pos_control.set_target_to_stopping_point_xy();
@@ -74,9 +74,9 @@ void AC_Circle::init(const Vector3f& center)
 void AC_Circle::init()
 {
     // initialise position controller (sets target roll angle, pitch angle and I terms based on vehicle current lean angles)
-    _pos_control.set_desired_accel_xy(0.0f,0.0f);
-    _pos_control.set_desired_velocity_xy(0.0f,0.0f);
-    _pos_control.init_xy_controller();
+    _pos_control.set_desired_accel_to_zero_NE();
+    _pos_control.set_desired_vel_to_zero_NE();
+    _pos_control.init_NE_controller();
 
     // set initial position target to reasonable stopping point
     _pos_control.set_target_to_stopping_point_xy();
@@ -110,7 +110,7 @@ void AC_Circle::set_rate(float deg_per_sec)
 void AC_Circle::update()
 {
     // calculate dt
-    float dt = _pos_control.time_since_last_xy_update();
+    float dt = _pos_control.time_since_last_NE_update();
     if (dt >= 0.2f) {
         dt = 0.0f;
     }
@@ -159,7 +159,7 @@ void AC_Circle::update()
     }
 
     // update position controller
-    _pos_control.update_xy_controller();
+    _pos_control.update_NE_controller();
 }
 
 // get_closest_point_on_circle - returns closest point on the circle
@@ -177,7 +177,7 @@ void AC_Circle::get_closest_point_on_circle(Vector3f &result)
 
     // get current position
     Vector3f stopping_point;
-    _pos_control.get_stopping_point_xy(stopping_point);
+    _pos_control.get_stopping_point_xyz(stopping_point);
 
     // calc vector from stopping point to circle center
     Vector2f vec;   // vector from circle center to current location
@@ -210,14 +210,14 @@ void AC_Circle::calc_velocities(bool init_velocity)
         _angular_accel = MAX(fabsf(_angular_vel_max),ToRad(AC_CIRCLE_ANGULAR_ACCEL_MIN));  // reach maximum yaw velocity in 1 second
     }else{
         // calculate max velocity based on waypoint speed ensuring we do not use more than half our max acceleration for accelerating towards the center of the circle
-        float velocity_max = MIN(_pos_control.get_max_speed_xy(), safe_sqrt(0.5f*_pos_control.get_max_accel_xy()*_radius));
+        float velocity_max = MIN(_pos_control.get_max_speed_NE(), safe_sqrt(0.5f*_pos_control.get_max_accel_NE()*_radius));
 
         // angular_velocity in radians per second
         _angular_vel_max = velocity_max/_radius;
         _angular_vel_max = constrain_float(ToRad(_rate),-_angular_vel_max,_angular_vel_max);
 
         // angular_velocity in radians per second
-        _angular_accel = MAX(_pos_control.get_max_accel_xy()/_radius, ToRad(AC_CIRCLE_ANGULAR_ACCEL_MIN));
+        _angular_accel = MAX(_pos_control.get_max_accel_NE()/_radius, ToRad(AC_CIRCLE_ANGULAR_ACCEL_MIN));
     }
 
     // initialise angular velocity

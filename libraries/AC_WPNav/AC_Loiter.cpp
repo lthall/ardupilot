@@ -103,8 +103,8 @@ void AC_Loiter::init_target(const Vector3f& position)
     _pos_control.set_xy_target(position.x, position.y);
 
     // set vehicle velocity and acceleration to zero
-    _pos_control.set_desired_velocity_xy(0.0f,0.0f);
-    _pos_control.set_desired_accel_xy(0.0f,0.0f);
+    _pos_control.set_desired_vel_to_zero_NE();
+    _pos_control.set_desired_accel_to_zero_NE();
 
     // initialise position controller if not already active
     if (!_pos_control.is_active_xy()) {
@@ -125,12 +125,13 @@ void AC_Loiter::init_target()
     _pos_control.set_max_accel_xy(_accel_cmss);
     _pos_control.set_leash_length_xy(LOITER_POS_CORRECTION_MAX);
 
-    _predicted_accel = _desired_accel;
-    // update angle targets that will be passed to stabilize controller
-    float roll_cd, pitch_cd;
-    _pos_control.accel_to_lean_angles(_predicted_accel.x, _predicted_accel.y, roll_cd, pitch_cd);
-    _predicted_euler_angle.x = radians(roll_cd*0.01f);
-    _predicted_euler_angle.y = radians(pitch_cd*0.01f);
+    // Initialise the current predicted angle and acceleration based on our target attitude.
+    Vector3f euler_angle = _attitude_control.get_att_target_euler_cd();
+    _predicted_euler_angle.x = euler_angle.x;
+    _predicted_euler_angle.y = euler_angle.y;
+    // This may be more correct if it is the measure acceleration
+    _pos_control.target_attitude_to_accel(euler_angle, _predicted_accel.x, _predicted_accel.y);
+
     // set target position
     _pos_control.set_xy_target(curr_pos.x, curr_pos.y);
 
@@ -194,7 +195,7 @@ void AC_Loiter::set_pilot_desired_acceleration(float euler_roll_angle_cd, float 
 /// get vector to stopping point based on a horizontal position and velocity
 void AC_Loiter::get_stopping_point_xy(Vector3f& stopping_point) const
 {
-    _pos_control.get_stopping_point_xy(stopping_point);
+    _pos_control.get_stopping_point_xyz(stopping_point);
 }
 
 /// get maximum lean angle when using loiter

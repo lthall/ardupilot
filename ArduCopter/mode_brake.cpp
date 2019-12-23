@@ -18,8 +18,7 @@ bool ModeBrake::init(bool ignore_checks)
 
     // initialise position and desired velocity
     if (!pos_control->is_active_z()) {
-        pos_control->set_alt_target_to_current_alt();
-        pos_control->set_desired_velocity_z(inertial_nav.get_velocity_z());
+        pos_control->init_D_controller();
     }
 
     _timeout_ms = 0;
@@ -78,8 +77,8 @@ void ModeBrake::timeout_to_loiter_ms(uint32_t timeout_ms)
 void ModeBrake::init_target()
 {
     // initialise position controller
-    pos_control->set_desired_velocity_xy(0.0f,0.0f);
-    pos_control->set_desired_accel_xy(0.0f,0.0f);
+    pos_control->set_desired_vel_to_zero_NE();
+    pos_control->set_desired_accel_to_zero_NE();
     pos_control->init_xy_controller();
 
     // initialise pos controller speed and acceleration
@@ -88,9 +87,7 @@ void ModeBrake::init_target()
     pos_control->calc_leash_length_xy();
 
     // set target position
-    Vector3f stopping_point;
-    pos_control->get_stopping_point_xy(stopping_point);
-    pos_control->set_xy_target(stopping_point.x, stopping_point.y);
+    pos_control->set_target_to_stopping_point_xy();
 }
 
 #endif

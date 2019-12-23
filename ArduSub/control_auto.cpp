@@ -371,8 +371,7 @@ bool Sub::auto_loiter_start()
 
     // calculate stopping point
     Vector3f stopping_point;
-    pos_control.get_stopping_point_xy(stopping_point);
-    pos_control.get_stopping_point_z(stopping_point);
+    pos_control.get_stopping_point_xyz(stopping_point);
 
     // initialise waypoint controller target to stopping point
     wp_nav.set_wp_origin_and_destination(origin, stopping_point);

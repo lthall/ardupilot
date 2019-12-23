@@ -395,8 +395,8 @@ void Sub::guided_posvel_control_run()
     // if motors not enabled set throttle to zero and exit immediately
     if (!motors.armed()) {
         // set target position and velocity to current position and velocity
-        pos_control.set_pos_target(inertial_nav.get_position());
-        pos_control.set_desired_velocity(Vector3f(0,0,0));
+        pos_control.set_target_to_vehicle_pos_NE();
+        pos_control.set_desired_vel_to_zero_NE();
         motors.set_desired_spool_state(AP_Motors::DesiredSpoolState::GROUND_IDLE);
         // Sub vehicles do not stabilize roll/pitch/yaw when disarmed
         attitude_control.set_throttle_out(0,true,g.throttle_filt);

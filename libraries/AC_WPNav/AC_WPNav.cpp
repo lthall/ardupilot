@@ -111,12 +111,11 @@ void AC_WPNav::wp_and_spline_init()
     }
 
     // initialise position controller
-    _pos_control.set_desired_accel_xy(0.0f,0.0f);
     _pos_control.init_xy_controller();
-    _pos_control.clear_desired_velocity_ff_z();
+    _pos_control.set_desired_accel_to_zero_NE();
 
     // initialise feed forward velocity to zero
-    _pos_control.set_desired_velocity_xy(0.0f, 0.0f);
+    _pos_control.set_desired_vel_to_zero_NE();
 
     // initialise position controller speed and acceleration
     _pos_control.set_max_speed_xy(_wp_speed_cms);
@@ -195,8 +194,7 @@ bool AC_WPNav::set_wp_destination(const Vector3f& destination, bool terrain_alt)
         origin = _pos_control.get_pos_target();
     } else {
         // if waypoint controller is not active, set origin to reasonable stopping point (using curr pos and velocity)
-        _pos_control.get_stopping_point_xy(origin);
-        _pos_control.get_stopping_point_z(origin);
+        _pos_control.get_stopping_point_xyz(origin);
     }
 
     // convert origin to alt-above-terrain
@@ -296,20 +294,18 @@ void AC_WPNav::shift_wp_origin_to_current_pos()
 
     // move pos controller target and disable feed forward
     _pos_control.set_pos_target(curr_pos);
-    _pos_control.freeze_ff_z();
 }
 
 /// get_wp_stopping_point_xy - returns vector to stopping point based on a horizontal position and velocity
 void AC_WPNav::get_wp_stopping_point_xy(Vector3f& stopping_point) const
 {
-	_pos_control.get_stopping_point_xy(stopping_point);
+	_pos_control.get_stopping_point_xyz(stopping_point);
 }
 
 /// get_wp_stopping_point - returns vector to stopping point based on 3D position and velocity
 void AC_WPNav::get_wp_stopping_point(Vector3f& stopping_point) const
 {
-    _pos_control.get_stopping_point_xy(stopping_point);
-    _pos_control.get_stopping_point_z(stopping_point);
+    _pos_control.get_stopping_point_xyz(stopping_point);
 }
 
 /// advance_wp_target_along_track - move target location along track from origin to destination
@@ -503,7 +499,6 @@ bool AC_WPNav::update_wpnav()
     // freeze feedforwards during known discontinuities
     if (_flags.new_wp_destination) {
         _flags.new_wp_destination = false;
-        _pos_control.freeze_ff_z();
     }
 
     _pos_control.update_xy_controller();
@@ -637,8 +632,7 @@ bool AC_WPNav::set_spline_destination(const Vector3f& destination, bool terrain_
         origin = _pos_control.get_pos_target();
     }else{
         // otherwise calculate origin from the current position and velocity
-        _pos_control.get_stopping_point_xy(origin);
-        _pos_control.get_stopping_point_z(origin);
+        _pos_control.get_stopping_point_xyz(origin);
     }
 
     // convert origin to alt-above-terrain
@@ -792,7 +786,6 @@ bool AC_WPNav::update_spline()
     // freeze feedforwards during known discontinuities
     if (_flags.new_wp_destination) {
         _flags.new_wp_destination = false;
-        _pos_control.freeze_ff_z();
     }
 
     // run horizontal position controller
