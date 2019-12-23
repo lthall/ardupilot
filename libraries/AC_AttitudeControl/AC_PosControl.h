@@ -5,7 +5,10 @@
 #include <AP_Math/AP_Math.h>
 #include <AC_PID/AC_P.h>               // P library
 #include <AC_PID/AC_PID.h>             // PID library
+#include <AC_PID/AC_P_1D.h>            // P library (1-axis)
+#include <AC_PID/AC_P_2D.h>            // P library (2-axis)
 #include <AC_PID/AC_PI_2D.h>           // PI library (2-axis)
+#include <AC_PID/AC_PID_1D.h>          // PID library (1-axis)
 #include <AC_PID/AC_PID_2D.h>          // PID library (2-axis)
 #include <AP_InertialNav/AP_InertialNav.h>     // Inertial Navigation library
 #include "AC_AttitudeControl.h" // Attitude control library
@@ -248,7 +251,7 @@ public:
     ///     results placed in stopping_position vector
     ///     set_accel_xy() should be called before this method to set vehicle acceleration
     ///     set_leash_length() should have been called before this method
-    void get_stopping_point_xy(Vector3f &stopping_point) const;
+    void get_stopping_point_xy(Vector3f &stopping_point);
 
     /// get_distance_to_target - get horizontal distance to position target in cm (used for reporting)
     float get_distance_to_target() const;
@@ -281,11 +284,11 @@ public:
     float get_leash_xy() const { return _leash; }
 
     /// get pid controllers
-    AC_P& get_pos_z_p() { return _p_pos_z; }
-    AC_P& get_vel_z_p() { return _p_vel_z; }
-    AC_PID& get_accel_z_pid() { return _pid_accel_z; }
-    AC_P& get_pos_xy_p() { return _p_pos_xy; }
+    AC_P_2D& get_pos_xy_p() { return _p_pos_xy; }
+    AC_P_1D& get_pos_z_p() { return _p_pos_z; }
     AC_PID_2D& get_vel_xy_pid() { return _pid_vel_xy; }
+    AC_PID_1D& get_vel_z_p() { return _p_vel_z; }
+    AC_PID& get_accel_z_pid() { return _pid_accel_z; }
 
     /// accessors for reporting
     const Vector3f& get_vel_target() const { return _vel_target; }
@@ -387,10 +390,10 @@ protected:
     // parameters
     AP_Float    _accel_xy_filt_hz;      // XY acceleration filter cutoff frequency
     AP_Float    _lean_angle_max;        // Maximum autopilot commanded angle (in degrees). Set to zero for Angle Max
-    AC_P        _p_pos_z;
-    AC_P        _p_vel_z;
+    AC_P_1D     _p_pos_z;
+    AC_PID_1D   _p_vel_z;
     AC_PID      _pid_accel_z;
-    AC_P        _p_pos_xy;
+    AC_P_2D     _p_pos_xy;
     AC_PID_2D   _pid_vel_xy;
 
     // internal variables
