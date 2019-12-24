@@ -287,7 +287,7 @@ public:
     AC_P_2D& get_pos_xy_p() { return _p_pos_xy; }
     AC_P_1D& get_pos_z_p() { return _p_pos_z; }
     AC_PID_2D& get_vel_xy_pid() { return _pid_vel_xy; }
-    AC_PID_1D& get_vel_z_p() { return _p_vel_z; }
+    AC_PID_1D& get_vel_z_pid() { return _pid_vel_z; }
     AC_PID& get_accel_z_pid() { return _pid_accel_z; }
 
     /// accessors for reporting
@@ -390,14 +390,15 @@ protected:
     // parameters
     AP_Float    _accel_xy_filt_hz;      // XY acceleration filter cutoff frequency
     AP_Float    _lean_angle_max;        // Maximum autopilot commanded angle (in degrees). Set to zero for Angle Max
-    AC_P_1D     _p_pos_z;
-    AC_PID_1D   _p_vel_z;
-    AC_PID      _pid_accel_z;
     AC_P_2D     _p_pos_xy;
+    AC_P_1D     _p_pos_z;
     AC_PID_2D   _pid_vel_xy;
+    AC_PID_1D   _pid_vel_z;
+    AC_PID      _pid_accel_z;
 
     // internal variables
     float       _dt;                    // time difference (in seconds) between calls from the main program
+    float       _dt2;                    // time difference (in seconds) between calls from the main program
     uint64_t    _last_update_xy_us;     // system time (in microseconds) since last update_xy_controller call
     uint64_t    _last_update_z_us;      // system time (in microseconds) of last update_z_controller call
     float       _speed_down_cms;        // max descent rate in cm/s

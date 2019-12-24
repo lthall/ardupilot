@@ -47,7 +47,8 @@ float AC_P_1D::update_all(float &target, float measurement, float min, float max
 
 //    todo: Replace sqrt_controller with optimal acceleration and jerk limited curve
     // MIN(_Dxy_max, _D2xy_max / _kxy_P) limits the max accel to the point where max jerk is exceeded
-    return sqrt_controller(error, _kp, _D_max, _D2_max, _dt);
+//    return sqrt_controller(error, _kp, _D_max, _D2_max, _dt);
+    return error * _kp;
 }
 
 float AC_P_1D::get_p() const
