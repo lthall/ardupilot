@@ -216,9 +216,6 @@ public:
     /// set_desired_velocity_z - sets desired velocity in cm/s in z axis
     void set_desired_velocity_z(float vel_z_cms) {_vel_desired.z = vel_z_cms;}
 
-    // clear desired velocity feed-forward in z axis
-    void clear_desired_velocity_ff_z() { _flags.use_desvel_ff_z = false; }
-
     // set desired acceleration in cm/s in xy axis
     void set_desired_accel_xy(float accel_lat_cms, float accel_lon_cms) { _accel_desired.x = accel_lat_cms; _accel_desired.y = accel_lon_cms; }
 
