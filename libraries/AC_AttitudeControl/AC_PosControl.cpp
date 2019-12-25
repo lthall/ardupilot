@@ -219,7 +219,6 @@ AC_PosControl::AC_PosControl(const AP_AHRS_View& ahrs, const AP_InertialNav& ina
     _flags.reset_desired_vel_to_pos = true;
     _flags.reset_accel_to_lean_xy = true;
     _flags.reset_rate_to_accel_z = true;
-    _flags.freeze_ff_z = true;
     _limit.pos_up = true;
     _limit.pos_down = true;
     _limit.vel_up = true;
@@ -369,11 +368,6 @@ void AC_PosControl::add_takeoff_climb_rate(float climb_rate_cms, float dt)
 void AC_PosControl::shift_alt_target(float z_cm)
 {
     _pos_target.z += z_cm;
-
-    // freeze feedforward to avoid jump
-    if (!is_zero(z_cm)) {
-        freeze_ff_z();
-    }
 }
 
 /// relax_alt_hold_controllers - set all desired and targets to measured
@@ -449,9 +443,6 @@ void AC_PosControl::init_takeoff()
     const Vector3f& curr_pos = _inav.get_position();
 
     _pos_target.z = curr_pos.z;
-
-    // freeze feedforward to avoid jump
-    freeze_ff_z();
 
     // shift difference between last motor out and hover throttle into accelerometer I
     _pid_accel_z.set_integrator((_attitude_control.get_throttle_in() - _motors.get_throttle_hover()) * 1000.0f);
@@ -568,7 +559,6 @@ void AC_PosControl::run_z_controller()
 
 float AC_PosControl::vibration_override()
 {
-    _flags.freeze_ff_z = true;
     _accel_desired.z = 0.0f;
     const float thr_per_accelz_cmss = _motors.get_throttle_hover() / (GRAVITY_MSS * 100.0f);
     // during vibration compensation use feed forward with manually calculated gain

@@ -312,7 +312,6 @@ void AC_WPNav::shift_wp_origin_to_current_pos()
 
     // move pos controller target and disable feed forward
     _pos_control.set_pos_target(curr_pos);
-    _pos_control.freeze_ff_z();
 }
 
 /// get_wp_stopping_point_xy - returns vector to stopping point based on a horizontal position and velocity
@@ -519,7 +518,6 @@ bool AC_WPNav::update_wpnav()
     // freeze feedforwards during known discontinuities
     if (_flags.new_wp_destination) {
         _flags.new_wp_destination = false;
-        _pos_control.freeze_ff_z();
     }
 
     _pos_control.update_xy_controller();
@@ -808,7 +806,6 @@ bool AC_WPNav::update_spline()
     // freeze feedforwards during known discontinuities
     if (_flags.new_wp_destination) {
         _flags.new_wp_destination = false;
-        _pos_control.freeze_ff_z();
     }
 
     // run horizontal position controller

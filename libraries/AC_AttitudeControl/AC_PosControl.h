@@ -231,9 +231,6 @@ public:
     // overrides the velocity process variable for one timestep
     void override_vehicle_velocity_xy(const Vector2f& vel_xy) { _vehicle_horiz_vel = vel_xy; _flags.vehicle_horiz_vel_override = true; }
 
-    /// freeze_ff_z - used to stop the feed forward being calculated during a known discontinuity
-    void freeze_ff_z() { _flags.freeze_ff_z = true; }
-
     // is_active_xy - returns true if the xy position controller has been run very recently
     bool is_active_xy() const;
 
@@ -322,8 +319,6 @@ protected:
             uint16_t reset_desired_vel_to_pos   : 1;    // 1 if we should reset the rate_to_accel_xy step
             uint16_t reset_accel_to_lean_xy     : 1;    // 1 if we should reset the accel to lean angle step
             uint16_t reset_rate_to_accel_z      : 1;    // 1 if we should reset the rate_to_accel_z step
-            uint16_t freeze_ff_z        : 1;    // 1 used to freeze velocity to accel feed forward for one iteration
-            uint16_t use_desvel_ff_z    : 1;    // 1 to use z-axis desired velocity as feed forward into velocity step
             uint16_t vehicle_horiz_vel_override : 1; // 1 if we should use _vehicle_horiz_vel as our velocity process variable for one timestep
     } _flags;
 
