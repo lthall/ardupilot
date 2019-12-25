@@ -19,11 +19,13 @@ public:
     // set_dt - set time step in seconds
     void set_dt(float dt);
 
+    void set_limits_error(float error_min, float error_max, float output_min, float output_max, float D_Out_max = 0.0f, float D2_Out_max = 0.0f);
+
     //  update_all - set target and measured inputs to PID controller and calculate outputs
     //  target and _error are filtered
     //  the derivative is then calculated and filtered
     //  the integral is then updated based on the setting of the limit flag
-    float update_all(float &target, float measurement, float min, float max, bool limit_min, bool limit_max);
+    float update_all(float &target, float measurement, bool limit_min, bool limit_max);
 
     // get_pi - get results from pid controller
     float get_p() const;
@@ -42,7 +44,8 @@ public:
     bool asymetricLimit(float &input, float min, float max, bool &limitMin, bool &limitMax );
 
     // Proportional controller with piecewise sqrt sections to constrain second derivative
-    float sqrt_controller(float error, float p, float D_max, float D2_max, float dt);
+    float sqrt_controller(float error, float p, float D_max, float dt);
+    float inv_sqrt_controller(float output, float p, float D_max);
 
     // accessors
     AP_Float        &kP() { return _kp; }
@@ -63,6 +66,7 @@ protected:
     // internal variables
     float           _dt;        // time step in seconds
     float           _error;     // error value to enable filtering
-    float           _D_max;     // maximum first differential of output
-    float           _D2_max;    // maximum second differential of output
+    float           _error_min;     // error value to enable filtering
+    float           _error_max;     // error value to enable filtering
+    float           _D_Out_max;     // maximum first differential of output
 };

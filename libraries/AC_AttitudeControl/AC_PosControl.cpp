@@ -340,19 +340,19 @@ void AC_PosControl::set_alt_target_from_climb_rate_ff(float climb_rate_cms, floa
     // jerk_z is calculated to reach full acceleration in 1000ms.
     float jerk_z = accel_z_cms * POSCONTROL_JERK_RATIO;
 
-    float accel_z_max = MIN(accel_z_cms, safe_sqrt(2.0f * fabsf(_vel_desired.z - climb_rate_cms) * jerk_z));
+    float accel_z_max = MIN(accel_z_cms, safe_sqrt(2.0f * fabsf(climb_rate_cms- _vel_desired.z) * jerk_z));
 
     // jerk limit the acceleration increase
     _accel_last_z_cms += jerk_z * dt;
     // jerk limit the decrease as zero error is approached
     _accel_last_z_cms = MIN(_accel_last_z_cms, accel_z_max);
     // remove overshoot during last time step
-    _accel_last_z_cms = MIN(_accel_last_z_cms, fabsf(_vel_desired.z - climb_rate_cms) / dt);
+    _accel_last_z_cms = MIN(_accel_last_z_cms, fabsf(climb_rate_cms- _vel_desired.z) / dt);
 
-    if (is_positive(_vel_desired.z - climb_rate_cms)){
-        _accel_desired.z = -_accel_last_z_cms;
-    } else {
+    if (is_positive(climb_rate_cms- _vel_desired.z)){
         _accel_desired.z = _accel_last_z_cms;
+    } else {
+        _accel_desired.z = -_accel_last_z_cms;
     }
 
     float vel_change_limit = _accel_last_z_cms * dt;
@@ -484,6 +484,7 @@ void AC_PosControl::update_z_controller()
 {
     // check time since last cast
     const uint64_t now_us = AP_HAL::micros64();
+    // do we need to do this
     if (now_us - _last_update_z_us > POSCONTROL_ACTIVE_TIMEOUT_US) {
         _flags.reset_rate_to_accel_z = true;
         _pid_accel_z.set_integrator((_attitude_control.get_throttle_in() - _motors.get_throttle_hover()) * 1000.0f);
@@ -519,73 +520,80 @@ void AC_PosControl::calc_leash_length_z()
 // vel_up_max, vel_down_max should have already been set before calling this method
 void AC_PosControl::run_z_controller()
 {
+    // Position Controller
+
     float curr_alt = _inav.get_altitude();
-
-    _vel_target.z = _p_pos_z.update_all(_pos_target.z, curr_alt, -fabsf(_leash_down_z), _leash_up_z, _limit.pos_down, _limit.pos_up);
-
-    // check speed limits
-    // To-Do: check these speed limits here or in the pos->rate controller
-    _limit.vel_up = false;
-    _limit.vel_down = false;
-    if (_vel_target.z < -fabsf(_speed_down_cms)) {
-        _vel_target.z = -fabsf(_speed_down_cms);
-        _limit.vel_down = true;
-    }
-    if (_vel_target.z > _speed_up_cms) {
-        _vel_target.z = _speed_up_cms;
-        _limit.vel_up = true;
-    }
-
+    // define maximum position error and maximum first and second differential limits
+    _p_pos_z.set_limits_error(fabsf(_leash_down_z), _leash_up_z, fabsf(_speed_down_cms), _speed_up_cms);
+    // calculate the target velocity correction
+    _vel_target.z = _p_pos_z.update_all(_pos_target.z, curr_alt, _limit.pos_down, _limit.pos_up);
     // add feed forward component
     if (_flags.use_desvel_ff_z) {
         _vel_target.z += _vel_desired.z;
     }
 
-    // the following section calculates acceleration required to achieve the velocity target
+    // Velocity Controller
 
     const Vector3f& curr_vel = _inav.get_velocity();
-
     _accel_target.z = _pid_vel_z.update_all(_vel_target.z, curr_vel.z);
-
     _accel_target.z += _accel_desired.z;
 
-    // the following section calculates a desired throttle needed to achieve the acceleration target
-    float z_accel_meas;         // actual acceleration
+    // Acceleration Controller
 
+    float z_accel_meas;         // actual acceleration
     // Calculate Earth Frame Z acceleration
     z_accel_meas = -(_ahrs.get_accel_ef_blended().z + GRAVITY_MSS) * 100.0f;
-
     // ensure imax is always large enough to overpower hover throttle
     if (_motors.get_throttle_hover() * 1000.0f > _pid_accel_z.imax()) {
         _pid_accel_z.imax(_motors.get_throttle_hover() * 1000.0f);
     }
-
     float thr_out;
     if (_vibe_comp_enabled) {
-        _flags.freeze_ff_z = true;
-        _accel_desired.z = 0.0f;
-        const float thr_per_accelz_cmss = _motors.get_throttle_hover() / (GRAVITY_MSS * 100.0f);
-        // during vibration compensation use feed forward with manually calculated gain
-        // ToDo: clear pid_info P, I and D terms for logging
-        if (!(_motors.limit.throttle_lower || _motors.limit.throttle_upper) || ((is_positive(_pid_accel_z.get_i()) && is_negative(_vel_error.z)) || (is_negative(_pid_accel_z.get_i()) && is_positive(_vel_error.z)))) {
-            _pid_accel_z.set_integrator(_pid_accel_z.get_i() + _dt * thr_per_accelz_cmss * 1000.0f * _vel_error.z * _pid_vel_z.kP() * POSCONTROL_VIBE_COMP_I_GAIN);
-        }
-        thr_out = POSCONTROL_VIBE_COMP_P_GAIN * thr_per_accelz_cmss * _accel_target.z + _pid_accel_z.get_i() * 0.001f;
+        thr_out = vibration_override();
     } else {
         thr_out = _pid_accel_z.update_all(_accel_target.z, z_accel_meas, (_motors.limit.throttle_lower || _motors.limit.throttle_upper)) * 0.001f;
         thr_out += _pid_accel_z.get_ff() * 0.001f;
     }
     thr_out += _motors.get_throttle_hover();
 
+    // Actuator commands
+
     // send throttle to attitude controller with angle boost
     _attitude_control.set_throttle_out(thr_out, true, POSCONTROL_THROTTLE_CUTOFF_FREQ);
 
+    // Check for vertical controller health
+
     // _speed_down_cms is checked to be non-zero when set
     float error_ratio = _vel_error.z/_speed_down_cms;
-
     _vel_z_control_ratio += _dt*0.1f*(0.5-error_ratio);
     _vel_z_control_ratio = constrain_float(_vel_z_control_ratio, 0.0f, 2.0f);
+
+    AP::logger().Write("LEN", "TimeUS,pt,pm,vd,vt,vm,ad,at,am,to", "Qfffffffff",
+                                                  AP_HAL::micros64(),
+                                                  (double)_pos_target.z,
+                                                  (double)curr_alt,
+                                                  (double)_vel_desired.z,
+                                                  (double)_vel_target.z,
+                                                  (double)curr_vel.z,
+                                                  (double)_accel_desired.z,
+                                                  (double)_accel_target.z,
+                                                  (double)z_accel_meas,
+                                                  (double)thr_out);
 }
+
+float AC_PosControl::vibration_override()
+{
+    _flags.freeze_ff_z = true;
+    _accel_desired.z = 0.0f;
+    const float thr_per_accelz_cmss = _motors.get_throttle_hover() / (GRAVITY_MSS * 100.0f);
+    // during vibration compensation use feed forward with manually calculated gain
+    // ToDo: clear pid_info P, I and D terms for logging
+    if (!(_motors.limit.throttle_lower || _motors.limit.throttle_upper) || ((is_positive(_pid_accel_z.get_i()) && is_negative(_vel_error.z)) || (is_negative(_pid_accel_z.get_i()) && is_positive(_vel_error.z)))) {
+        _pid_accel_z.set_integrator(_pid_accel_z.get_i() + _dt * thr_per_accelz_cmss * 1000.0f * _vel_error.z * _pid_vel_z.kP() * POSCONTROL_VIBE_COMP_I_GAIN);
+    }
+    return POSCONTROL_VIBE_COMP_P_GAIN * thr_per_accelz_cmss * _accel_target.z + _pid_accel_z.get_i() * 0.001f;
+}
+
 
 ///
 /// lateral position controller

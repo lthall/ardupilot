@@ -152,6 +152,7 @@ public:
 
     /// update_z_controller - fly to altitude in cm above home
     void update_z_controller();
+    float vibration_override();
 
     // get_leash_down_z, get_leash_up_z - returns vertical leash lengths in cm
     float get_leash_down_z() const { return _leash_down_z; }
