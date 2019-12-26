@@ -616,9 +616,14 @@ void AC_AttitudeControl::attitude_controller_run_quat()
 
     ang_vel_limit(_rate_target_ang_vel, radians(_ang_vel_roll_max), radians(_ang_vel_pitch_max), radians(_ang_vel_yaw_max));
 
+    // calculate the translation quaternion to move from the target frame to the vehicle frame
+    Quaternion to_to_from_quat = attitude_vehicle_quat.inverse() * _attitude_target_quat;
+
+    // Implement vechile model
+    plant_model(_attitude_target_ang_vel, to_to_from_quat);
+
     // Add the angular velocity feedforward, rotated into vehicle frame
     Quaternion attitude_target_ang_vel_quat = Quaternion(0.0f, _attitude_target_ang_vel.x, _attitude_target_ang_vel.y, _attitude_target_ang_vel.z);
-    Quaternion to_to_from_quat = attitude_vehicle_quat.inverse() * _attitude_target_quat;
     Quaternion desired_ang_vel_quat = to_to_from_quat.inverse() * attitude_target_ang_vel_quat * to_to_from_quat;
 
     // Correct the thrust vector and smoothly add feedforward and yaw input
@@ -650,6 +655,26 @@ void AC_AttitudeControl::attitude_controller_run_quat()
 
     // Record error to handle EKF resets
     _attitude_ang_error = attitude_vehicle_quat.inverse() * _attitude_target_quat;
+}
+
+// Calculates the delay in the plant and the ideal actuator output to achieve the desired rates
+void AC_AttitudeControl::plant_model(Vector3f &attitude_target_ang_vel, Quaternion to_to_from_quat)
+{
+    Vector3f    rate_target_ang_vel;
+    Quaternion attitude_target_ang_vel_quat = Quaternion(0.0f, attitude_target_ang_vel.x, attitude_target_ang_vel.y, attitude_target_ang_vel.z);
+    Quaternion desired_ang_vel_quat = to_to_from_quat.inverse() * attitude_target_ang_vel_quat * to_to_from_quat;
+    rate_target_ang_vel.x += desired_ang_vel_quat.q2;
+    rate_target_ang_vel.y += desired_ang_vel_quat.q3;
+    rate_target_ang_vel.z += desired_ang_vel_quat.q4;
+
+//    Plant_Roll_PID = plant_model_Roll_PID(rate_target_ang_vel.x);
+//    Plant_Roll_FF = plant_model__FF(rate_target_ang_vel.x);
+//    Plant_Pit_PID = plant_model_Pit_PID(rate_target_ang_vel.y);
+//    Plant_Pit_FF = plant_model_Pit_FF(rate_target_ang_vel.y);
+//    Plant_Yaw_PID = plant_model_Yaw_PID(rate_target_ang_vel.z);
+//    Plant_Yaw_FF = plant_model_Yaw_FF(rate_target_ang_vel.z);
+
+//    attitude_target_ang_vel = Delay(attitude_target_ang_vel);
 }
 
 // thrust_heading_rotation_angles - calculates two ordered rotations to move the att_from_quat quaternion to the att_to_quat quaternion.

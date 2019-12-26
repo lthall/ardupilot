@@ -291,6 +291,9 @@ public:
     // Calculates the body frame angular velocities to follow the target attitude
     void attitude_controller_run_quat();
 
+    // Calculates the body frame angular velocities to follow the target attitude
+    void plant_model(Vector3f &attitude_target_ang_vel, Quaternion to_to_from_quat);
+
     // sanity check parameters.  should be called once before take-off
     virtual void parameter_sanity_check() {}
 
