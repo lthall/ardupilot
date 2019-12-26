@@ -605,6 +605,14 @@ void AC_PosControl::set_pos_target(const Vector3f& position)
     //_pitch_target = constrain_int32(_ahrs.pitch_sensor,-_attitude_control.lean_angle_max(),_attitude_control.lean_angle_max());
 }
 
+/// set_pos_target in cm from home
+void AC_PosControl::set_pos_vel_accel(const Vector3f& pos, const Vector3f& vel, const Vector3f& accel)
+{
+    _pos_target = pos;
+    _vel_desired = vel;
+    _accel_desired = accel;
+}
+
 /// set_xy_target in cm from home
 void AC_PosControl::set_xy_target(float x, float y)
 {

@@ -4,18 +4,26 @@
 
 class scurves {
 public:
+    scurves()
+    {
+        otj = 0.0;
+        oJp = 0.0;
+        oAp = 0.0;
+        oVp = 0.0;
+    }
 
     // constructor
     scurves(float tj, float Jp, float Ap, float Vp) :
         otj(tj), oJp(Jp), oAp(Ap), oVp(Vp)
     {}
 
+    void Cal_Init(float T0, float J0, float A0, float V0, float P0);
     void Cal_T(float tin, float J0);
     void Cal_JS1(float tj, float Jp);
     void Cal_JS2(float tj, float Jp);
     void Cal_tj_Jp_Tcj(float tj, float Jp, float Tcj);
 
-    void Cal_Pn(float V0, float P0, float Pp);
+    void Cal_Pn(float Pp);
     void Cal_Pos(float tj, float V0, float P0, float Jp, float Ap, float Vp, float Pp,
                  float& Jp_out, float& t2_out, float& t4_out, float& t6_out);
 

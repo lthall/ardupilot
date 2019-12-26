@@ -3,6 +3,7 @@
 #include <AP_Common/AP_Common.h>
 #include <AP_Param/AP_Param.h>
 #include <AP_Math/AP_Math.h>
+#include <AP_Math/scurves.h>
 #include <AP_Common/Location.h>
 #include <AP_InertialNav/AP_InertialNav.h>     // Inertial Navigation library
 #include <AC_AttitudeControl/AC_PosControl.h>      // Position control library
@@ -293,6 +294,9 @@ protected:
     AP_Float    _wp_radius_cm;          // distance from a waypoint in cm that, when crossed, indicates the wp has been reached
     AP_Float    _wp_accel_cmss;          // horizontal acceleration in cm/s/s during missions
     AP_Float    _wp_accel_z_cmss;        // vertical acceleration in cm/s/s during missions
+
+//    scurve
+    scurves _scurve_this_leg;
 
     // waypoint controller internal variables
     uint32_t    _wp_last_update;        // time of last update_wpnav call

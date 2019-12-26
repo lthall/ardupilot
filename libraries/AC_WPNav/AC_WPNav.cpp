@@ -142,6 +142,8 @@ void AC_WPNav::wp_and_spline_init()
     _pos_control.calc_leash_length_xy();
     _pos_control.calc_leash_length_z();
 
+    _scurve_this_leg = scurves(0.25f, 1000.0f, _wp_accel_cmss, _wp_speed_cms);
+
     // initialise yaw heading to current heading target
     _flags.wp_yaw_set = false;
 }
@@ -285,6 +287,8 @@ bool AC_WPNav::set_wp_origin_and_destination(const Vector3f& origin, const Vecto
     // get speed along track (note: we convert vertical speed into horizontal speed equivalent)
     float speed_along_track = curr_vel.x * _pos_delta_unit.x + curr_vel.y * _pos_delta_unit.y + curr_vel.z * _pos_delta_unit.z;
     _limited_speed_xy_cms = constrain_float(speed_along_track, 0, _pos_control.get_max_speed_xy());
+    _scurve_this_leg.Cal_Init(0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+    _scurve_this_leg.Cal_Pn(_track_length);
 
     return true;
 }
@@ -446,7 +450,7 @@ bool AC_WPNav::advance_wp_target_along_track(float dt)
     Vector3f final_target = _origin + _pos_delta_unit * _track_desired;
     // convert final_target.z to altitude above the ekf origin
     final_target.z += terr_offset;
-    _pos_control.set_pos_target(final_target);
+    _pos_control.set_pos_vel_accel(final_target, _pos_delta_unit * _limited_speed_xy_cms, Vector3f());
 
     // check if we've reached the waypoint
     if( !_flags.reached_destination ) {

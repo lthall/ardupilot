@@ -15,6 +15,27 @@
 
 #include <AP_Math/AP_Math.h>
 #include "scurves.h"
+#include <AP_HAL/AP_HAL.h>
+
+extern const AP_HAL::HAL& hal;
+
+void scurves::Cal_Init(float T0, float J0, float A0, float V0, float P0)
+{
+    enum jtype_t Jtype = JTYPE_CONSTANT;
+    float J = J0;
+    float T = T0;
+    float A = A0;
+    float V = V0;
+    float P = P0;
+    num_items++;
+
+    oT[num_items] = T;
+    oJtype[num_items] = Jtype;
+    oJ[num_items] = J;
+    oA[num_items] = A;
+    oV[num_items] = V;
+    oP[num_items] = P;
+}
 
 void scurves::Cal_T(float tin, float J0)
 {
@@ -89,30 +110,34 @@ void scurves::Cal_tj_Jp_Tcj(float tj, float Jp, float Tcj)
 {
     Cal_JS1(tj, Jp);
     Cal_T(Tcj, Jp);
-    Cal_JS2(tj, Jp);
+    hal.console->printf("Tcj %4.2f\n", Tcj);
+//    Cal_JS2(tj, Jp);
 }
 
-void scurves::Cal_Pn(float V0, float P0, float Pp)
+void scurves::Cal_Pn(float Pp)
 {
     float tj = otj;
     float Jp = oJp;
     float Ap = oAp;
     float Vp = oVp;
+    float V0 = oV[num_items];
+    float P0 = oP[num_items];
 
     float t2, t4, t6;
     Cal_Pos(tj, V0, P0, Jp, Ap, Vp, Pp, Jp, t2, t4, t6);
 
     Cal_tj_Jp_Tcj(tj, Jp, t2);
-    Cal_T(t4, 0.0);
-    Cal_tj_Jp_Tcj(tj, -Jp, t6);
-    float Tcv = (Pp-oP[num_items])/oV[num_items];
-    Cal_T(Tcv, 0.0);
+//    Cal_T(t4, 0.0);
+//    Cal_tj_Jp_Tcj(tj, -Jp, t6);
 
-    Cal_Pos(tj, 0, P0, Jp, Ap, Vp, Pp*2, Jp, t2, t4, t6);
-    Cal_T(Tcv, 0.0);
-    Cal_tj_Jp_Tcj(tj, -Jp, t6);
-    Cal_T(t4, 0.0);
-    Cal_tj_Jp_Tcj(tj, Jp, t2);
+//    float Tcv = (Pp/2.0-oP[num_items])/oV[num_items];
+//    Cal_T(Tcv, 0.0);
+//    Cal_T(Tcv, 0.0);
+//
+//    Cal_Pos(tj, 0.0f, P0, Jp, Ap, Vp, Pp, Jp, t2, t4, t6);
+//    Cal_tj_Jp_Tcj(tj, -Jp, t6);
+//    Cal_T(t4, 0.0);
+//    Cal_tj_Jp_Tcj(tj, Jp, t2);
 }
 
 void scurves::Cal_Pos(float tj, float V0, float P0, float Jp, float Ap, float Vp, float Pp,

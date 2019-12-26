@@ -204,6 +204,8 @@ public:
     /// set_pos_target in cm from home
     void set_pos_target(const Vector3f& position);
 
+    void set_pos_vel_accel(const Vector3f& pos, const Vector3f& vel, const Vector3f& accel);
+
     /// set_xy_target in cm from home
     void set_xy_target(float x, float y);
 
