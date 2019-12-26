@@ -957,22 +957,21 @@ void AC_PosControl::run_xy_controller(float dt)
     float ekfGndSpdLimit, ekfNavVelGainScaler;
     AP::ahrs_navekf().getEkfControlLimits(ekfGndSpdLimit, ekfNavVelGainScaler);
 
-    Vector3f curr_pos = _inav.get_position();
+    // Position Controller
 
-    Vector2f vel_target;
-    vel_target = _p_pos_xy.update_all(_pos_target.x, _pos_target.y, curr_pos, _leash);
+    Vector3f curr_pos = _inav.get_position();
+    Vector2f vel_target = _p_pos_xy.update_all(_pos_target.x, _pos_target.y, curr_pos, _leash);
 
     // add velocity feed-forward
     _vel_target.x = vel_target.x;
     _vel_target.y = vel_target.y;
+    // acceleration to correct for velocity error and scale PID output to compensate for optical flow measurement induced EKF noise
     _vel_target.x *= ekfNavVelGainScaler;
     _vel_target.y *= ekfNavVelGainScaler;
     _vel_target.x += _vel_desired.x;
     _vel_target.y += _vel_desired.y;
 
-    // the following section converts desired velocities in lat/lon directions to accelerations in lat/lon frame
-
-    Vector2f accel_target;
+    // Velocity Controller
 
     // check if vehicle velocity is being overridden
     if (_flags.vehicle_horiz_vel_override) {
@@ -981,10 +980,7 @@ void AC_PosControl::run_xy_controller(float dt)
         _vehicle_horiz_vel.x = _inav.get_velocity().x;
         _vehicle_horiz_vel.y = _inav.get_velocity().y;
     }
-
-    // call pi controller
-    accel_target = _pid_vel_xy.update_all(_vel_target.x, _vel_target.y, _vehicle_horiz_vel);
-
+    Vector2f accel_target = _pid_vel_xy.update_all(_vel_target.x, _vel_target.y, _vehicle_horiz_vel);
     // acceleration to correct for velocity error and scale PID output to compensate for optical flow measurement induced EKF noise
     accel_target.x *= ekfNavVelGainScaler;
     accel_target.y *= ekfNavVelGainScaler;
@@ -1007,7 +1003,7 @@ void AC_PosControl::run_xy_controller(float dt)
     _accel_target.x += _accel_desired.x;
     _accel_target.y += _accel_desired.y;
 
-    // the following section converts desired accelerations provided in lat/lon frame to roll/pitch angles
+    // Acceleration Controller
 
     // limit acceleration using maximum lean angles
     float angle_max = MIN(_attitude_control.get_althold_lean_angle_max(), get_lean_angle_max_cd());

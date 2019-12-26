@@ -20,8 +20,12 @@ AC_P_1D::AC_P_1D(float initial_p, float dt) :
     AP_Param::setup_object_defaults(this, var_info);
 
     _kp = initial_p;
-    _D_Out_max = 10.0f;
     _error = 0.0f;
+    _lim_err_neg = 0.0f;     // error value to enable filtering
+    _lim_err_pos = 0.0f;     // error value to enable filtering
+    _lim_out_neg = 0.0f;     // error value to enable filtering
+    _lim_out_pos = 0.0f;     // error value to enable filtering
+    _lim_D_Out = 10.0f;     // maximum first differential of output
 }
 
 // set_dt - set time step in seconds
@@ -32,16 +36,17 @@ void AC_P_1D::set_dt(float dt)
 }
 
 // set_dt - set time step in seconds
-void AC_P_1D::set_limits_error(float error_min, float error_max, float output_min, float output_max, float D_Out_max, float D2_Out_max)
+void AC_P_1D::set_limits_error(float lim_err_neg, float lim_err_pos, float lim_out_neg, float lim_out_pos, float lim_D_Out, float lim_D2_Out)
 {
-    _D_Out_max = D_Out_max;
-    if(is_positive(D2_Out_max)) {
+    _lim_err_neg = -inv_sqrt_controller(lim_err_neg, _kp, _lim_D_Out);
+    _lim_err_pos = inv_sqrt_controller(lim_err_pos, _kp, _lim_D_Out);
+    _lim_out_neg = lim_out_neg;     // error value to enable filtering
+    _lim_out_pos = lim_out_pos;     // error value to enable filtering
+    _lim_D_Out = lim_D_Out;
+    if(is_positive(lim_D2_Out)) {
         // limit the first derivative so as not to exceed the second derivative
-        _D_Out_max = MIN(_D_Out_max, D2_Out_max / _kp);
+        _lim_D_Out = MIN(_lim_D_Out, lim_D2_Out / _kp);
     }
-
-    _error_min = inv_sqrt_controller(error_min, _kp, _D_Out_max);
-    _error_max = inv_sqrt_controller(error_min, _kp, _D_Out_max);
 }
 
 //  update_all - set target and measured inputs to PID controller and calculate outputs
@@ -50,16 +55,19 @@ void AC_P_1D::set_limits_error(float error_min, float error_max, float output_mi
 //  the integral is then updated based on the setting of the limit flag
 float AC_P_1D::update_all(float &target, float measurement, bool limit_min, bool limit_max)
 {
+    limit_min = false;
+    limit_max = false;
+
     // calculate distance _error
     float error = target - measurement;
 
-    if (asymetricLimit(error, _error_min, _error_max, limit_min, limit_max )) {
+    if (asymetricLimit(error, _lim_err_neg, _lim_err_pos, limit_min, limit_max )) {
         target = measurement + error;
     }
 
 //    todo: Replace sqrt_controller with optimal acceleration and jerk limited curve
     // MIN(_Dxy_max, _D2xy_max / _kxy_P) limits the max accel to the point where max jerk is exceeded
-    return sqrt_controller(error, _kp, _D_Out_max, _dt);
+    return sqrt_controller(error, _kp, _lim_D_Out, _dt);
 }
 
 float AC_P_1D::get_p() const
@@ -87,8 +95,6 @@ void AC_P_1D::operator()(float initial_p, float dt)
 /// asymetricLimit - set limits based on seperate max and min
 bool AC_P_1D::asymetricLimit(float &input, float min, float max, bool &limitMin, bool &limitMax )
 {
-    limitMin = false;
-    limitMax = false;
     if (input < min) {
         input = min;
         limitMin = true;

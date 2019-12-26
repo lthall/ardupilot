@@ -115,6 +115,7 @@ protected:
     AP_Float _ki;
     AP_Float _kd;
     AP_Float _kff;
+    AP_Float _kdf;
     AP_Float _kimax;
     AP_Float _filt_T_hz;         // PID target filter frequency in Hz
     AP_Float _filt_E_hz;         // PID error filter frequency in Hz

@@ -66,7 +66,9 @@ protected:
     // internal variables
     float           _dt;        // time step in seconds
     float           _error;     // error value to enable filtering
-    float           _error_min;     // error value to enable filtering
-    float           _error_max;     // error value to enable filtering
-    float           _D_Out_max;     // maximum first differential of output
+    float           _lim_err_neg;     // error value to enable filtering
+    float           _lim_err_pos;     // error value to enable filtering
+    float           _lim_out_neg;     // error value to enable filtering
+    float           _lim_out_pos;     // error value to enable filtering
+    float           _lim_D_Out;     // maximum first differential of output
 };
