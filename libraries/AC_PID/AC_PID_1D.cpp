@@ -57,6 +57,8 @@ AC_PID_1D::AC_PID_1D(float initial_p, float initial_i, float initial_d, float in
 
     // reset input filter to first value received
     _flags._reset_filter = true;
+
+    memset(&_pid_info, 0, sizeof(_pid_info));
 }
 
 // set_dt - set time step in seconds
@@ -113,7 +115,15 @@ float AC_PID_1D::update_all(float target, float measurement, bool limit_neg, boo
     float P_out = (_error * _kp);
     float D_out = (_derivative * _kd);
 
-    return P_out + _integrator + D_out;
+    _pid_info.target = _target;
+    _pid_info.actual = measurement;
+    _pid_info.error = _error;
+    _pid_info.P = _error * _kp;
+    _pid_info.I = _integrator;
+    _pid_info.D = _derivative * _kd;
+    _pid_info.FF = _target * _kff;
+
+    return P_out + _integrator + D_out + _target * _kff;
 }
 
 //  update_i - update the integral

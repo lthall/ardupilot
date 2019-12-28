@@ -1,3 +1,6 @@
+
+#define ALLOW_DOUBLE_MATH_FUNCTIONS
+
 /*
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -37,6 +40,7 @@ void scurves::Segment(float T, enum jtype_t Jtype, float J, float A, float V, fl
 
 void scurves::Cal_Init(float T0, float J0, float A0, float V0, float P0)
 {
+    num_items = 0;
     enum jtype_t Jtype = JTYPE_CONSTANT;
     float J = J0;
     float T = T0;
@@ -51,49 +55,49 @@ void scurves::Cal_T(float tin, float J0)
 {
     enum jtype_t Jtype = JTYPE_CONSTANT;
     float J = J0;
-    float T = oT[num_items] + tin;
-    float A = oA[num_items] + J0*tin;
-    float V = oV[num_items] + oA[num_items]*tin + 0.5*J0*sq(tin);
-    float P = oP[num_items] + oV[num_items]*tin + 0.5*oA[num_items]*sq(tin) + (1/6)*J0*powf(tin,3);
+    float T = oT[num_items - 1] + tin;
+    float A = oA[num_items - 1] + J0*tin;
+    float V = oV[num_items - 1] + oA[num_items - 1]*tin + 0.5*J0*sq(tin);
+    float P = oP[num_items - 1] + oV[num_items - 1]*tin + 0.5*oA[num_items - 1]*sq(tin) + (1/6.0)*J0*powf(tin,3.0);
     Segment(T, Jtype, J, A, V, P);
 }
 
 void scurves::Cal_JS1(float tj, float Jp)
 {
     float Beta = M_PI/tj;
-    float Alpha = Jp/2;
+    float Alpha = Jp/2.0;
     float AT = Alpha*tj;
-    float VT = Alpha*(sq(tj)/2 - 2/sq(Beta));
-    float PT = Alpha*((-1/sq(Beta))*tj + (1/6)*powf(tj,3));
+    float VT = Alpha*(sq(tj)/2.0 - 2.0/sq(Beta));
+    float PT = Alpha*((-1.0/sq(Beta))*tj + (1/6.0)*powf(tj,3.0));
 
     enum jtype_t Jtype = JTYPE_POSITIVE;
     float J = Jp;
-    float T = oT[num_items] + tj;
-    float A = oA[num_items] + AT;
-    float V = oV[num_items] + oA[num_items]*tj + VT;
-    float P = oP[num_items] + oV[num_items]*tj + 0.5*oA[num_items]*sq(tj) + PT;
+    float T = oT[num_items - 1] + tj;
+    float A = oA[num_items - 1] + AT;
+    float V = oV[num_items - 1] + oA[num_items - 1]*tj + VT;
+    float P = oP[num_items - 1] + oV[num_items - 1]*tj + 0.5*oA[num_items - 1]*sq(tj) + PT;
     Segment(T, Jtype, J, A, V, P);
 }
 
 void scurves::Cal_JS2(float tj, float Jp)
 {
     float Beta = M_PI/tj;
-    float Alpha = Jp/2;
+    float Alpha = Jp/2.0;
     float AT = Alpha*tj;
-    float VT = Alpha*(sq(tj)/2 - 2/sq(Beta));
-    float PT = Alpha*((-1/sq(Beta))*tj + (1/6)*powf(tj,3));
+    float VT = Alpha*(sq(tj)/2.0 - 2.0/sq(Beta));
+    float PT = Alpha*((-1.0/sq(Beta))*tj + (1/6.0)*powf(tj,3.0));
     float A2T = Jp*tj;
     float V2T = Jp*sq(tj);
-    float P2T = Alpha*((-1/sq(Beta))*2*tj +(4/3)*powf(tj,3));
+    float P2T = Alpha*((-1.0/sq(Beta))*2.0*tj +(4.0/3.0)*powf(tj,3.0));
 
 //    hal.console->printf("Cal_JS2 - Beta %4.2f, Alpha %4.2f, AT %4.2f, VT %4.2f, PT %4.2f, A2T %4.2f, V2T %4.2f, P2T %4.2f\n", Beta, Alpha, AT, VT, PT, A2T, V2T, P2T);
 
     enum jtype_t Jtype = JTYPE_NEGATIVE;
     float J = Jp;
-    float T = oT[num_items] + tj;
-    float A = (oA[num_items]-AT) + A2T;
-    float V = (oV[num_items]-VT) + (oA[num_items]-AT)*tj + V2T;
-    float P = (oP[num_items]-PT) + (oV[num_items]-VT)*tj + 0.5*(oA[num_items]-AT)*sq(tj) + P2T;
+    float T = oT[num_items - 1] + tj;
+    float A = (oA[num_items - 1]-AT) + A2T;
+    float V = (oV[num_items - 1]-VT) + (oA[num_items - 1]-AT)*tj + V2T;
+    float P = (oP[num_items - 1]-PT) + (oV[num_items - 1]-VT)*tj + 0.5*(oA[num_items - 1]-AT)*sq(tj) + P2T;
     Segment(T, Jtype, J, A, V, P);
 }
 
@@ -109,53 +113,53 @@ void scurves::Cal_tj_Jp_Tcj(float tj, float Jp, float Tcj)
 
 void scurves::Cal_Pn(float Pp)
 {
+//    timer == 40;
     if (is_zero(Pp)) {
         return;
     }
-    num_items = 0;
 
-    hal.console->printf("Cal_Pn : %4.2f, otj %4.2f, oJp %4.2f, oAp %4.2f, oVp %4.2f\n", Pp, otj, oJp, oAp, oVp);
+//    hal.console->printf("Cal_Pn : %4.2f, otj %4.2f, oJp %4.2f, oAp %4.2f, oVp %4.2f\n", Pp, otj, oJp, oAp, oVp);
     float tj = otj;
     float Jp = oJp;
     float Ap = oAp;
     float Vp = oVp;
-    float V0 = oV[num_items];
-    float P0 = oP[num_items];
+    float V0 = oV[num_items - 1];
+    float P0 = oP[num_items - 1];
 
     float t2, t4, t6;
-    Cal_Pos(tj, V0, P0, Jp, Ap, Vp, Pp, Jp, t2, t4, t6);
-    hal.console->printf("Block1\n");
-
+    Cal_Pos(tj, V0, P0, Jp, Ap, Vp, Pp/2.0, Jp, t2, t4, t6);
+//    hal.console->printf("Block1 : Jp %4.2f, t2 %4.2f, t4 %4.2f, t6 %4.2f\n", Jp, t2, t4, t6);
     Cal_tj_Jp_Tcj(tj, Jp, t2);
     Cal_T(t4, 0.0);
     Cal_tj_Jp_Tcj(tj, -Jp, t6);
-    hal.console->printf("Block2\n");
 
-    float Tcv = (Pp/2.0-oP[num_items])/oV[num_items];
+    float Tcv = (Pp/2.0-oP[num_items - 1])/oV[num_items - 1];
     Cal_T(Tcv, 0.0);
     Cal_T(Tcv, 0.0);
-    hal.console->printf("Block3\n");
+//    hal.console->printf("Block3 : tin %4.2f, J0 %4.2f\n", Tcv, 0.0);
 
-    Cal_Pos(tj, 0.0f, P0, Jp, Ap, Vp, Pp, Jp, t2, t4, t6);
+    Cal_Pos(tj, 0.0f, P0, Jp, Ap, Vp, Pp/2.0, Jp, t2, t4, t6);
+//    hal.console->printf("Block4 : Jp %4.2f, t2 %4.2f, t4 %4.2f, t6 %4.2f\n", Jp, t2, t4, t6);
     Cal_tj_Jp_Tcj(tj, -Jp, t6);
     Cal_T(t4, 0.0);
     Cal_tj_Jp_Tcj(tj, Jp, t2);
-    hal.console->printf("Block4\n");
 
-    for (uint8_t i = 0; i < num_items; i++) {
-        hal.console->printf("Cal_Pn - T %4.2f, Jt %4.2f, J %4.2f, A %4.2f, V %4.2f, P %4.2f\n", oT[i], (float)oJtype[i], oJ[i], oA[i], oV[i], oP[i]);
-    }
+//    hal.console->printf("T, Jt, J, A, V, P\n");
+//    for (uint8_t i = 0; i < num_items; i++) {
+//        hal.console->printf("%4.2f, %4.2f, %4.2f, %4.2f, %4.2f, %4.2f\n", oT[i], (float)oJtype[i], oJ[i], oA[i], oV[i], oP[i]);
+//    }
 }
 
 void scurves::Cal_Pos(float tj, float V0, float P0, float Jp, float Ap, float Vp, float Pp,
                       float& Jp_out, float& t2_out, float& t4_out, float& t6_out)
 {
-    Ap = MIN(MIN(Ap, (Vp - V0)/(2*tj)), (Pp - P0 + 4*V0*tj)/(4*sq(tj)));
+    Ap = MIN(MIN(Ap, (Vp - V0)/(2.0*tj)), (Pp - P0 + 4.0*V0*tj)/(4.0*sq(tj)));
     if (fabsf(Ap) < Jp*tj) {
-        Jp_out = Ap/tj;
-        t2_out = 0;
-        if ((Vp <= V0 + 2*Ap*tj) || (Pp <= P0 + 4*V0*tj + 4*Ap*sq(tj))) {
-            t4_out = 0;
+        Jp = Ap/tj;
+        Jp_out = Jp;
+        t2_out = 0.0;
+        if ((Vp <= V0 + 2.0*Ap*tj) || (Pp <= P0 + 4.0*V0*tj + 4.0*Ap*sq(tj))) {
+            t4_out = 0.0;
         } else {
             t4_out = MIN(-(V0-Vp+Ap*tj+(Ap*Ap)/Jp)/Ap, \
                     MAX( \
@@ -182,15 +186,15 @@ void scurves::Cal_Pos(float tj, float V0, float P0, float Jp, float Ap, float Vp
     t6_out = t2_out;
 }
 
-void scurves::runme(float t, float& Jt_out, float& At_out, float& Vt_out, float& Pt_out)
+bool scurves::runme(float t, float& Jt_out, float& At_out, float& Vt_out, float& Pt_out)
 {
     jtype_t Jtype;
     int8_t pnt = num_items;
     float Jp, T0, A0, V0, P0;
 
-    for (int8_t i=0; i<num_items; i++) {
-        if (t < oT[i]){
-            pnt = i;
+    for (uint8_t i = 0; i < num_items; i++) {
+        if (t < oT[num_items-1-i]){
+            pnt = num_items-1-i;
         }
     }
     if (pnt == 0) {
@@ -227,6 +231,13 @@ void scurves::runme(float t, float& Jt_out, float& At_out, float& Vt_out, float&
             JConst(t-T0, Jp, A0, V0, P0, Jt_out, At_out, Vt_out, Pt_out);
             break;
     }
+//    timer++;
+//    if(timer == 40 ){
+//        timer = 0;
+//        hal.console->printf("%4.2f, %4.2f, %4.2f, %4.2f, %4.2f, %4.2u\n", t, Jt_out, At_out, Vt_out, Pt_out, pnt);
+//    }
+
+    return pnt == num_items;
 }
 
 void scurves::JConst(float t, float J0, float A0, float V0, float P0, float& Jt, float& At, float& Vt, float& Pt)
@@ -234,30 +245,30 @@ void scurves::JConst(float t, float J0, float A0, float V0, float P0, float& Jt,
     Jt = J0;
     At = A0 + J0*t;
     Vt = V0 + A0*t + 0.5*J0*(t*t);
-    Pt = P0 + V0*t + 0.5*A0*(t*t) + (1/6)*J0*(t*t*t);
+    Pt = P0 + V0*t + 0.5*A0*(t*t) + (1/6.0)*J0*(t*t*t);
 }
 
 void scurves::JSegment1(float t, float Jp, float A0, float V0, float P0, float& Jt, float& At, float& Vt, float& Pt)
 {
     float tj = otj;
-    float Alpha = Jp/2;
+    float Alpha = Jp/2.0;
     float Beta = M_PI/tj;
-    Jt = Alpha*(1 - cosf(Beta*t));
+    Jt = Alpha*(1.0 - cosf(Beta*t));
     At = A0 + Alpha*t - (Alpha/Beta)*sinf(Beta*t);
-    Vt = V0 + A0*t + (Alpha/2)*(t*t) + (Alpha/(Beta*Beta))*cosf(Beta*t) - Alpha/(Beta*Beta);
-    Pt = P0 + V0*t + 0.5*A0*(t*t) + (-Alpha/(Beta*Beta))*t + Alpha*(t*t*t)/6 + (Alpha/(Beta*Beta*Beta))*sinf(Beta*t);
+    Vt = V0 + A0*t + (Alpha/2.0)*(t*t) + (Alpha/(Beta*Beta))*cosf(Beta*t) - Alpha/(Beta*Beta);
+    Pt = P0 + V0*t + 0.5*A0*(t*t) + (-Alpha/(Beta*Beta))*t + Alpha*(t*t*t)/6.0 + (Alpha/(Beta*Beta*Beta))*sinf(Beta*t);
 }
 
 void scurves::JSegment2(float t, float Jp, float A0, float V0, float P0, float& Jt, float& At, float& Vt, float& Pt)
 {
     float tj = otj;
-    float Alpha = Jp/2;
+    float Alpha = Jp/2.0;
     float Beta = M_PI/tj;
     float AT = Alpha*tj;
-    float VT = Alpha*((tj*tj)/2 - 2/(Beta*Beta));
-    float PT = Alpha*((-1/(Beta*Beta))*tj + (1/6)*(tj*tj*tj));
-    Jt = Alpha*(1 - cosf(Beta * (t+tj)));
+    float VT = Alpha*((tj*tj)/2.0 - 2.0/(Beta*Beta));
+    float PT = Alpha*((-1.0/(Beta*Beta))*tj + (1/6.0)*(tj*tj*tj));
+    Jt = Alpha*(1.0 - cosf(Beta * (t+tj)));
     At = (A0-AT) + Alpha*(t+tj) - (Alpha / Beta) * sinf(Beta * (t+tj));
     Vt = (V0-VT) + (A0-AT)*t + 0.5*Alpha*(t+tj)*(t+tj) + (Alpha/(Beta*Beta))*cosf(Beta*(t+tj)) - Alpha/(Beta*Beta);
-    Pt = (P0-PT) + (V0-VT)*t + 0.5*(A0-AT)*(t*t) + (-Alpha/(Beta*Beta))*(t+tj) + (Alpha/6)*(t+tj)*(t+tj)*(t+tj) + (Alpha/(Beta*Beta*Beta))*sinf(Beta*(t+tj));
+    Pt = (P0-PT) + (V0-VT)*t + 0.5*(A0-AT)*(t*t) + (-Alpha/(Beta*Beta))*(t+tj) + (Alpha/6.0)*(t+tj)*(t+tj)*(t+tj) + (Alpha/(Beta*Beta*Beta))*sinf(Beta*(t+tj));
 }

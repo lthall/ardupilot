@@ -7,6 +7,7 @@
 #include <AP_Param/AP_Param.h>
 #include <stdlib.h>
 #include <cmath>
+#include <AP_Logger/AP_Logger.h>
 
 #define AC_PID_2D_FILT_HZ_DEFAULT  20.0f   // default input filter frequency
 #define AC_PID_2D_FILT_HZ_MIN      0.01f   // minimum input filter frequency
@@ -87,6 +88,9 @@ public:
     void set_integrator(Vector3f i) { set_integrator(Vector2f(i.x, i.y)); }
     void set_integrator(Vector2f i);
 
+    const AP_Logger::PID_Info& get_pid_info_x(void) const { return _pid_info_x; }
+    const AP_Logger::PID_Info& get_pid_info_y(void) const { return _pid_info_y; }
+
     // parameter var table
     static const struct AP_Param::GroupInfo        var_info[];
 
@@ -112,4 +116,7 @@ protected:
     Vector2f        _error;         // error value to enable filtering
     Vector2f        _derivative;    // last derivative for low-pass filter
     Vector2f        _integrator;    // integrator value
+
+    AP_Logger::PID_Info _pid_info_x;
+    AP_Logger::PID_Info _pid_info_y;
 };

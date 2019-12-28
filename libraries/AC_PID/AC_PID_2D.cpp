@@ -37,6 +37,11 @@ const AP_Param::GroupInfo AC_PID_2D::var_info[] = {
     // @Units: Hz
     AP_GROUPINFO("D_FILT", 5, AC_PID_2D, _filt_D_hz, AC_PID_2D_FILT_D_HZ_DEFAULT),
 
+    // @Param: FF
+    // @DisplayName: PID Feed Forward Gain
+    // @Description: FF Gain which produces an output that is proportional to the magnitude of the target
+    AP_GROUPINFO("FF",    6, AC_PID_2D, _kff, 0),
+
     AP_GROUPEND
 };
 
@@ -57,6 +62,9 @@ AC_PID_2D::AC_PID_2D(float initial_p, float initial_i, float initial_d, float in
 
     // reset input filter to first value received
     _flags._reset_filter = true;
+
+    memset(&_pid_info_x, 0, sizeof(_pid_info_x));
+//    memset(&_pid_info_y, 0, sizeof(_pid_info_y));
 }
 
 // set_dt - set time step in seconds
@@ -109,7 +117,23 @@ Vector2f AC_PID_2D::update_all(float target_x, float target_y, Vector2f measurem
     // update I term
     update_i(limit);
 
-    return _error * _kp + _integrator + _derivative * _kd;
+    _pid_info_x.target = _target.x;
+    _pid_info_x.actual = measurement.x;
+    _pid_info_x.error = _error.x;
+    _pid_info_x.P = _error.x * _kp;
+    _pid_info_x.I = _integrator.x;
+    _pid_info_x.D = _derivative.x * _kd;
+    _pid_info_x.FF = _target.x * _kff;
+
+    _pid_info_y.target = _target.y;
+    _pid_info_y.actual = measurement.y;
+    _pid_info_y.error = _error.y;
+    _pid_info_y.P = _error.y * _kp;
+    _pid_info_y.I = _integrator.y;
+    _pid_info_y.D = _derivative.y * _kd;
+    _pid_info_y.FF = _target.y * _kff;
+
+    return _error * _kp + _integrator + _derivative * _kd + _target * _kff;
 }
 
 //  update_i - update the integral

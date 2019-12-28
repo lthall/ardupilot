@@ -142,7 +142,7 @@ void AC_WPNav::wp_and_spline_init()
     _pos_control.calc_leash_length_xy();
     _pos_control.calc_leash_length_z();
 
-    _scurve_this_leg = scurves(0.25f, 1000.0f, _wp_accel_cmss, _wp_speed_cms);
+    _scurve_this_leg = scurves(0.5f, 100.0f, _wp_accel_cmss, _wp_speed_cms);
 
     // initialise yaw heading to current heading target
     _flags.wp_yaw_set = false;
@@ -289,6 +289,8 @@ bool AC_WPNav::set_wp_origin_and_destination(const Vector3f& origin, const Vecto
     _limited_speed_xy_cms = constrain_float(speed_along_track, 0, _pos_control.get_max_speed_xy());
     _scurve_this_leg.Cal_Init(0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
     _scurve_this_leg.Cal_Pn(_track_length);
+    // advance spline time to next step
+    _spline_time = 0.0f;
 
     return true;
 }
@@ -450,11 +452,16 @@ bool AC_WPNav::advance_wp_target_along_track(float dt)
     Vector3f final_target = _origin + _pos_delta_unit * _track_desired;
     // convert final_target.z to altitude above the ekf origin
     final_target.z += terr_offset;
-    _pos_control.set_pos_vel_accel(final_target, Vector3f(), Vector3f());
+    float scurve_P, scurve_V, scurve_A, scurve_J;
+
+    // advance spline time to next step
+    _spline_time += dt;
+    bool s_finish = _scurve_this_leg.runme(_spline_time, scurve_J, scurve_A, scurve_V, scurve_P);
+    _pos_control.set_pos_vel_accel(_origin + _pos_delta_unit*scurve_P, _pos_delta_unit*scurve_V, _pos_delta_unit*scurve_A);
 
     // check if we've reached the waypoint
     if( !_flags.reached_destination ) {
-        if( _track_desired >= _track_length ) {
+        if( s_finish ) {
             // "fast" waypoints are complete once the intermediate point reaches the destination
             if (_flags.fast_waypoint) {
                 _flags.reached_destination = true;
