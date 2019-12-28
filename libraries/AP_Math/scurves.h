@@ -34,7 +34,7 @@ public:
 
 private:
 
-    const static uint16_t array_size_max = 16;
+    const static uint16_t array_size_max = 17;
 
     // scurve segment types
     enum jtype_t {
@@ -42,6 +42,7 @@ private:
         JTYPE_POSITIVE,
         JTYPE_NEGATIVE
     };
+    void Segment(float T, enum jtype_t Jtype, float J, float A, float V, float P);
 
     // members
     float otj;

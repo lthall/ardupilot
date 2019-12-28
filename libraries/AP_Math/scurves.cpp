@@ -19,6 +19,22 @@
 
 extern const AP_HAL::HAL& hal;
 
+void scurves::Segment(float T, enum jtype_t Jtype, float J, float A, float V, float P)
+{
+    if(num_items >= array_size_max) {
+        hal.console->printf("You fucked up");
+        return;
+    }
+    oT[num_items] = T;
+    oJtype[num_items] = Jtype;
+    oJ[num_items] = J;
+    oA[num_items] = A;
+    oV[num_items] = V;
+    oP[num_items] = P;
+    num_items++;
+//    hal.console->printf("Cal_JS2 - J %4.2f, T %4.2f, A %4.2f, V %4.2f, P %4.2f\n", J, T, A, V, P);
+}
+
 void scurves::Cal_Init(float T0, float J0, float A0, float V0, float P0)
 {
     enum jtype_t Jtype = JTYPE_CONSTANT;
@@ -27,14 +43,8 @@ void scurves::Cal_Init(float T0, float J0, float A0, float V0, float P0)
     float A = A0;
     float V = V0;
     float P = P0;
-    num_items++;
 
-    oT[num_items] = T;
-    oJtype[num_items] = Jtype;
-    oJ[num_items] = J;
-    oA[num_items] = A;
-    oV[num_items] = V;
-    oP[num_items] = P;
+    Segment(T, Jtype, J, A, V, P);
 }
 
 void scurves::Cal_T(float tin, float J0)
@@ -45,14 +55,7 @@ void scurves::Cal_T(float tin, float J0)
     float A = oA[num_items] + J0*tin;
     float V = oV[num_items] + oA[num_items]*tin + 0.5*J0*sq(tin);
     float P = oP[num_items] + oV[num_items]*tin + 0.5*oA[num_items]*sq(tin) + (1/6)*J0*powf(tin,3);
-    num_items++;
-
-    oT[num_items] = T;
-    oJtype[num_items] = Jtype;
-    oJ[num_items] = J;
-    oA[num_items] = A;
-    oV[num_items] = V;
-    oP[num_items] = P;
+    Segment(T, Jtype, J, A, V, P);
 }
 
 void scurves::Cal_JS1(float tj, float Jp)
@@ -69,14 +72,7 @@ void scurves::Cal_JS1(float tj, float Jp)
     float A = oA[num_items] + AT;
     float V = oV[num_items] + oA[num_items]*tj + VT;
     float P = oP[num_items] + oV[num_items]*tj + 0.5*oA[num_items]*sq(tj) + PT;
-    num_items++;
-
-    oT[num_items] = T;
-    oJtype[num_items] = Jtype;
-    oJ[num_items] = J;
-    oA[num_items] = A;
-    oV[num_items] = V;
-    oP[num_items] = P;
+    Segment(T, Jtype, J, A, V, P);
 }
 
 void scurves::Cal_JS2(float tj, float Jp)
@@ -90,32 +86,35 @@ void scurves::Cal_JS2(float tj, float Jp)
     float V2T = Jp*sq(tj);
     float P2T = Alpha*((-1/sq(Beta))*2*tj +(4/3)*powf(tj,3));
 
+//    hal.console->printf("Cal_JS2 - Beta %4.2f, Alpha %4.2f, AT %4.2f, VT %4.2f, PT %4.2f, A2T %4.2f, V2T %4.2f, P2T %4.2f\n", Beta, Alpha, AT, VT, PT, A2T, V2T, P2T);
+
     enum jtype_t Jtype = JTYPE_NEGATIVE;
     float J = Jp;
     float T = oT[num_items] + tj;
     float A = (oA[num_items]-AT) + A2T;
     float V = (oV[num_items]-VT) + (oA[num_items]-AT)*tj + V2T;
     float P = (oP[num_items]-PT) + (oV[num_items]-VT)*tj + 0.5*(oA[num_items]-AT)*sq(tj) + P2T;
-    num_items++;
-
-    oT[num_items] = T;
-    oJtype[num_items] = Jtype;
-    oJ[num_items] = J;
-    oA[num_items] = A;
-    oV[num_items] = V;
-    oP[num_items] = P;
+    Segment(T, Jtype, J, A, V, P);
 }
 
 void scurves::Cal_tj_Jp_Tcj(float tj, float Jp, float Tcj)
 {
     Cal_JS1(tj, Jp);
+//    hal.console->printf("Cal_JS1 - tj %4.2f, Tcj %4.2f\n", tj, Jp);
     Cal_T(Tcj, Jp);
-    hal.console->printf("Tcj %4.2f\n", Tcj);
-//    Cal_JS2(tj, Jp);
+//    hal.console->printf("Cal_T - Tcj %4.2f, Tcj %4.2f\n", Tcj, Jp);
+    Cal_JS2(tj, Jp);
+//    hal.console->printf("Cal_JS2 - tj %4.2f, Tcj %4.2f\n", tj, Jp);
 }
 
 void scurves::Cal_Pn(float Pp)
 {
+    if (is_zero(Pp)) {
+        return;
+    }
+    num_items = 0;
+
+    hal.console->printf("Cal_Pn : %4.2f, otj %4.2f, oJp %4.2f, oAp %4.2f, oVp %4.2f\n", Pp, otj, oJp, oAp, oVp);
     float tj = otj;
     float Jp = oJp;
     float Ap = oAp;
@@ -125,19 +124,27 @@ void scurves::Cal_Pn(float Pp)
 
     float t2, t4, t6;
     Cal_Pos(tj, V0, P0, Jp, Ap, Vp, Pp, Jp, t2, t4, t6);
+    hal.console->printf("Block1\n");
 
     Cal_tj_Jp_Tcj(tj, Jp, t2);
-//    Cal_T(t4, 0.0);
-//    Cal_tj_Jp_Tcj(tj, -Jp, t6);
+    Cal_T(t4, 0.0);
+    Cal_tj_Jp_Tcj(tj, -Jp, t6);
+    hal.console->printf("Block2\n");
 
-//    float Tcv = (Pp/2.0-oP[num_items])/oV[num_items];
-//    Cal_T(Tcv, 0.0);
-//    Cal_T(Tcv, 0.0);
-//
-//    Cal_Pos(tj, 0.0f, P0, Jp, Ap, Vp, Pp, Jp, t2, t4, t6);
-//    Cal_tj_Jp_Tcj(tj, -Jp, t6);
-//    Cal_T(t4, 0.0);
-//    Cal_tj_Jp_Tcj(tj, Jp, t2);
+    float Tcv = (Pp/2.0-oP[num_items])/oV[num_items];
+    Cal_T(Tcv, 0.0);
+    Cal_T(Tcv, 0.0);
+    hal.console->printf("Block3\n");
+
+    Cal_Pos(tj, 0.0f, P0, Jp, Ap, Vp, Pp, Jp, t2, t4, t6);
+    Cal_tj_Jp_Tcj(tj, -Jp, t6);
+    Cal_T(t4, 0.0);
+    Cal_tj_Jp_Tcj(tj, Jp, t2);
+    hal.console->printf("Block4\n");
+
+    for (uint8_t i = 0; i < num_items; i++) {
+        hal.console->printf("Cal_Pn - T %4.2f, Jt %4.2f, J %4.2f, A %4.2f, V %4.2f, P %4.2f\n", oT[i], (float)oJtype[i], oJ[i], oA[i], oV[i], oP[i]);
+    }
 }
 
 void scurves::Cal_Pos(float tj, float V0, float P0, float Jp, float Ap, float Vp, float Pp,
