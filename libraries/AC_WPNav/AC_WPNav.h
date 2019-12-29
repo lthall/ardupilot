@@ -109,6 +109,7 @@ public:
     /// set_wp_destination waypoint using location class
     ///     returns false if conversion from location to vector from ekf origin cannot be calculated
     bool set_wp_destination(const Location& destination);
+    bool set_wp_destination_next(const Location& destination);
 
     // returns wp location using location class.
     // returns false if unable to convert from target vector to global
@@ -122,6 +123,7 @@ public:
     /// set_wp_destination waypoint using position vector (distance from ekf origin in cm)
     ///     terrain_alt should be true if destination.z is a desired altitude above terrain
     bool set_wp_destination(const Vector3f& destination, bool terrain_alt = false);
+    bool set_wp_destination_next(const Vector3f& destination, bool terrain_alt = false);
 
     /// set waypoint destination using NED position vector from ekf origin in meters
     bool set_wp_destination_NED(const Vector3f& destination_NED);
@@ -296,13 +298,17 @@ protected:
     AP_Float    _wp_accel_z_cmss;        // vertical acceleration in cm/s/s during missions
 
 //    scurve
+    scurves _scurve_last_leg;
     scurves _scurve_this_leg;
+    scurves _scurve_next_leg;
 
     // waypoint controller internal variables
     uint32_t    _wp_last_update;        // time of last update_wpnav call
     Vector3f    _origin;                // starting point of trip to next waypoint in cm from ekf origin
     Vector3f    _destination;           // target destination in cm from ekf origin
     Vector3f    _pos_delta_unit;        // each axis's percentage of the total track from origin to destination
+    Vector3f    _pos_delta_unit_next;        // each axis's percentage of the total track from origin to destination
+    Vector3f    _pos_delta_unit_last;   // each axis's percentage of the total track from origin to destination
     float       _track_error_xy;        // horizontal error of the actual position vs the desired position
     float       _track_length;          // distance in cm between origin and destination
     float       _track_length_xy;       // horizontal distance in cm between origin and destination

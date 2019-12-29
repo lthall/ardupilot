@@ -222,6 +222,17 @@ void ModeAuto::wp_start(const Location& dest_loc)
     }
 }
 
+// auto_wp_start - initialises waypoint controller to implement flying to a particular destination
+void ModeAuto::wp_next(const Location& dest_loc)
+{
+    // send target to waypoint controller
+    if (!wp_nav->set_wp_destination_next(dest_loc)) {
+        // failure to set destination can only be because of missing terrain data
+        copter.failsafe_terrain_on_event();
+        return;
+    }
+}
+
 // auto_land_start - initialises controller to implement a landing
 void ModeAuto::land_start()
 {
@@ -1142,11 +1153,12 @@ void ModeAuto::do_nav_wp(const AP_Mission::Mission_Command& cmd)
                 // if next command's lat, lon is specified then do not slowdown at this waypoint
                 if ((temp_cmd.content.location.lat != 0) || (temp_cmd.content.location.lng != 0)) {
                     fast_waypoint = true;
+                    wp_next(loc_from_cmd(temp_cmd));
                 }
                 break;
             case MAV_CMD_NAV_RETURN_TO_LAUNCH:
                 // do not stop for RTL
-                fast_waypoint = true;
+//                fast_waypoint = true;
                 break;
             case MAV_CMD_NAV_TAKEOFF:
             default:

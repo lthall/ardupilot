@@ -40,6 +40,7 @@ void scurves::Segment(float T, enum jtype_t Jtype, float J, float A, float V, fl
 
 void scurves::Cal_Init(float T0, float J0, float A0, float V0, float P0)
 {
+    _t = 0.0f;
     num_items = 0;
     enum jtype_t Jtype = JTYPE_CONSTANT;
     float J = J0;
@@ -113,7 +114,9 @@ void scurves::Cal_tj_Jp_Tcj(float tj, float Jp, float Tcj)
 
 void scurves::Cal_Pn(float Pp)
 {
+    _t = 0.0f;
 //    timer == 40;
+
     if (is_zero(Pp)) {
         return;
     }

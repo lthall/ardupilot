@@ -10,12 +10,15 @@ public:
         oJp = 0.0;
         oAp = 0.0;
         oVp = 0.0;
+        _t = 0.0;
     }
 
     // constructor
     scurves(float tj, float Jp, float Ap, float Vp) :
         otj(tj), oJp(Jp), oAp(Ap), oVp(Vp)
-    {}
+    {
+        _t = 0.0;
+    }
 
     void Cal_Init(float T0, float J0, float A0, float V0, float P0);
     void Cal_T(float tin, float J0);
@@ -27,10 +30,17 @@ public:
     void Cal_Pos(float tj, float V0, float P0, float Jp, float Ap, float Vp, float Pp,
                  float& Jp_out, float& t2_out, float& t4_out, float& t6_out);
 
+    void advance_time(float dt) {_t += dt;}
     bool runme(float t, float& Jt_out, float& At_out, float& Vt_out, float& Pt_out);
+    bool runme(float& Jt_out, float& At_out, float& Vt_out, float& Pt_out) {return runme(_t, Jt_out, At_out, Vt_out, Pt_out);}
     void JConst(float t, float J0, float A0, float V0, float P0, float& Jt, float& At, float& Vt, float& Pt);
     void JSegment1(float t, float Jp, float A0, float V0, float P0, float& Jt, float& At, float& Vt, float& Pt);
     void JSegment2(float t, float Jp, float A0, float V0, float P0, float& Jt, float& At, float& Vt, float& Pt);
+
+    float pos_end() {return oP[num_items-1];}
+    float time_now() {return _t;}
+    float time_end() {return oT[num_items-1];}
+    float time_to_end() {return oT[num_items-1]-_t;}
 
 private:
 
@@ -49,6 +59,7 @@ private:
     float oJp;
     float oAp;
     float oVp;
+    float _t;
 
     // arrays
     uint16_t num_items;
@@ -59,5 +70,5 @@ private:
     float oV[array_size_max];
     float oP[array_size_max];
 
-//    uint16_t timer;
+    uint16_t timer;
 };
