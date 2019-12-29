@@ -430,7 +430,7 @@ bool AC_WPNav::advance_wp_target_along_track(float dt)
         _scurve_this_leg.runme(_scurve_this_leg.time_now() + time_to_destination/2.0, scurve_J1, scurve_A1, scurve_V1, scurve_P1);
         _scurve_next_leg.runme(time_to_destination/2.0, scurve_J2, scurve_A2, scurve_V2, scurve_P2);
         Vector3f turn_pos = _pos_delta_unit * (scurve_P1 - _scurve_this_leg.pos_end()) + _pos_delta_unit_next * scurve_P2;
-        Vector3f turn_vel = _pos_delta_unit * scurve_V1 + _pos_delta_unit_next * scurve_A2;
+        Vector3f turn_vel = _pos_delta_unit * scurve_V1 + _pos_delta_unit_next * scurve_V2;
         Vector3f turn_accel = _pos_delta_unit * scurve_A1 + _pos_delta_unit_next * scurve_A2;
         s_finish = s_finish || ((turn_pos.length() < _wp_radius_cm) && (Vector2f(turn_vel.x, turn_vel.y).length() < _wp_speed_cms) && (Vector2f(turn_accel.x, turn_accel.y).length() < _wp_accel_cmss));
     }
