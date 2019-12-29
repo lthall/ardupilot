@@ -425,7 +425,7 @@ bool AC_WPNav::advance_wp_target_along_track(float dt)
 
     _pos_control.set_pos_vel_accel(target_pos, target_vel, target_accel);
 
-    if (_flags.fast_waypoint) {
+    if (_flags.fast_waypoint && _scurve_this_leg.breaking()) {
         float time_to_destination = _scurve_this_leg.time_to_end();
         _scurve_this_leg.runme(_scurve_this_leg.time_now() + time_to_destination/2.0, scurve_J1, scurve_A1, scurve_V1, scurve_P1);
         _scurve_next_leg.runme(time_to_destination/2.0, scurve_J2, scurve_A2, scurve_V2, scurve_P2);
@@ -454,7 +454,8 @@ bool AC_WPNav::advance_wp_target_along_track(float dt)
 
     // update the target yaw if origin and destination are at least 2m apart horizontally
     if (_track_length_xy >= WPNAV_YAW_DIST_MIN) {
-        set_yaw_cd(get_bearing_cd(_origin, _destination));
+        float heading_vel = get_bearing_cd(Vector3f(), target_vel);
+        set_yaw_cd(heading_vel);
     }
 
     // successfully advanced along track

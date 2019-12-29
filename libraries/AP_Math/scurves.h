@@ -41,6 +41,7 @@ public:
     float time_now() {return _t;}
     float time_end() {return oT[num_items-1];}
     float time_to_end() {return oT[num_items-1]-_t;}
+    bool breaking() {return _t > oT[9];}
 
 private:
 
