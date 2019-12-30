@@ -35,7 +35,7 @@ void scurves::Segment(float T, enum jtype_t Jtype, float J, float A, float V, fl
     oV[num_items] = V;
     oP[num_items] = P;
     num_items++;
-//    hal.console->printf("Cal_JS2 - J %4.2f, T %4.2f, A %4.2f, V %4.2f, P %4.2f\n", J, T, A, V, P);
+    //    hal.console->printf("Segment - J %4.2f, T %4.2f, A %4.2f, V %4.2f, P %4.2f\n", J, T, A, V, P);
 }
 
 void scurves::Cal_Init(float T0, float J0, float A0, float V0, float P0)
@@ -121,7 +121,7 @@ void scurves::Cal_Pn(float Pp)
         return;
     }
 
-//    hal.console->printf("Cal_Pn : %4.2f, otj %4.2f, oJp %4.2f, oAp %4.2f, oVp %4.2f\n", Pp, otj, oJp, oAp, oVp);
+    hal.console->printf("Cal_Pn : %4.2f, otj %4.2f, oJp %4.2f, oAp %4.2f, oVp %4.2f\n", Pp, otj, oJp, oAp, oVp);
     float tj = otj;
     float Jp = oJp;
     float Ap = oAp;

@@ -383,6 +383,21 @@ bool AC_WPNav::advance_wp_target_along_track(float dt)
 
     // get current location
     const Vector3f &curr_pos = _inav.get_position();
+    const Vector3f &curr_vel = _inav.get_velocity();
+    const Vector3f &desired_vel = _pos_control.get_desired_velocity();
+    float track_desired_vel = desired_vel.length();
+
+    float nav_tc = 1.0f;
+    if (track_desired_vel > 0) {
+        if (track_desired_vel > 0.1f * _wp_speed_cms) {
+            float track_vel = (curr_vel.x * desired_vel.x + curr_vel.y * desired_vel.y + curr_vel.z * desired_vel.z) / track_desired_vel;
+            _track_scaler_dt += (track_vel/track_desired_vel-_track_scaler_dt) * (dt / (dt + nav_tc));
+            _track_scaler_dt = constrain_float(_track_scaler_dt, 0.1f, 1.0f);
+        }
+    } else {
+        _track_scaler_dt = 1.0f;
+    }
+
 
     // calculate terrain adjustments
     float terr_offset = 0.0f;
@@ -407,16 +422,16 @@ bool AC_WPNav::advance_wp_target_along_track(float dt)
 
     // advance spline time to next step
     float scurve_P1, scurve_V1, scurve_A1, scurve_J1;
-    _scurve_this_leg.advance_time(dt);
+    _scurve_this_leg.advance_time(_track_scaler_dt * dt);
     bool s_finish = _scurve_this_leg.runme(scurve_J1, scurve_A1, scurve_V1, scurve_P1);
-    Vector3f target_accel = _pos_delta_unit*scurve_A1;
+    Vector3f target_accel = _pos_delta_unit*scurve_A1*_track_scaler_dt;
     Vector3f target_vel = _pos_delta_unit*scurve_V1;
     Vector3f target_pos = _origin + _pos_delta_unit*scurve_P1;
 
     float scurve_P2, scurve_V2, scurve_A2, scurve_J2;
-    _scurve_last_leg.advance_time(dt);
+    _scurve_last_leg.advance_time(_track_scaler_dt * dt);
     _scurve_last_leg.runme(scurve_J2, scurve_A2, scurve_V2, scurve_P2);
-    target_accel += _pos_delta_unit_last*scurve_A2;
+    target_accel += _pos_delta_unit_last*scurve_A2*_track_scaler_dt;
     target_vel += _pos_delta_unit_last*scurve_V2;
     target_pos += _pos_delta_unit_last*(scurve_P2 - _scurve_last_leg.pos_end());
 
@@ -431,9 +446,22 @@ bool AC_WPNav::advance_wp_target_along_track(float dt)
         _scurve_next_leg.runme(time_to_destination/2.0, scurve_J2, scurve_A2, scurve_V2, scurve_P2);
         Vector3f turn_pos = _pos_delta_unit * (scurve_P1 - _scurve_this_leg.pos_end()) + _pos_delta_unit_next * scurve_P2;
         Vector3f turn_vel = _pos_delta_unit * scurve_V1 + _pos_delta_unit_next * scurve_V2;
-        Vector3f turn_accel = _pos_delta_unit * scurve_A1 + _pos_delta_unit_next * scurve_A2;
-        s_finish = s_finish || ((turn_pos.length() < _wp_radius_cm) && (Vector2f(turn_vel.x, turn_vel.y).length() < _wp_speed_cms) && (Vector2f(turn_accel.x, turn_accel.y).length() < _wp_accel_cmss));
+//        Vector3f turn_accel = _pos_delta_unit * scurve_A1 + _pos_delta_unit_next * scurve_A2;
+//        s_finish = s_finish || ((turn_pos.length() < _wp_radius_cm) && (Vector2f(turn_vel.x, turn_vel.y).length() < _wp_speed_cms) && (Vector2f(turn_accel.x, turn_accel.y).length() < _wp_accel_cmss));
+//        Vector3f turn_accel = _pos_delta_unit * scurve_A1 + _pos_delta_unit_next * scurve_A2;
+//        s_finish = s_finish || ((turn_pos.length() < _wp_radius_cm) && (Vector2f(turn_vel.x, turn_vel.y).length() < _wp_speed_cms) && (Vector2f(turn_accel.x, turn_accel.y).length() < _wp_accel_cmss));
+        s_finish = s_finish || ((_scurve_this_leg.time_to_end() < _scurve_next_leg.time_end()/2.0) && (turn_pos.length() < _wp_radius_cm) && (Vector2f(turn_vel.x, turn_vel.y).length() < _wp_speed_cms));
+//        s_finish = s_finish || _scurve_this_leg.time_to_end() < _scurve_next_leg.time_end()/2.0;
     }
+
+    //    AP::logger().Write("LEN2", "TimeUS,tpx,tpy,tx,ty,lx,ly", "Qffffff",
+    //                                                  AP_HAL::micros64(),
+    //                                                  (double)target_pos.x,
+    //                                                  (double)target_pos.y,
+    //                                                  (double)_origin.x + _pos_delta_unit.x*scurve_P1,
+    //                                                  (double)_origin.y + _pos_delta_unit.y*scurve_P1,
+    //                                                  (double)_pos_delta_unit_last.x*(scurve_P2 - _scurve_last_leg.pos_end()),
+    //                                                  (double)_pos_delta_unit_last.y*(scurve_P2 - _scurve_last_leg.pos_end()));
 
 
     // check if we've reached the waypoint

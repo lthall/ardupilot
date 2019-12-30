@@ -313,6 +313,7 @@ protected:
     float       _track_length;          // distance in cm between origin and destination
     float       _track_length_xy;       // horizontal distance in cm between origin and destination
     float       _track_desired;         // our desired distance along the track in cm
+    float       _track_scaler_dt;       // our desired distance along the track in cm
     float       _limited_speed_xy_cms;  // horizontal speed in cm/s used to advance the intermediate target towards the destination.  used to limit extreme acceleration after passing a waypoint
     float       _track_accel;           // acceleration along track
     float       _track_speed;           // speed in cm/s along track
