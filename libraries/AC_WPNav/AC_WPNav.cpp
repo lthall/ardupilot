@@ -67,6 +67,14 @@ const AP_Param::GroupInfo AC_WPNav::var_info[] = {
     // @User: Advanced
     AP_GROUPINFO("RFND_USE",   10, AC_WPNav, _rangefinder_use, 1),
 
+    // @Param: JERK
+    // @DisplayName: Waypoint Jerk
+    // @Description: Defines the horizontal jerk in m/s/s used during missions
+    // @Units: m/s/s
+    // @Range: 1 20
+    // @User: Standard
+    AP_GROUPINFO("JERK",   11, AC_WPNav, _wp_jerk, 1),
+
     AP_GROUPEND
 };
 
@@ -142,9 +150,20 @@ void AC_WPNav::wp_and_spline_init()
     _pos_control.calc_leash_length_xy();
     _pos_control.calc_leash_length_z();
 
-    _scurve_last_leg = scurves(0.5f, 100.0f, _wp_accel_cmss, _wp_speed_cms);
-    _scurve_this_leg = scurves(0.5f, 100.0f, _wp_accel_cmss, _wp_speed_cms);
-    _scurve_next_leg = scurves(0.5f, 100.0f, _wp_accel_cmss, _wp_speed_cms);
+    float jerk = MIN(_attitude_control.get_ang_vel_roll_max() * GRAVITY_MSS, _attitude_control.get_ang_vel_pitch_max() * GRAVITY_MSS);
+    if (is_zero(jerk)) {
+        jerk = _wp_jerk;
+    } else {
+        jerk = MIN(jerk, _wp_jerk);
+    }
+    float jounce = MIN(_attitude_control.get_accel_roll_max() * GRAVITY_MSS, _attitude_control.get_accel_pitch_max() * GRAVITY_MSS);
+
+    // Attitude Controller time constant causes delay problems for the position controller.
+    float tc = MAX(_attitude_control.get_input_tc(), 0.5 * jerk * M_PI / jounce);
+//    float tc = MAX(0.25 * 2.0, 0.5 * jerk * M_PI / jounce);
+    _scurve_last_leg = scurves(tc * 2.0, jerk * 100.0, _wp_accel_cmss, _wp_speed_cms);
+    _scurve_this_leg = scurves(tc * 2.0, jerk * 100.0, _wp_accel_cmss, _wp_speed_cms);
+    _scurve_next_leg = scurves(tc * 2.0, jerk * 100.0, _wp_accel_cmss, _wp_speed_cms);
 
     // initialise yaw heading to current heading target
     _flags.wp_yaw_set = false;
@@ -391,7 +410,7 @@ bool AC_WPNav::advance_wp_target_along_track(float dt)
     if (track_desired_vel > 0) {
         if (track_desired_vel > 0.1f * _wp_speed_cms) {
             float track_vel = (curr_vel.x * desired_vel.x + curr_vel.y * desired_vel.y + curr_vel.z * desired_vel.z) / track_desired_vel;
-            _track_scaler_dt += (track_vel/track_desired_vel-_track_scaler_dt) * (dt / (dt + nav_tc));
+            _track_scaler_dt += (track_vel/(_track_scaler_dt*track_desired_vel)-_track_scaler_dt) * (dt / (dt + nav_tc));
             _track_scaler_dt = constrain_float(_track_scaler_dt, 0.1f, 1.0f);
         }
     } else {
@@ -446,7 +465,9 @@ bool AC_WPNav::advance_wp_target_along_track(float dt)
         _scurve_next_leg.runme(time_to_destination/2.0, scurve_J2, scurve_A2, scurve_V2, scurve_P2);
         Vector3f turn_pos = _pos_delta_unit * (scurve_P1 - _scurve_this_leg.pos_end()) + _pos_delta_unit_next * scurve_P2;
         Vector3f turn_vel = _pos_delta_unit * scurve_V1 + _pos_delta_unit_next * scurve_V2;
-        s_finish = s_finish || ((_scurve_this_leg.time_to_end() < _scurve_next_leg.time_end()/2.0) && (turn_pos.length() < _wp_radius_cm) && (Vector2f(turn_vel.x, turn_vel.y).length() < _wp_speed_cms));
+                Vector3f turn_accel = _pos_delta_unit * scurve_A1 + _pos_delta_unit_next * scurve_A2;
+//                s_finish = s_finish || ((_scurve_this_leg.time_to_end() < _scurve_next_leg.time_end()/2.0) && (turn_pos.length() < _wp_radius_cm) && (Vector2f(turn_vel.x, turn_vel.y).length() < _wp_speed_cms));
+                s_finish = s_finish || ((_scurve_this_leg.time_to_end() < _scurve_next_leg.time_end()/2.0) && (turn_pos.length() < _wp_radius_cm) && (Vector2f(turn_vel.x, turn_vel.y).length() < _wp_speed_cms) && (Vector2f(turn_accel.x, turn_accel.y).length() < _wp_accel_cmss));
     }
 
     // check if we've reached the waypoint
@@ -467,10 +488,13 @@ bool AC_WPNav::advance_wp_target_along_track(float dt)
 
     float turn_rate, accel_forward;
     Vector3f accel_turn;
-    if (track_desired_vel > 0.1f * _wp_speed_cms) {
+    if (track_desired_vel > 0.0) {
         accel_forward = (target_accel.x * target_vel.x + target_accel.y * target_vel.y + target_accel.z * target_vel.z)/target_vel.length();
         accel_turn = target_accel - target_vel * accel_forward / target_vel.length();
         turn_rate = accel_turn.length() / (_track_scaler_dt*target_vel.length());
+        if(accel_turn.y * target_vel.x - accel_turn.x * target_vel.y < 0.0 ) {
+            turn_rate *= -1.0f;
+        }
     } else {
         turn_rate = 0.0f;
     }

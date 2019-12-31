@@ -791,7 +791,7 @@ void ModeAuto::wp_run()
     } else {
         // roll, pitch from waypoint controller, yaw heading from auto_heading()
         attitude_control->input_euler_angle_roll_pitch_yaw_euler_rate_yaw(wp_nav->get_roll(), wp_nav->get_pitch(), wp_nav->get_yaw(), wp_nav->get_yaw_rate());
-
+//        attitude_control->input_euler_angle_roll_pitch_yaw(wp_nav->get_roll(), wp_nav->get_pitch(), wp_nav->get_yaw(), true);
         AP::logger().Write("LEN3", "TimeUS,r,p,y,ry", "Qffff",
                                                       AP_HAL::micros64(),
                                                       (double)wp_nav->get_roll(),

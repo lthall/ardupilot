@@ -1026,11 +1026,13 @@ void AC_PosControl::run_xy_controller(float dt)
 void AC_PosControl::accel_to_lean_angles(float accel_x_cmss, float accel_y_cmss, float& roll_target, float& pitch_target) const
 {
     float accel_right, accel_forward;
+    float sin_yaw = sin(_attitude_control.get_att_target_euler().z);
+    float cos_yaw = cos(_attitude_control.get_att_target_euler().z);
 
     // rotate accelerations into body forward-right frame
     // todo: this should probably be based on the desired heading not the current heading
-    accel_forward = accel_x_cmss * _ahrs.cos_yaw() + accel_y_cmss * _ahrs.sin_yaw();
-    accel_right = -accel_x_cmss * _ahrs.sin_yaw() + accel_y_cmss * _ahrs.cos_yaw();
+    accel_forward = accel_x_cmss * cos_yaw + accel_y_cmss * sin_yaw;
+    accel_right = -accel_x_cmss * sin_yaw + accel_y_cmss * cos_yaw;
 
     // update angle targets that will be passed to stabilize controller
     pitch_target = atanf(-accel_forward / (GRAVITY_MSS * 100.0f)) * (18000.0f / M_PI);
