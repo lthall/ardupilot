@@ -187,6 +187,7 @@ public:
 
     // get target yaw in centi-degrees (used for wp and spline navigation)
     float get_yaw() const;
+    float get_yaw_rate() const;
 
     /// set_spline_destination waypoint using location class
     ///     returns false if conversion from location to vector from ekf origin cannot be calculated
@@ -281,6 +282,7 @@ protected:
 
     // set heading used for spline and waypoint navigation
     void set_yaw_cd(float heading_cd);
+    void set_yaw_cds(float heading_cd);
 
     // references and pointers to external libraries
     const AP_InertialNav&   _inav;
@@ -328,6 +330,7 @@ protected:
     Vector3f    _hermite_spline_solution[4]; // array describing spline path between origin and destination
     float       _spline_vel_scaler;	    //
     float       _yaw;                   // heading according to yaw
+    float       _yaw_rate;
 
     // terrain following variables
     bool        _terrain_alt;   // true if origin and destination.z are alt-above-terrain, false if alt-above-ekf-origin

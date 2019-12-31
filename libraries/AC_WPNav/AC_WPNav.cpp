@@ -446,23 +446,8 @@ bool AC_WPNav::advance_wp_target_along_track(float dt)
         _scurve_next_leg.runme(time_to_destination/2.0, scurve_J2, scurve_A2, scurve_V2, scurve_P2);
         Vector3f turn_pos = _pos_delta_unit * (scurve_P1 - _scurve_this_leg.pos_end()) + _pos_delta_unit_next * scurve_P2;
         Vector3f turn_vel = _pos_delta_unit * scurve_V1 + _pos_delta_unit_next * scurve_V2;
-//        Vector3f turn_accel = _pos_delta_unit * scurve_A1 + _pos_delta_unit_next * scurve_A2;
-//        s_finish = s_finish || ((turn_pos.length() < _wp_radius_cm) && (Vector2f(turn_vel.x, turn_vel.y).length() < _wp_speed_cms) && (Vector2f(turn_accel.x, turn_accel.y).length() < _wp_accel_cmss));
-//        Vector3f turn_accel = _pos_delta_unit * scurve_A1 + _pos_delta_unit_next * scurve_A2;
-//        s_finish = s_finish || ((turn_pos.length() < _wp_radius_cm) && (Vector2f(turn_vel.x, turn_vel.y).length() < _wp_speed_cms) && (Vector2f(turn_accel.x, turn_accel.y).length() < _wp_accel_cmss));
         s_finish = s_finish || ((_scurve_this_leg.time_to_end() < _scurve_next_leg.time_end()/2.0) && (turn_pos.length() < _wp_radius_cm) && (Vector2f(turn_vel.x, turn_vel.y).length() < _wp_speed_cms));
-//        s_finish = s_finish || _scurve_this_leg.time_to_end() < _scurve_next_leg.time_end()/2.0;
     }
-
-    //    AP::logger().Write("LEN2", "TimeUS,tpx,tpy,tx,ty,lx,ly", "Qffffff",
-    //                                                  AP_HAL::micros64(),
-    //                                                  (double)target_pos.x,
-    //                                                  (double)target_pos.y,
-    //                                                  (double)_origin.x + _pos_delta_unit.x*scurve_P1,
-    //                                                  (double)_origin.y + _pos_delta_unit.y*scurve_P1,
-    //                                                  (double)_pos_delta_unit_last.x*(scurve_P2 - _scurve_last_leg.pos_end()),
-    //                                                  (double)_pos_delta_unit_last.y*(scurve_P2 - _scurve_last_leg.pos_end()));
-
 
     // check if we've reached the waypoint
     if( !_flags.reached_destination ) {
@@ -480,11 +465,36 @@ bool AC_WPNav::advance_wp_target_along_track(float dt)
         }
     }
 
-    // update the target yaw if origin and destination are at least 2m apart horizontally
-    if (_track_length_xy >= WPNAV_YAW_DIST_MIN) {
-        float heading_vel = get_bearing_cd(Vector3f(), target_vel);
-        set_yaw_cd(heading_vel);
+    float turn_rate, accel_forward;
+    Vector3f accel_turn;
+    if (track_desired_vel > 0.1f * _wp_speed_cms) {
+        accel_forward = (target_accel.x * target_vel.x + target_accel.y * target_vel.y + target_accel.z * target_vel.z)/target_vel.length();
+        accel_turn = target_accel - target_vel * accel_forward / target_vel.length();
+        turn_rate = accel_turn.length() / (_track_scaler_dt*target_vel.length());
+    } else {
+        turn_rate = 0.0f;
     }
+
+    // update the target yaw if origin and destination are at least 2m apart horizontally
+    float heading_vel = 0.0f;
+    if (_track_length_xy >= WPNAV_YAW_DIST_MIN) {
+        heading_vel = get_bearing_cd(Vector3f(), target_vel);
+        // todo: add feed forward yaw for coordinated turns
+        set_yaw_cd(heading_vel);
+        set_yaw_cds(turn_rate*degrees(100));
+    }
+
+        AP::logger().Write("LEN2", "TimeUS,tvx,tvy,tax,tay,ltx,lty,tr,ta,ts", "Qfffffffff",
+                                                      AP_HAL::micros64(),
+                                                      (double)target_vel.x,
+                                                      (double)target_vel.y,
+                                                      (double)target_accel.x,
+                                                      (double)target_accel.y,
+                                                      (double)accel_turn.x,
+                                                      (double)accel_turn.y,
+                                                      (double)degrees(turn_rate),
+                                                      (double)heading_vel/100.0f,
+                                                      (double)_track_scaler_dt);
 
     // successfully advanced along track
     return true;
@@ -600,11 +610,28 @@ float AC_WPNav::get_yaw() const
     }
 }
 
+// returns target yaw in centi-degrees (used for wp and spline navigation)
+float AC_WPNav::get_yaw_rate() const
+{
+    if (_flags.wp_yaw_set) {
+        return _yaw_rate;
+    } else {
+        // if yaw has not been set return attitude controller's current target
+        return 0.0f;
+    }
+}
+
 // set heading used for spline and waypoint navigation
 void AC_WPNav::set_yaw_cd(float heading_cd)
 {
     _yaw = heading_cd;
     _flags.wp_yaw_set = true;
+}
+
+// set heading used for spline and waypoint navigation
+void AC_WPNav::set_yaw_cds(float heading_cds)
+{
+    _yaw_rate = heading_cds;
 }
 
 ///

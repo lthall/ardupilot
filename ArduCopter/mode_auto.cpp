@@ -790,7 +790,14 @@ void ModeAuto::wp_run()
         attitude_control->input_euler_angle_roll_pitch_euler_rate_yaw(wp_nav->get_roll(), wp_nav->get_pitch(), target_yaw_rate);
     } else {
         // roll, pitch from waypoint controller, yaw heading from auto_heading()
-        attitude_control->input_euler_angle_roll_pitch_yaw(wp_nav->get_roll(), wp_nav->get_pitch(), auto_yaw.yaw(), true);
+        attitude_control->input_euler_angle_roll_pitch_yaw_euler_rate_yaw(wp_nav->get_roll(), wp_nav->get_pitch(), wp_nav->get_yaw(), wp_nav->get_yaw_rate());
+
+        AP::logger().Write("LEN3", "TimeUS,r,p,y,ry", "Qffff",
+                                                      AP_HAL::micros64(),
+                                                      (double)wp_nav->get_roll(),
+                                                      (double)wp_nav->get_pitch(),
+                                                      (double)wp_nav->get_yaw(),
+                                                      (double)wp_nav->get_yaw_rate());
     }
 }
 
@@ -877,7 +884,7 @@ void ModeAuto::circle_run()
         attitude_control->input_euler_angle_roll_pitch_yaw(copter.circle_nav->get_roll(), copter.circle_nav->get_pitch(), copter.circle_nav->get_yaw(), true);
     } else {
         // roll, pitch from waypoint controller, yaw heading from auto_heading()
-        attitude_control->input_euler_angle_roll_pitch_yaw(copter.circle_nav->get_roll(), copter.circle_nav->get_pitch(), auto_yaw.yaw(), true);
+        attitude_control->input_euler_angle_roll_pitch_yaw_euler_rate_yaw(copter.circle_nav->get_roll(), copter.circle_nav->get_pitch(), auto_yaw.yaw(), true);
     }
 }
 
