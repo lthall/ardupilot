@@ -158,8 +158,13 @@ void AC_WPNav::wp_and_spline_init()
     }
     float jounce = MIN(_attitude_control.get_accel_roll_max() * GRAVITY_MSS, _attitude_control.get_accel_pitch_max() * GRAVITY_MSS);
 
-    // Attitude Controller time constant causes delay problems for the position controller.
-    float tc = MAX(_attitude_control.get_input_tc(), 0.5 * jerk * M_PI / jounce);
+    // time constant may also be a useful parameter
+    float tc;
+    if (is_positive(jounce)) {
+        tc = MAX(_attitude_control.get_input_tc(), 0.5 * jerk * M_PI / jounce);
+    } else {
+        tc = MAX(_attitude_control.get_input_tc(), 0.1f);
+    }
 //    float tc = MAX(0.25 * 2.0, 0.5 * jerk * M_PI / jounce);
     _scurve_last_leg = scurves(tc * 2.0, jerk * 100.0, _wp_accel_cmss, _wp_speed_cms);
     _scurve_this_leg = scurves(tc * 2.0, jerk * 100.0, _wp_accel_cmss, _wp_speed_cms);
@@ -407,12 +412,10 @@ bool AC_WPNav::advance_wp_target_along_track(float dt)
     float track_desired_vel = desired_vel.length();
 
     float nav_tc = 1.0f;
-    if (track_desired_vel > 0) {
-        if (track_desired_vel > 0.1f * _wp_speed_cms) {
-            float track_vel = (curr_vel.x * desired_vel.x + curr_vel.y * desired_vel.y + curr_vel.z * desired_vel.z) / track_desired_vel;
-            _track_scaler_dt += (track_vel/(_track_scaler_dt*track_desired_vel)-_track_scaler_dt) * (dt / (dt + nav_tc));
-            _track_scaler_dt = constrain_float(_track_scaler_dt, 0.1f, 1.0f);
-        }
+    if (is_positive(track_desired_vel)) {
+        float track_vel = (curr_vel.x * desired_vel.x + curr_vel.y * desired_vel.y + curr_vel.z * desired_vel.z) / track_desired_vel;
+        _track_scaler_dt += (track_vel/(_track_scaler_dt*track_desired_vel)-_track_scaler_dt) * (dt / (dt + nav_tc));
+        _track_scaler_dt = constrain_float(_track_scaler_dt, 0.1f, 1.0f);
     } else {
         _track_scaler_dt = 1.0f;
     }
@@ -444,14 +447,14 @@ bool AC_WPNav::advance_wp_target_along_track(float dt)
     _scurve_this_leg.advance_time(_track_scaler_dt * dt);
     bool s_finish = _scurve_this_leg.runme(scurve_J1, scurve_A1, scurve_V1, scurve_P1);
     Vector3f target_accel = _pos_delta_unit*scurve_A1*_track_scaler_dt;
-    Vector3f target_vel = _pos_delta_unit*scurve_V1;
+    Vector3f target_vel = _pos_delta_unit*scurve_V1 * MIN(_track_scaler_dt * 1.1f, 1.0f);
     Vector3f target_pos = _origin + _pos_delta_unit*scurve_P1;
 
     float scurve_P2, scurve_V2, scurve_A2, scurve_J2;
     _scurve_last_leg.advance_time(_track_scaler_dt * dt);
     _scurve_last_leg.runme(scurve_J2, scurve_A2, scurve_V2, scurve_P2);
     target_accel += _pos_delta_unit_last*scurve_A2*_track_scaler_dt;
-    target_vel += _pos_delta_unit_last*scurve_V2;
+    target_vel += _pos_delta_unit_last*scurve_V2 * MIN(_track_scaler_dt * 1.1f, 1.0f);
     target_pos += _pos_delta_unit_last*(scurve_P2 - _scurve_last_leg.pos_end());
 
     // convert target_pos.z to altitude above the ekf origin
@@ -465,9 +468,9 @@ bool AC_WPNav::advance_wp_target_along_track(float dt)
         _scurve_next_leg.runme(time_to_destination/2.0, scurve_J2, scurve_A2, scurve_V2, scurve_P2);
         Vector3f turn_pos = _pos_delta_unit * (scurve_P1 - _scurve_this_leg.pos_end()) + _pos_delta_unit_next * scurve_P2;
         Vector3f turn_vel = _pos_delta_unit * scurve_V1 + _pos_delta_unit_next * scurve_V2;
-                Vector3f turn_accel = _pos_delta_unit * scurve_A1 + _pos_delta_unit_next * scurve_A2;
-//                s_finish = s_finish || ((_scurve_this_leg.time_to_end() < _scurve_next_leg.time_end()/2.0) && (turn_pos.length() < _wp_radius_cm) && (Vector2f(turn_vel.x, turn_vel.y).length() < _wp_speed_cms));
-                s_finish = s_finish || ((_scurve_this_leg.time_to_end() < _scurve_next_leg.time_end()/2.0) && (turn_pos.length() < _wp_radius_cm) && (Vector2f(turn_vel.x, turn_vel.y).length() < _wp_speed_cms) && (Vector2f(turn_accel.x, turn_accel.y).length() < _wp_accel_cmss));
+        Vector3f turn_accel = _pos_delta_unit * scurve_A1 + _pos_delta_unit_next * scurve_A2;
+//      s_finish = s_finish || ((_scurve_this_leg.time_to_end() < _scurve_next_leg.time_end()/2.0) && (turn_pos.length() < _wp_radius_cm) && (Vector2f(turn_vel.x, turn_vel.y).length() < _wp_speed_cms));
+        s_finish = s_finish || ((_scurve_this_leg.time_to_end() < _scurve_next_leg.time_end()/2.0) && (turn_pos.length() < _wp_radius_cm) && (Vector2f(turn_vel.x, turn_vel.y).length() < _wp_speed_cms) && (Vector2f(turn_accel.x, turn_accel.y).length() < 2*_wp_accel_cmss));
     }
 
     // check if we've reached the waypoint
@@ -488,7 +491,7 @@ bool AC_WPNav::advance_wp_target_along_track(float dt)
 
     float turn_rate, accel_forward;
     Vector3f accel_turn;
-    if (track_desired_vel > 0.0) {
+    if (is_positive(track_desired_vel) && is_positive(target_vel.length())) {
         accel_forward = (target_accel.x * target_vel.x + target_accel.y * target_vel.y + target_accel.z * target_vel.z)/target_vel.length();
         accel_turn = target_accel - target_vel * accel_forward / target_vel.length();
         turn_rate = accel_turn.length() / (_track_scaler_dt*target_vel.length());

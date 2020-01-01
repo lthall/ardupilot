@@ -286,7 +286,7 @@ void AC_AttitudeControl::input_euler_angle_roll_pitch_euler_rate_yaw(float euler
     attitude_controller_run_quat();
 }
 
-// Command an euler roll and pitch angle and an euler yaw rate with angular velocity feedforward and smoothing
+// Command an euler roll pitch and yaw angle and an euler yaw rate for use with input shaped commands
 void AC_AttitudeControl::input_euler_angle_roll_pitch_yaw_euler_rate_yaw(float euler_roll_angle_cd, float euler_pitch_angle_cd, float euler_yaw_angle_cd, float euler_yaw_rate_cds)
 {
     // Convert from centidegrees on public interface to radians
