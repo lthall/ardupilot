@@ -129,18 +129,6 @@ void AC_PI_2D::reset_I()
     _integrator.zero();
 }
 
-void AC_PI_2D::load_gains()
-{
-    _kp.load();
-    _ki.load();
-    _imax.load();
-    _imax = fabsf(_imax);
-    _filt_hz.load();
-
-    // calculate the input filter alpha
-    calc_filt_alpha();
-}
-
 // save_gains - save gains to eeprom
 void AC_PI_2D::save_gains()
 {
