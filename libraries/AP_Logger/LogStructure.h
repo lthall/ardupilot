@@ -2522,7 +2522,9 @@ struct PACKED log_Arm_Disarm {
     { LOG_ARM_DISARM_MSG, sizeof(log_Arm_Disarm), \
       "ARM", "QBIBB", "TimeUS,ArmState,ArmChecks,Forced,Method", "s----", "F----" }, \
     { LOG_ERROR_MSG, sizeof(log_Error), \
-      "ERR",   "QBB",         "TimeUS,Subsys,ECode", "s--", "F--" }
+      "ERR",   "QBB",         "TimeUS,Subsys,ECode", "s--", "F--" }, \
+    { LOG_PIDN_MSG, sizeof(log_PID), \
+      "PIDN", PID_FMT,  PID_LABELS, PID_UNITS, PID_MULTS }
 
 
 // @LoggerMessage: SBPH
@@ -2681,6 +2683,7 @@ enum LogMessages : uint8_t {
     LOG_OA_BENDYRULER_MSG,
     LOG_OA_DIJKSTRA_MSG,
     LOG_VISUALVEL_MSG,
+    LOG_PIDN_MSG,
 
     _LOG_LAST_MSG_
 };
