@@ -1851,7 +1851,11 @@ LOG_STRUCTURE_FROM_AHRS \
     { LOG_WINCH_MSG, sizeof(log_Winch), \
       "WINC", "QBBBBBfffHfb", "TimeUS,Heal,ThEnd,Mov,Clut,Mode,DLen,Len,DRate,Tens,Vcc,Temp", "s-----mmn?vO", "F-----000000" }, \
     { LOG_PSC_MSG, sizeof(log_PSC), \
-      "PSC", "Qffffffffffff", "TimeUS,TPX,TPY,PX,PY,TVX,TVY,VX,VY,TAX,TAY,AX,AY", "smmmmnnnnoooo", "F000000000000" }
+      "PSC", "Qffffffffffff", "TimeUS,TPX,TPY,PX,PY,TVX,TVY,VX,VY,TAX,TAY,AX,AY", "smmmmnnnnoooo", "F000000000000" }, \
+    { LOG_PIDN_MSG, sizeof(log_PID), \
+      "PIDN", PID_FMT,  PID_LABELS, PID_UNITS, PID_MULTS }, \
+    { LOG_PIDE_MSG, sizeof(log_PID), \
+      "PIDE", PID_FMT,  PID_LABELS, PID_UNITS, PID_MULTS }
 
 // @LoggerMessage: SBPH
 // @Description: Swift Health Data
@@ -1976,6 +1980,8 @@ enum LogMessages : uint8_t {
     LOG_SIMPLE_AVOID_MSG,
     LOG_WINCH_MSG,
     LOG_PSC_MSG,
+    LOG_PIDN_MSG,
+    LOG_PIDE_MSG,
 
     _LOG_LAST_MSG_
 };
