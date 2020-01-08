@@ -207,14 +207,22 @@ void ModeAuto::wp_start(const Location& dest_loc)
     }
 }
 
-// auto_wp_start - initialises waypoint controller to implement flying to a particular destination
-void ModeAuto::wp_next(const Location& dest_loc)
+// initialises waypoint controller to implement flying to a particular destination and prepare for a next destination
+void ModeAuto::wp_start(const Location& dest_loc, const Location& next_dest_loc)
 {
+    _mode = Auto_WP;
+
     // send target to waypoint controller
-    if (!wp_nav->set_wp_destination_next(dest_loc)) {
+    if (!wp_nav->set_wp_destination(dest_loc, next_dest_loc)) {
         // failure to set destination can only be because of missing terrain data
         copter.failsafe_terrain_on_event();
         return;
+    }
+
+    // initialise yaw
+    // To-Do: reset the yaw only when the previous navigation command is not a WP.  this would allow removing the special check for ROI
+    if (auto_yaw.mode() != AUTO_YAW_ROI) {
+        auto_yaw.set_mode_to_default(false);
     }
 }
 
@@ -1125,12 +1133,9 @@ void ModeAuto::do_nav_wp(const AP_Mission::Mission_Command& cmd)
     // this is the delay, stored in seconds
     loiter_time_max = cmd.p1;
 
-    // Set wp navigation target
-    wp_start(target_loc);
-
     // if no delay as well as not final waypoint set the waypoint as "fast"
     AP_Mission::Mission_Command temp_cmd;
-    bool fast_waypoint = false;
+    bool found_next_wp = false;
     if (loiter_time_max == 0 && mission.get_next_nav_cmd(cmd.index+1, temp_cmd)) {
 
         // whether vehicle should stop at the target position depends upon the next command
@@ -1141,10 +1146,10 @@ void ModeAuto::do_nav_wp(const AP_Mission::Mission_Command& cmd)
             case MAV_CMD_NAV_LOITER_TIME:
             case MAV_CMD_NAV_LAND:
             case MAV_CMD_NAV_SPLINE_WAYPOINT:
-                // if next command's lat, lon is specified then do not slowdown at this waypoint
+                // if next command's lat, lon is specified then provide as next destination
                 if ((temp_cmd.content.location.lat != 0) || (temp_cmd.content.location.lng != 0)) {
-                    fast_waypoint = true;
-                    wp_next(loc_from_cmd(temp_cmd));
+                    found_next_wp = true;
+                    wp_start(target_loc, loc_from_cmd(temp_cmd));
                 }
                 break;
             case MAV_CMD_NAV_RETURN_TO_LAUNCH:
@@ -1157,7 +1162,11 @@ void ModeAuto::do_nav_wp(const AP_Mission::Mission_Command& cmd)
                 // for unsupported commands it is safer to stop
                 break;
         }
-        copter.wp_nav->set_fast_waypoint(fast_waypoint);
+    }
+
+    // if next waypoint not found, send only immediate destination
+    if (!found_next_wp) {
+        wp_start(target_loc);
     }
 }
 

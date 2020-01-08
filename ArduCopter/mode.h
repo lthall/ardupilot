@@ -364,7 +364,7 @@ public:
     void rtl_start();
     void takeoff_start(const Location& dest_loc);
     void wp_start(const Location& dest_loc);
-    void wp_next(const Location& dest_loc);
+    void wp_start(const Location& dest_loc, const Location& next_dest_loc);
     void land_start();
     void land_start(const Vector3f& destination);
     void circle_movetoedge_start(const Location &circle_center, float radius_m);
