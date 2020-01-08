@@ -107,9 +107,10 @@ public:
     bool origin_and_destination_are_terrain_alt() const { return _terrain_alt; }
 
     /// set_wp_destination waypoint using location class
+    ///     provide the next_destination if known
     ///     returns false if conversion from location to vector from ekf origin cannot be calculated
     bool set_wp_destination(const Location& destination);
-    bool set_wp_destination_next(const Location& destination);
+    bool set_wp_destination(const Location& destination, const Location& next_destination);
 
     // returns wp location using location class.
     // returns false if unable to convert from target vector to global
@@ -122,16 +123,17 @@ public:
 
     /// set_wp_destination waypoint using position vector (distance from ekf origin in cm)
     ///     terrain_alt should be true if destination.z is a desired altitude above terrain
-    bool set_wp_destination(const Vector3f& destination, bool terrain_alt = false);
-    bool set_wp_destination_next(const Vector3f& destination, bool terrain_alt = false);
+    virtual bool set_wp_destination(const Vector3f& destination, bool terrain_alt = false);
+
+    /// set next destination using position vector (distance from ekf origin in cm)
+    ///     terrain_alt should be true if destination.z is a desired altitude above terrain
+    ///     provide next_destination and next_dest_terrain_alt if known
+    bool set_wp_destination_next(const Vector3f& next_destination, bool next_dest_terrain_alt);
 
     /// set waypoint destination using NED position vector from ekf origin in meters
+    ///     provide next_destination_NED if known
     bool set_wp_destination_NED(const Vector3f& destination_NED);
-
-    /// set_wp_origin_and_destination - set origin and destination waypoints using position vectors (distance from ekf origin in cm)
-    ///     terrain_alt should be true if origin.z and destination.z are desired altitudes above terrain (false if these are alt-above-ekf-origin)
-    ///     returns false on failure (likely caused by missing terrain data)
-    virtual bool set_wp_origin_and_destination(const Vector3f& origin, const Vector3f& destination, bool terrain_alt = false);
+    bool set_wp_destination_NED(const Vector3f& destination_NED, const Vector3f& next_destination_NED);
 
     /// shift_wp_origin_to_current_pos - shifts the origin and destination so the origin starts at the current position
     ///     used to reset the position just before takeoff
@@ -156,9 +158,6 @@ public:
     bool reached_wp_destination_xy() const {
         return get_wp_distance_to_destination() < _wp_radius_cm;
     }
-
-    /// set_fast_waypoint - set to true to ignore the waypoint radius and consider the waypoint 'reached' the moment the intermediate point reaches it
-    void set_fast_waypoint(bool fast) { _flags.fast_waypoint = fast; }
 
     /// update_wpnav - run the wp controller - should be called at 100hz or higher
     virtual bool update_wpnav();
