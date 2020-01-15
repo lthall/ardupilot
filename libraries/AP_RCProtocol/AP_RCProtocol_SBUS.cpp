@@ -185,8 +185,8 @@ bool AP_RCProtocol_SBUS::sbus_decode(const uint8_t frame[25], uint16_t *values, 
     /* decode and handle failsafe and frame-lost flags */
     if (frame[SBUS_FLAGS_BYTE] & (1 << SBUS_FAILSAFE_BIT)) { /* failsafe */
         /* report that we failed to read anything valid off the receiver */
-        *sbus_failsafe = true;
-        *sbus_frame_drop = true;
+        *sbus_failsafe = false;
+        *sbus_frame_drop = false;
     } else if (frame[SBUS_FLAGS_BYTE] & (1 << SBUS_FRAMELOST_BIT)) { /* a frame was lost */
         /* set a special warning flag
          *
