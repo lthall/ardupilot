@@ -3,6 +3,7 @@
 /// @file    AC_AttitudeControl.h
 /// @brief   ArduCopter attitude control library
 
+#include <AP_HAL/AP_HAL.h>
 #include <AP_Common/AP_Common.h>
 #include <AP_Param/AP_Param.h>
 #include <AP_Math/AP_Math.h>
@@ -366,6 +367,9 @@ protected:
     // Enable/Disable angle boost
     AP_Int8             _angle_boost_enabled;
 
+    // time delay of command model states to determine error for PID
+    AP_Int8             _time_delay;
+
     // angle controller P objects
     AC_P                _p_angle_roll;
     AC_P                _p_angle_pitch;
@@ -442,6 +446,18 @@ protected:
 
     // Yaw feed forward percent to allow zero yaw actuator output during extreme roll and pitch corrections
     float               _feedforward_scalar = 1.0f;
+
+    // desired angular velocity for feedforward to motors class
+    Vector3f            _desired_ang_vel_ff;
+
+    // buffers to provide time delay
+    struct target_states {
+        Quaternion attitude;
+        Quaternion rate;
+    };
+    ObjectBuffer<target_states> *target_states_buffer;
+    void push_to_buffer(Quaternion &attitude_target_quat, Quaternion &rate_target_quat);
+    void pull_from_buffer(Quaternion &attitude_target_quat, Quaternion &rate_target_quat);
 
     // References to external libraries
     const AP_AHRS_View&  _ahrs;

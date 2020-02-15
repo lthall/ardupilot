@@ -144,6 +144,15 @@ const AP_Param::GroupInfo AC_AttitudeControl::var_info[] = {
     // @User: Standard
     AP_GROUPINFO("INPUT_TC", 20, AC_AttitudeControl, _input_tc, AC_ATTITUDE_CONTROL_INPUT_TC_DEFAULT),
 
+    // @Param: _TIME_DELAY
+    // @DisplayName: Time Delay
+    // @Description: Time Delay of command model states to determine PID error
+    // @Units: msec
+    // @Range: 0 100
+    // @Increment: 1
+    // @User: Standard
+    AP_GROUPINFO("TIME_DELAY", 21, AC_AttitudeControl, _time_delay, 0),
+
     AP_GROUPEND
 };
 
@@ -649,9 +658,32 @@ void AC_AttitudeControl::attitude_controller_run_quat()
     Quaternion attitude_vehicle_quat;
     _ahrs.get_quat_body_to_ned(attitude_vehicle_quat);
 
+    // make ang vel quaternion
+    Quaternion attitude_target_ang_vel_quat = Quaternion(0.0f, _attitude_target_ang_vel.x, _attitude_target_ang_vel.y, _attitude_target_ang_vel.z);
+
+    // Get delayed target states
+    Quaternion delayed_attitude_target_quat;
+    Quaternion delayed_attitude_target_ang_vel_quat;
+
+    if (_time_delay == 0) {
+        delayed_attitude_target_quat = _attitude_target_quat;
+        delayed_attitude_target_ang_vel_quat = attitude_target_ang_vel_quat;
+    } else if (target_states_buffer == nullptr) {
+        uint16_t buffer_size = constrain_int16(_time_delay, 1, 100) * 0.001f / _dt;
+        target_states_buffer = new ObjectBuffer<target_states>(buffer_size);
+        while (target_states_buffer->space() != 0) {
+            push_to_buffer(_attitude_target_quat, attitude_target_ang_vel_quat);
+        }
+        delayed_attitude_target_quat = _attitude_target_quat;
+        delayed_attitude_target_ang_vel_quat = attitude_target_ang_vel_quat;
+    } else {
+        pull_from_buffer(delayed_attitude_target_quat, delayed_attitude_target_ang_vel_quat);
+        push_to_buffer(_attitude_target_quat, attitude_target_ang_vel_quat);
+    }
+
     // Compute attitude error
     Vector3f attitude_error_vector;
-    thrust_heading_rotation_angles(_attitude_target_quat, attitude_vehicle_quat, attitude_error_vector, _thrust_error_angle);
+    thrust_heading_rotation_angles(delayed_attitude_target_quat, attitude_vehicle_quat, attitude_error_vector, _thrust_error_angle);
 
     // Compute the angular velocity target from the attitude error
     _rate_target_ang_vel = update_ang_vel_target_from_att_error(attitude_error_vector);
@@ -663,10 +695,13 @@ void AC_AttitudeControl::attitude_controller_run_quat()
 
     ang_vel_limit(_rate_target_ang_vel, radians(_ang_vel_roll_max), radians(_ang_vel_pitch_max), radians(_ang_vel_yaw_max));
 
-    // Add the angular velocity feedforward, rotated into vehicle frame
-    Quaternion attitude_target_ang_vel_quat = Quaternion(0.0f, _attitude_target_ang_vel.x, _attitude_target_ang_vel.y, _attitude_target_ang_vel.z);
+    // determine feedforward components of desired velocity
     Quaternion to_to_from_quat = attitude_vehicle_quat.inverse() * _attitude_target_quat;
-    Quaternion desired_ang_vel_quat = to_to_from_quat.inverse() * attitude_target_ang_vel_quat * to_to_from_quat;
+    Quaternion desired_ang_vel_quat_ff = to_to_from_quat.inverse() * attitude_target_ang_vel_quat * to_to_from_quat;
+    _desired_ang_vel_ff = Vector3f(desired_ang_vel_quat_ff.q2 + _rate_target_ang_vel.x, desired_ang_vel_quat_ff.q3 + _rate_target_ang_vel.y, desired_ang_vel_quat_ff.q4 + _rate_target_ang_vel.z);
+
+    // Add the angular velocity feedforward, rotated into vehicle frame
+    Quaternion desired_ang_vel_quat = to_to_from_quat.inverse() * delayed_attitude_target_ang_vel_quat * to_to_from_quat;
 
     // Correct the thrust vector and smoothly add feedforward and yaw input
     _feedforward_scalar = 1.0f;
@@ -696,7 +731,7 @@ void AC_AttitudeControl::attitude_controller_run_quat()
     _attitude_target_quat.normalize();
 
     // Record error to handle EKF resets
-    _attitude_ang_error = attitude_vehicle_quat.inverse() * _attitude_target_quat;
+    _attitude_ang_error = attitude_vehicle_quat.inverse() * delayed_attitude_target_quat;
 }
 
 // thrust_heading_rotation_angles - calculates two ordered rotations to move the att_from_quat quaternion to the att_to_quat quaternion.
@@ -1115,4 +1150,24 @@ bool AC_AttitudeControl::pre_arm_checks(const char *param_prefix,
         }
     }
     return true;
+}
+
+// push target states to buffer
+void AC_AttitudeControl::push_to_buffer(Quaternion &attitude_target_quat, Quaternion &rate_target_quat)
+{
+    target_states sample;
+    sample.attitude = attitude_target_quat;
+    sample.rate = rate_target_quat;
+    target_states_buffer->push(sample);
+
+}
+
+// pull target states from buffer
+void AC_AttitudeControl::pull_from_buffer(Quaternion &attitude_target_quat, Quaternion &rate_target_quat)
+{
+    target_states sample;
+    target_states_buffer->pop(sample);
+    attitude_target_quat = sample.attitude;
+    rate_target_quat = sample.rate;
+
 }
