@@ -695,13 +695,9 @@ void AC_AttitudeControl::attitude_controller_run_quat()
 
     ang_vel_limit(_rate_target_ang_vel, radians(_ang_vel_roll_max), radians(_ang_vel_pitch_max), radians(_ang_vel_yaw_max));
 
-    // determine feedforward components of desired velocity
-    Quaternion to_to_from_quat = attitude_vehicle_quat.inverse() * _attitude_target_quat;
-    Quaternion desired_ang_vel_quat_ff = to_to_from_quat.inverse() * attitude_target_ang_vel_quat * to_to_from_quat;
-    _desired_ang_vel_ff = Vector3f(desired_ang_vel_quat_ff.q2 + _rate_target_ang_vel.x, desired_ang_vel_quat_ff.q3 + _rate_target_ang_vel.y, desired_ang_vel_quat_ff.q4 + _rate_target_ang_vel.z);
-
     // Add the angular velocity feedforward, rotated into vehicle frame
-    Quaternion desired_ang_vel_quat = to_to_from_quat.inverse() * delayed_attitude_target_ang_vel_quat * to_to_from_quat;
+    Quaternion to_to_from_quat = attitude_vehicle_quat.inverse() * _attitude_target_quat;
+    Quaternion desired_ang_vel_quat = to_to_from_quat.inverse() * attitude_target_ang_vel_quat * to_to_from_quat;
 
     // Correct the thrust vector and smoothly add feedforward and yaw input
     _feedforward_scalar = 1.0f;
