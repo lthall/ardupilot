@@ -75,6 +75,7 @@ public:
     AP_Float &kI() { return _ki; }
     AP_Float &kD() { return _kd; }
     AP_Float &ff() { return _kff;}
+    AP_Float &fd() { return _kfd;}
     AP_Float &filt_T_hz() { return _filt_T_hz; }
     AP_Float &filt_E_hz() { return _filt_E_hz; }
     AP_Float &filt_D_hz() { return _filt_D_hz; }
@@ -89,6 +90,7 @@ public:
     void kI(const float v) { _ki.set(v); }
     void kD(const float v) { _kd.set(v); }
     void ff(const float v) { _kff.set(v); }
+    void fd(const float v) { _kfd.set(v); }
     void imax(const float v) { _kimax.set(fabsf(v)); }
     void filt_T_hz(const float v);
     void filt_E_hz(const float v);
