@@ -66,6 +66,14 @@ void Copter::tuning()
         attitude_control->get_rate_yaw_pid().kD(tuning_value);
         break;
 
+    case TUNING_RATE_YAW_FF:
+        attitude_control->get_rate_yaw_pid().ff(tuning_value);
+        break;
+
+    case TUNING_RATE_YAW_FD:
+        attitude_control->get_rate_yaw_pid().fd(tuning_value);
+        break;
+
     // Altitude and throttle tuning
     case TUNING_ALTITUDE_HOLD_KP:
         pos_control->get_pos_z_p().kP(tuning_value);
@@ -117,18 +125,6 @@ void Copter::tuning()
 #if FRAME_CONFIG == HELI_FRAME
     case TUNING_HELI_EXTERNAL_GYRO:
         motors->ext_gyro_gain(tuning_value);
-        break;
-
-    case TUNING_RATE_PITCH_FF:
-        attitude_control->get_rate_pitch_pid().ff(tuning_value);
-        break;
-
-    case TUNING_RATE_ROLL_FF:
-        attitude_control->get_rate_roll_pid().ff(tuning_value);
-        break;
-
-    case TUNING_RATE_YAW_FF:
-        attitude_control->get_rate_yaw_pid().ff(tuning_value);
         break;
 #endif
 
@@ -184,6 +180,10 @@ void Copter::tuning()
         attitude_control->set_input_tc(tuning_value);
         break;
 
+    case TUNING_STABILIZE_PITCH_KP:
+        attitude_control->get_angle_pitch_p().kP(tuning_value);
+        break;
+
     case TUNING_RATE_PITCH_KP:
         attitude_control->get_rate_pitch_pid().kP(tuning_value);
         break;
@@ -196,6 +196,18 @@ void Copter::tuning()
         attitude_control->get_rate_pitch_pid().kD(tuning_value);
         break;
 
+    case TUNING_RATE_PITCH_FF:
+        attitude_control->get_rate_pitch_pid().ff(tuning_value);
+        break;
+
+    case TUNING_RATE_PITCH_FD:
+        attitude_control->get_rate_pitch_pid().fd(tuning_value);
+        break;
+
+    case TUNING_STABILIZE_ROLL_KP:
+        attitude_control->get_angle_roll_p().kP(tuning_value);
+        break;
+
     case TUNING_RATE_ROLL_KP:
         attitude_control->get_rate_roll_pid().kP(tuning_value);
         break;
@@ -206,6 +218,14 @@ void Copter::tuning()
 
     case TUNING_RATE_ROLL_KD:
         attitude_control->get_rate_roll_pid().kD(tuning_value);
+        break;
+
+    case TUNING_RATE_ROLL_FF:
+        attitude_control->get_rate_roll_pid().ff(tuning_value);
+        break;
+
+    case TUNING_RATE_ROLL_FD:
+        attitude_control->get_rate_roll_pid().fd(tuning_value);
         break;
 
 #if FRAME_CONFIG != HELI_FRAME
