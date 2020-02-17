@@ -61,6 +61,11 @@ const AP_Param::GroupInfo AC_HELI_PID::var_info[] = {
     // @Units: Hz
     AP_GROUPINFO("FLTD", 11, AC_HELI_PID, _filt_D_hz, AC_PID_DFILT_HZ_DEFAULT),
 
+    // @Param: VFFD
+    // @DisplayName: VFFD FeedForward derivitive Gain
+    // @Description: FF derivitive Gain which produces an output value that is proportional to the demanded input
+    AP_GROUPINFO("VFFD", 12, AC_HELI_PID, _kfd, 0),
+
     AP_GROUPEND
 };
 
