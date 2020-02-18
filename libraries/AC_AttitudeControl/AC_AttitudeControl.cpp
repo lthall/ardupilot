@@ -662,11 +662,10 @@ void AC_AttitudeControl::attitude_controller_run_quat()
     Quaternion attitude_target_ang_vel_quat = Quaternion(0.0f, _attitude_target_ang_vel.x, _attitude_target_ang_vel.y, _attitude_target_ang_vel.z);
 
     // Get delayed target states
-    Quaternion delayed_attitude_target_quat;
     Quaternion delayed_attitude_target_ang_vel_quat;
 
     if (_time_delay == 0) {
-        delayed_attitude_target_quat = _attitude_target_quat;
+        _delayed_attitude_target_quat = _attitude_target_quat;
         delayed_attitude_target_ang_vel_quat = attitude_target_ang_vel_quat;
     } else if (target_states_buffer == nullptr) {
         uint16_t buffer_size = constrain_int16(_time_delay, 1, 100) * 0.001f / _dt;
@@ -674,16 +673,17 @@ void AC_AttitudeControl::attitude_controller_run_quat()
         while (target_states_buffer->space() != 0) {
             push_to_buffer(_attitude_target_quat, attitude_target_ang_vel_quat);
         }
-        delayed_attitude_target_quat = _attitude_target_quat;
+        _delayed_attitude_target_quat = _attitude_target_quat;
         delayed_attitude_target_ang_vel_quat = attitude_target_ang_vel_quat;
     } else {
-        pull_from_buffer(delayed_attitude_target_quat, delayed_attitude_target_ang_vel_quat);
+        pull_from_buffer(_delayed_attitude_target_quat, delayed_attitude_target_ang_vel_quat);
         push_to_buffer(_attitude_target_quat, attitude_target_ang_vel_quat);
     }
+    _delayed_attitude_target_quat.to_euler(_delayed_attitude_target_euler_angle.x, _delayed_attitude_target_euler_angle.y, _delayed_attitude_target_euler_angle.z);
 
     // Compute attitude error
     Vector3f attitude_error_vector;
-    thrust_heading_rotation_angles(delayed_attitude_target_quat, attitude_vehicle_quat, attitude_error_vector, _thrust_error_angle);
+    thrust_heading_rotation_angles(_delayed_attitude_target_quat, attitude_vehicle_quat, attitude_error_vector, _thrust_error_angle);
 
     // Compute the angular velocity target from the attitude error
     _rate_target_ang_vel = update_ang_vel_target_from_att_error(attitude_error_vector);
@@ -727,7 +727,7 @@ void AC_AttitudeControl::attitude_controller_run_quat()
     _attitude_target_quat.normalize();
 
     // Record error to handle EKF resets
-    _attitude_ang_error = attitude_vehicle_quat.inverse() * delayed_attitude_target_quat;
+    _attitude_ang_error = attitude_vehicle_quat.inverse() * _delayed_attitude_target_quat;
 }
 
 // thrust_heading_rotation_angles - calculates two ordered rotations to move the att_from_quat quaternion to the att_to_quat quaternion.
