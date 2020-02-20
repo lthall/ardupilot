@@ -144,10 +144,10 @@ const AP_Param::GroupInfo AC_AttitudeControl::var_info[] = {
     // @User: Standard
     AP_GROUPINFO("INPUT_TC", 20, AC_AttitudeControl, _input_tc, AC_ATTITUDE_CONTROL_INPUT_TC_DEFAULT),
 
-    // @Param: _TIME_DELAY
+    // @Param: TIME_DELAY
     // @DisplayName: Time Delay
     // @Description: Time Delay of command model states to determine PID error
-    // @Units: msec
+    // @Units: ms
     // @Range: 0 100
     // @Increment: 1
     // @User: Standard
