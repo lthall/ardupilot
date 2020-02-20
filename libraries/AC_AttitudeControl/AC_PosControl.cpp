@@ -385,17 +385,6 @@ void AC_PosControl::add_takeoff_climb_rate(float climb_rate_cms, float dt)
     _pos_target.z += climb_rate_cms * dt;
 }
 
-/// shift altitude target (positive means move altitude up)
-void AC_PosControl::shift_alt_target(float z_cm)
-{
-    _pos_target.z += z_cm;
-
-    // freeze feedforward to avoid jump
-    if (!is_zero(z_cm)) {
-        freeze_ff_z();
-    }
-}
-
 /// relax_alt_hold_controllers - set all desired and targets to measured
 void AC_PosControl::relax_alt_hold_controllers(float throttle_setting)
 {
@@ -1223,7 +1212,13 @@ void AC_PosControl::check_for_ekf_z_reset()
     float alt_shift;
     uint32_t reset_ms = _ahrs.getLastPosDownReset(alt_shift);
     if (reset_ms != 0 && reset_ms != _ekf_z_reset_ms) {
-        shift_alt_target(-alt_shift * 100.0f);
+        float curr_alt = _inav.get_altitude();
+        const Vector3f& curr_vel = _inav.get_velocity();
+        _pos_target.z = _pos_error.z + curr_alt;
+        _vel_target.z = _vel_error.z + curr_vel.z;
+        // freeze feedforward to avoid jump
+        freeze_ff_z();
+
         _ekf_z_reset_ms = reset_ms;
     }
 }

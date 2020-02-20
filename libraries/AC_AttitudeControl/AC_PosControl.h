@@ -117,9 +117,6 @@ public:
     /// set_alt_target_to_current_alt - set altitude target to current altitude
     void set_alt_target_to_current_alt() { _pos_target.z = _inav.get_altitude(); }
 
-    /// shift altitude target (positive means move altitude up)
-    void shift_alt_target(float z_cm);
-
     /// relax_alt_hold_controllers - set all desired and targets to measured
     void relax_alt_hold_controllers(float throttle_setting);
 
