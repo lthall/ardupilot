@@ -229,6 +229,10 @@ const AP_Param::GroupInfo SITL::var_info3[] = {
     AP_GROUPINFO("MAG8_DEVID",    10, SITL, mag_devid[7], 0),
 
     AP_GROUPINFO("LED_LAYOUT",    11, SITL, led_layout, 0),
+
+    AP_GROUPINFO("GNDMOVE_SPD",   12, SITL, ground_movement_speed, 0),
+    AP_GROUPINFO("GNDMOVE_DIR",   13, SITL, ground_movement_direction, 0),
+
     AP_GROUPEND
 
 };

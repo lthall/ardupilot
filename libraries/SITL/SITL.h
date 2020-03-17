@@ -191,6 +191,8 @@ public:
     AP_Int32 loop_delay; // extra delay to add to every loop
     AP_Float mag_scaling; // scaling factor on first compasses
     AP_Int32 mag_devid[MAX_CONNECTED_MAGS]; // Mag devid
+    AP_Float ground_movement_speed;  // movement of the ground (for ship takeoff/landing)
+    AP_Float ground_movement_direction;  // direction of ground movement
 
     // EFI type
     enum EFIType {
