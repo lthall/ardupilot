@@ -146,7 +146,8 @@ void Mode::auto_takeoff_run()
     // if not armed set throttle to zero and exit immediately
     if (!motors->armed() || !copter.ap.auto_armed) {
         make_safe_spool_down();
-        wp_nav->shift_wp_origin_to_current_pos();
+        wp_nav->shift_takeoff_origin_to_current_pos(constrain_float(g.pilot_takeoff_alt,0.0f,1000.0f));
+        pos_control->init_baseline_velocity();
         return;
     }
 
@@ -162,10 +163,24 @@ void Mode::auto_takeoff_run()
 
     // aircraft stays in landed state until rotor speed runup has finished
     if (motors->get_spool_state() == AP_Motors::SpoolState::THROTTLE_UNLIMITED) {
-        set_land_complete(false);
+        if (copter.ap.land_complete) {
+            set_land_complete(false);
+            wp_nav->shift_takeoff_origin_to_current_pos(constrain_float(g.pilot_takeoff_alt,0.0f,1000.0f));
+            pos_control->init_baseline_velocity();
+        }
     } else {
-        wp_nav->shift_wp_origin_to_current_pos();
+        wp_nav->shift_takeoff_origin_to_current_pos(constrain_float(g.pilot_takeoff_alt,0.0f,1000.0f));
+        pos_control->init_baseline_velocity();
     }
+
+    if (wp_nav->get_track_complete() > 0.75f) {
+        if (pos_control->baseline_state_on()) {
+            // Zero the baseline velocity without disabling it so it works again on the next launch
+            pos_control->set_baseline_state_zero();
+        }
+    }
+    pos_control->update_baseline_velocity(pos_control->get_dt());
+    wp_nav->shift_wp_origin_and_destination_xy(pos_control->get_vel_baseline()*pos_control->get_dt());
 
     // check if we are not navigating because of low altitude
     float nav_roll = 0.0f, nav_pitch = 0.0f;
@@ -180,6 +195,7 @@ void Mode::auto_takeoff_run()
         }
         // tell the position controller that we have limited roll/pitch demand to prevent integrator buildup
         pos_control->set_limit_accel_xy();
+        pos_control->relax_velocity_controller_xy();
     }
 
     // run waypoint controller
@@ -195,6 +211,10 @@ void Mode::auto_takeoff_run()
 
     // roll & pitch from waypoint controller, yaw rate from pilot
     attitude_control->input_euler_angle_roll_pitch_euler_rate_yaw(nav_roll, nav_pitch, target_yaw_rate);
+
+    if (wp_nav->reached_wp_destination()) {
+        pos_control->set_baseline_velocity(Vector3f(0.0f, 0.0f, 0.0f));
+    }
 }
 
 void Mode::auto_takeoff_set_start_alt(void)
