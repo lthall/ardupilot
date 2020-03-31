@@ -107,6 +107,7 @@ void RC_Channel_Copter::init_aux_function(const aux_func_t ch_option, const aux_
     case AUX_FUNC::SUPERSIMPLE_MODE:
     case AUX_FUNC::SURFACE_TRACKING:
     case AUX_FUNC::WINCH_ENABLE:
+    case AUX_FUNC::BASE_LINE:
         do_aux_function(ch_option, ch_flag);
         break;
     default:
@@ -543,7 +544,7 @@ void RC_Channel_Copter::do_aux_function(const aux_func_t ch_option, const aux_sw
             break;
         }
 
-        case AUX_FUNC::SURFACE_TRACKING:
+        case AUX_FUNC::SURFACE_TRACKING:{
             switch (ch_flag) {
             case LOW:
                 copter.surface_tracking.set_surface(Copter::SurfaceTracking::Surface::GROUND);
@@ -556,6 +557,23 @@ void RC_Channel_Copter::do_aux_function(const aux_func_t ch_option, const aux_sw
                 break;
             }
             break;
+        }
+
+        case AUX_FUNC::BASE_LINE:{
+            switch (ch_flag) {
+            case LOW:
+                copter.pos_control->set_baseline_state_off();
+                break;
+            case MIDDLE:
+                copter.pos_control->set_baseline_state_hold();
+                break;
+            case HIGH:
+                copter.pos_control->set_baseline_state_set();
+                break;
+            }
+            break;
+        }
+
             
     default:
         RC_Channel::do_aux_function(ch_option, ch_flag);
