@@ -917,6 +917,8 @@ void AC_PosControl::write_log()
                        double(accel_target.y * 0.01f),
                        double(accel_x * 0.01f),
                        double(accel_y * 0.01f));
+
+    write_baseline_log();
 }
 
 /// init_vel_controller_xyz - initialise the velocity controller - should be called once before the caller attempts to use the controller
@@ -1312,4 +1314,107 @@ bool AC_PosControl::pre_arm_checks(const char *param_prefix,
     }
 
     return true;
+}
+
+/// Initialises the baseline velocity based on its state.
+void AC_PosControl::init_baseline_velocity()
+{
+    switch (_baselineState) {
+    case OFF:
+        // set baseline velocity to zero
+        _vel_baseline.zero();
+        break;
+
+    case HOLD:
+        FALLTHROUGH;
+    case SET:
+        FALLTHROUGH;
+    case ZERO:
+        // Set baseline velocity to current velocity and change to HOLD
+        _vel_baseline = _inav.get_velocity();
+        set_baseline_state_hold();
+        break;
+    }
+}
+
+/// Initialises the baseline velocity based on its state.
+bool AC_PosControl::set_baseline_state(enum VelBaselineState baselineState)
+{
+    if (_baselineState == baselineState) {
+        return true;
+    }
+    switch (baselineState) {
+    case OFF:
+        gcs().send_text(MAV_SEVERITY_INFO, "BaseLine: Off");
+        _baselineState = baselineState;
+        break;
+
+    case HOLD:
+        gcs().send_text(MAV_SEVERITY_INFO, "BaseLine: Hold");
+        _baselineState = baselineState;
+        break;
+
+    case SET:
+        gcs().send_text(MAV_SEVERITY_INFO, "BaseLine: Set");
+        _baselineState = baselineState;
+        break;
+
+    case ZERO:
+        gcs().send_text(MAV_SEVERITY_INFO, "BaseLine: Zero");
+        _baselineState = baselineState;
+        break;
+
+    }
+    return true;
+}
+
+/// Proportional controller with piecewise sqrt sections to constrain second derivative
+void AC_PosControl::update_baseline_velocity(float dt)
+{
+    Vector3f target;
+    switch (_baselineState) {
+    case OFF:
+        // Slew baseline velocity to zero
+        target.zero();
+        break;
+
+    case HOLD:
+        // Keep current baseline velocity
+        target = _vel_baseline;
+        break;
+
+    case SET:
+        // Slew baseline velocity to current velocity
+        target = _inav.get_velocity();
+        break;
+
+    case ZERO:
+        // Set baseline velocity to zero
+        target.zero();
+        break;
+    }
+
+    Vector3f delta = target - _vel_baseline;
+    float delta_length = delta.length();
+    if (is_positive(delta_length)) {
+        _vel_baseline += delta.normalized() * MIN(delta_length, dt * _accel_cms / 3.0f);
+    } else {
+        _vel_baseline = target;
+    }
+}
+
+// write log to dataflash
+void AC_PosControl::write_baseline_log()
+{
+    if (baseline_state_on()) {
+        AP::logger().Write("PSB",
+                           "TimeUS,State,BVX,BVY",
+                           "s-nn",
+                           "F-00",
+                           "QBff",
+                           AP_HAL::micros64(),
+                           uint8_t(_baselineState),
+                           double(_vel_baseline.x * 0.01f),
+                           double(_vel_baseline.y * 0.01f));
+    }
 }

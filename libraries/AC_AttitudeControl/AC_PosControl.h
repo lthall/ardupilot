@@ -312,6 +312,22 @@ public:
     // enable or disable high vibration compensation
     void set_vibe_comp(bool on_off) { _vibe_comp_enabled = on_off; }
 
+    // Baseline state setters and getters
+    void set_baseline_state_off() {set_baseline_state(OFF);}
+    void set_baseline_state_hold() {set_baseline_state(HOLD);}
+    void set_baseline_state_set() {set_baseline_state(SET);}
+    void set_baseline_state_zero() {set_baseline_state(ZERO);}
+    void set_baseline_velocity(const Vector3f vel_baseline) { _vel_baseline = vel_baseline; }
+    bool baseline_state_on() {return _baselineState != OFF;}
+    const Vector3f& get_vel_baseline() {return _vel_baseline; }
+    void write_baseline_log();
+
+    // initialise baseline velocity
+    void init_baseline_velocity();
+
+    // update baseline velocity
+    void update_baseline_velocity(float dt);
+
     static const struct AP_Param::GroupInfo var_info[];
 
 protected:
@@ -428,6 +444,20 @@ protected:
     LowPassFilterFloat _vel_error_filter;   // low-pass-filter on z-axis velocity error
 
     LowPassFilterVector2f _accel_target_filter; // acceleration target filter
+
+    // velocity baseline variables
+    Vector3f    _vel_baseline;          // velocity baseline in cm/s used as zero reference for velocity based controllers
+    Vector3f    _vel_baseline_target;   // velocity baseline in cm/s used as zero reference for velocity based controllers
+    // Baseline state
+    enum VelBaselineState {
+        OFF  = 0,                       // Velocity Baseline is zero and disabled
+        HOLD = 1,                       // Velocity Baseline is enabled
+        SET  = 2,                       // Velocity Baseline is enabled and learning current velocity
+        ZERO = 3,                       // Velocity Baseline is enabled but set to zero
+    };
+    VelBaselineState _baselineState : 2;
+
+    bool set_baseline_state(enum VelBaselineState baselineState);
 
     // ekf reset handling
     uint32_t    _ekf_xy_reset_ms;      // system time of last recorded ekf xy position reset
