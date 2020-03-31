@@ -106,6 +106,8 @@ void AC_Loiter::init_target(const Vector3f& position)
     _pos_control.set_desired_velocity_xy(0.0f,0.0f);
     _pos_control.set_desired_accel_xy(0.0f,0.0f);
 
+    _use_baseline = false;
+
     // initialise position controller if not already active
     if (!_pos_control.is_active_xy()) {
         _pos_control.init_xy_controller();
@@ -139,6 +141,8 @@ void AC_Loiter::init_target()
     _pos_control.set_desired_accel_xy(_desired_accel.x, _desired_accel.y);
 
     // initialise position controller
+    _pos_control.init_baseline_velocity();
+    _use_baseline = false;
     _pos_control.init_xy_controller();
 }
 
@@ -219,6 +223,7 @@ void AC_Loiter::update()
     _pos_control.set_max_speed_xy(_speed_cms);
     _pos_control.set_max_accel_xy(_accel_cmss);
 
+    _pos_control.update_baseline_velocity(dt);
     calc_desired_velocity(dt);
     _pos_control.update_xy_controller();
 }
@@ -253,9 +258,16 @@ void AC_Loiter::calc_desired_velocity(float nav_dt)
     _pos_control.set_max_accel_xy(_accel_cmss);
     _pos_control.set_leash_length_xy(LOITER_POS_CORRECTION_MAX);
 
+    // add velocity baseline
+    Vector3f vel_baseline;
+    if (_use_baseline) {
+        vel_baseline = _pos_control.get_vel_baseline();
+        _use_baseline = false;
+    }
+
     // get loiters desired velocity from the position controller where it is being stored.
     const Vector3f &desired_vel_3d = _pos_control.get_desired_velocity();
-    Vector2f desired_vel(desired_vel_3d.x,desired_vel_3d.y);
+    Vector2f desired_vel(desired_vel_3d.x - vel_baseline.x, desired_vel_3d.y - vel_baseline.y);
 
     // update the desired velocity using our predicted acceleration
     desired_vel.x += _predicted_accel.x * nav_dt;
@@ -312,5 +324,5 @@ void AC_Loiter::calc_desired_velocity(float nav_dt)
 
     // send adjusted feed forward acceleration and velocity back to the Position Controller
     _pos_control.set_desired_accel_xy(_desired_accel.x, _desired_accel.y);
-    _pos_control.set_desired_velocity_xy(desired_vel.x, desired_vel.y);
+    _pos_control.set_desired_velocity_xy(desired_vel.x + vel_baseline.x, desired_vel.y + vel_baseline.y);
 }
