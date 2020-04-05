@@ -273,7 +273,16 @@ bool AC_WPNav::set_wp_origin_and_destination(const Vector3f& origin, const Vecto
     return true;
 }
 
-/// shift_takeoff_origin_to_current_pos - shifts the origin and destination so the origin starts at the current position
+void AC_WPNav::shift_wp_origin_and_destination_xy(Vector3f pos_diff)
+{
+    // shift origin and destination
+    _origin.x += pos_diff.x;
+    _origin.y += pos_diff.y;
+    _destination.x += pos_diff.x;
+    _destination.y += pos_diff.y;
+}
+
+/// shift_takeoff_origin_to_current_pos - shifts the origin and destination so the origin starts at the current position with the additional requested height
 ///     used to reset the position just before takeoff
 ///     relies on set_wp_destination or set_wp_origin_and_destination having been called first
 void AC_WPNav::shift_takeoff_origin_to_current_pos(float height)
@@ -296,37 +305,10 @@ void AC_WPNav::shift_takeoff_origin_to_current_pos(float height)
     _pos_control.freeze_ff_z();
 }
 
-/// shifts the origin and destination horizontally to the current position
-///     used to reset the track when taking off without horizontal position control
+/// shifts the origin and destination horizontally to the achievable stopping point based on the current velocity
+///     used to reset the track when horizontal navigation is enabled for takeoff
 ///     relies on set_wp_destination or set_wp_origin_and_destination having been called first
-void AC_WPNav::shift_wp_origin_and_destination_to_current_pos_xy()
-{
-    // get current and target locations
-    const Vector3f& curr_pos = _inav.get_position();
-
-    // shift origin and destination horizontally
-    _origin.x = curr_pos.x;
-    _origin.y = curr_pos.y;
-    _destination.x = curr_pos.x;
-    _destination.y = curr_pos.y;
-
-    // move pos controller target horizontally
-    _pos_control.set_xy_target(curr_pos.x, curr_pos.y);
-}
-
-void AC_WPNav::shift_wp_origin_and_destination_xy(Vector3f pos_diff)
-{
-    // shift origin and destination
-    _origin.x += pos_diff.x;
-    _origin.y += pos_diff.y;
-    _destination.x += pos_diff.x;
-    _destination.y += pos_diff.y;
-}
-
-/// shifts the origin and destination horizontally to the achievable stopping point
-///     used to reset the track when horizontal navigation is enabled after having been disabled (see Copter's wp_navalt_min)
-///     relies on set_wp_destination or set_wp_origin_and_destination having been called first
-void AC_WPNav::shift_wp_origin_and_destination_to_stopping_point_xy()
+void AC_WPNav::shift_takeoff_origin_and_destination_to_stopping_point_xy()
 {
     // relax position control in xy axis
     // removing velocity error also impacts stopping point calculation
