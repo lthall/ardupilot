@@ -164,7 +164,7 @@ void Mode::auto_takeoff_run()
     // aircraft stays in landed state until rotor speed runup has finished
     if (motors->get_spool_state() != AP_Motors::SpoolState::THROTTLE_UNLIMITED || copter.ap.land_complete) {
         wp_nav->shift_takeoff_origin_to_current_pos(constrain_float(g.pilot_takeoff_alt,0.0f,1000.0f));
-        wp_nav->shift_wp_origin_and_destination_to_stopping_point_xy();
+        wp_nav->shift_takeoff_origin_and_destination_to_stopping_point_xy();
         // tell the position controller that we have limited roll/pitch demand to prevent integrator buildup
         pos_control->set_limit_accel_xy();
         pos_control->relax_velocity_controller_xy();
@@ -192,7 +192,7 @@ void Mode::auto_takeoff_run()
         if (inertial_nav.get_altitude() >= auto_takeoff_no_nav_alt_cm) {
             auto_takeoff_no_nav_active = false;
         }
-        wp_nav->shift_wp_origin_and_destination_to_stopping_point_xy();
+        wp_nav->shift_takeoff_origin_and_destination_to_stopping_point_xy();
         // tell the position controller that we have limited roll/pitch demand to prevent integrator buildup
         pos_control->set_limit_accel_xy();
         pos_control->relax_velocity_controller_xy();
