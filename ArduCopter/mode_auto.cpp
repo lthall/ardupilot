@@ -208,21 +208,13 @@ void ModeAuto::wp_start(const Location& dest_loc)
 }
 
 // initialises waypoint controller to implement flying to a particular destination and prepare for a next destination
-void ModeAuto::wp_start(const Location& dest_loc, const Location& next_dest_loc)
+void ModeAuto::wp_next(const Location& next_dest_loc)
 {
-    _mode = Auto_WP;
-
     // send target to waypoint controller
-    if (!(wp_nav->set_wp_destination(dest_loc) && wp_nav->set_wp_destination_next(next_dest_loc))) {
+    if (!wp_nav->set_wp_destination_next(next_dest_loc)) {
         // failure to set destination can only be because of missing terrain data
         copter.failsafe_terrain_on_event();
         return;
-    }
-
-    // initialise yaw
-    // To-Do: reset the yaw only when the previous navigation command is not a WP.  this would allow removing the special check for ROI
-    if (auto_yaw.mode() != AUTO_YAW_ROI) {
-        auto_yaw.set_mode_to_default(false);
     }
 }
 
@@ -1128,6 +1120,7 @@ Location ModeAuto::loc_from_cmd(const AP_Mission::Mission_Command& cmd) const
 void ModeAuto::do_nav_wp(const AP_Mission::Mission_Command& cmd)
 {
     Location target_loc = loc_from_cmd(cmd);
+    wp_start(target_loc);
 
     // this will be used to remember the time in millis after we reach or pass the WP.
     loiter_time = 0;
@@ -1136,7 +1129,6 @@ void ModeAuto::do_nav_wp(const AP_Mission::Mission_Command& cmd)
 
     // if no delay as well as not final waypoint set the waypoint as "fast"
     AP_Mission::Mission_Command temp_cmd;
-    bool found_next_wp = false;
     if (loiter_time_max == 0 && mission.get_next_nav_cmd(cmd.index+1, temp_cmd)) {
 
         // whether vehicle should stop at the target position depends upon the next command
@@ -1148,8 +1140,7 @@ void ModeAuto::do_nav_wp(const AP_Mission::Mission_Command& cmd)
             case MAV_CMD_NAV_LAND:
                 // if next command's lat, lon is specified then provide as next destination
                 if ((temp_cmd.content.location.lat != 0) || (temp_cmd.content.location.lng != 0)) {
-                    found_next_wp = true;
-                    wp_start(target_loc, loc_from_cmd(temp_cmd));
+                    wp_next(loc_from_cmd(temp_cmd));
                 }
                 break;
             case MAV_CMD_NAV_SPLINE_WAYPOINT:
@@ -1165,11 +1156,6 @@ void ModeAuto::do_nav_wp(const AP_Mission::Mission_Command& cmd)
                 // for unsupported commands it is safer to stop
                 break;
         }
-    }
-
-    // if next waypoint not found, send only immediate destination
-    if (!found_next_wp) {
-        wp_start(target_loc);
     }
 }
 
