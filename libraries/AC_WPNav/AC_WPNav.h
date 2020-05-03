@@ -110,7 +110,7 @@ public:
     ///     provide the next_destination if known
     ///     returns false if conversion from location to vector from ekf origin cannot be calculated
     bool set_wp_destination(const Location& destination);
-    bool set_wp_destination(const Location& destination, const Location& next_destination);
+    bool set_wp_destination_next(const Location& next_destination);
 
     // returns wp location using location class.
     // returns false if unable to convert from target vector to global

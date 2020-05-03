@@ -213,7 +213,7 @@ void ModeAuto::wp_start(const Location& dest_loc, const Location& next_dest_loc)
     _mode = Auto_WP;
 
     // send target to waypoint controller
-    if (!wp_nav->set_wp_destination(dest_loc, next_dest_loc)) {
+    if (!(wp_nav->set_wp_destination(dest_loc) && wp_nav->set_wp_destination_next(next_dest_loc))) {
         // failure to set destination can only be because of missing terrain data
         copter.failsafe_terrain_on_event();
         return;
