@@ -1146,12 +1146,14 @@ void ModeAuto::do_nav_wp(const AP_Mission::Mission_Command& cmd)
             case MAV_CMD_NAV_LOITER_TURNS:
             case MAV_CMD_NAV_LOITER_TIME:
             case MAV_CMD_NAV_LAND:
-            case MAV_CMD_NAV_SPLINE_WAYPOINT:
                 // if next command's lat, lon is specified then provide as next destination
                 if ((temp_cmd.content.location.lat != 0) || (temp_cmd.content.location.lng != 0)) {
                     found_next_wp = true;
                     wp_start(target_loc, loc_from_cmd(temp_cmd));
                 }
+                break;
+            case MAV_CMD_NAV_SPLINE_WAYPOINT:
+                do_spline_wp(temp_cmd);
                 break;
             case MAV_CMD_NAV_RETURN_TO_LAUNCH:
                 // do not stop for RTL

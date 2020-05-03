@@ -294,8 +294,10 @@ bool AC_WPNav::set_wp_destination(const Vector3f& destination, bool terrain_alt)
     // store destination location
     _destination = destination;
     _terrain_alt = terrain_alt;
-    Vector3f pos_delta = _destination - _origin;
+    _scurve_last_leg = _scurve_this_leg;
+    _scurve_this_leg.calculate_leg(_origin, _destination);
 
+    Vector3f pos_delta = _destination - _origin;
     _track_length = pos_delta.length(); // get track length
     _track_length_xy = safe_sqrt(sq(pos_delta.x)+sq(pos_delta.y));  // get horizontal track length (used to decide if we should update yaw)
 
@@ -336,10 +338,6 @@ bool AC_WPNav::set_wp_destination(const Vector3f& destination, bool terrain_alt)
     // get speed along track (note: we convert vertical speed into horizontal speed equivalent)
     float speed_along_track = curr_vel.x * _pos_delta_unit.x + curr_vel.y * _pos_delta_unit.y + curr_vel.z * _pos_delta_unit.z;
     _limited_speed_xy_cms = constrain_float(speed_along_track, 0, _pos_control.get_max_speed_xy());
-    _scurve_last_leg = _scurve_this_leg;
-    _scurve_this_leg.Cal_Init(0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
-    _scurve_this_leg.Cal_Pn(_track_length);
-    // advance spline time to next step
 
     return true;
 }
@@ -360,8 +358,7 @@ bool AC_WPNav::set_wp_destination_next(const Vector3f& next_destination, bool ne
     } else {
         _pos_delta_unit_next = pos_delta/track_length;
     }
-    _scurve_next_leg.Cal_Init(0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
-    _scurve_next_leg.Cal_Pn(track_length);
+    _scurve_next_leg.calculate_leg(_destination, next_destination);
 
     // next destination provided so fast waypoint
     _flags.fast_waypoint = true;
@@ -410,60 +407,32 @@ void AC_WPNav::get_wp_stopping_point(Vector3f& stopping_point) const
 /// advance_wp_target_along_track - move target location along track from origin to destination
 bool AC_WPNav::advance_wp_target_along_track(float dt)
 {
-    float track_covered;        // distance (in cm) along the track that the vehicle has traveled.  Measured by drawing a perpendicular line from the track to the vehicle.
-    Vector3f track_error;       // distance error (in cm) from the track_covered position (i.e. closest point on the line to the vehicle) and the vehicle
-
-    // get current location
-    const Vector3f &curr_pos = _inav.get_position();
-    const Vector3f &curr_vel = _inav.get_velocity();
-    const Vector3f &desired_vel = _pos_control.get_desired_velocity();
-    float track_desired_vel = desired_vel.length();
-
-    float nav_tc = 1.0f;
-    if (is_positive(track_desired_vel)) {
-        float track_vel = (curr_vel.x * desired_vel.x + curr_vel.y * desired_vel.y + curr_vel.z * desired_vel.z) / track_desired_vel;
-        _track_scaler_dt += (track_vel/(_track_scaler_dt*track_desired_vel)-_track_scaler_dt) * (dt / (dt + nav_tc));
-        _track_scaler_dt = constrain_float(_track_scaler_dt, 0.1f, 1.0f);
-    } else {
-        _track_scaler_dt = 1.0f;
-    }
-
-
     // calculate terrain adjustments
     float terr_offset = 0.0f;
     if (_terrain_alt && !get_terrain_offset(terr_offset)) {
         return false;
     }
 
-    // calculate 3d vector from segment's origin
-    Vector3f curr_delta = (curr_pos - Vector3f(0,0,terr_offset)) - _origin;
+    // get current location
+    const Vector3f &curr_pos = _inav.get_position();
+//    const Vector3f &curr_vel = _inav.get_velocity();
+    const Vector3f &desired_vel = _pos_control.get_desired_velocity();
+    float track_desired_vel = desired_vel.length();
 
-    // calculate how far along the track we are
-    track_covered = curr_delta.x * _pos_delta_unit.x + curr_delta.y * _pos_delta_unit.y + curr_delta.z * _pos_delta_unit.z;
+//    float nav_tc = 1.0f;
+//    if (is_positive(track_desired_vel)) {
+//        float track_vel = (curr_vel.x * desired_vel.x + curr_vel.y * desired_vel.y + curr_vel.z * desired_vel.z) / track_desired_vel;
+//        _track_scaler_dt += (track_vel/(_track_scaler_dt*track_desired_vel)-_track_scaler_dt) * (dt / (dt + nav_tc));
+//        _track_scaler_dt = constrain_float(_track_scaler_dt, 0.1f, 1.0f);
+//    } else {
+//        _track_scaler_dt = 1.0f;
+//    }
+    _track_scaler_dt = 1.0f;
 
-    // calculate the point closest to the vehicle on the segment from origin to destination
-    Vector3f track_covered_pos = _pos_delta_unit * track_covered;
-
-    // calculate the distance vector from the vehicle to the closest point on the segment from origin to destination
-    track_error = curr_delta - track_covered_pos;
-
-    // calculate the horizontal error
-    _track_error_xy = norm(track_error.x, track_error.y);
-
-    // advance spline time to next step
-    float scurve_P1, scurve_V1, scurve_A1, scurve_J1;
-    _scurve_this_leg.advance_time(_track_scaler_dt * dt);
-    bool s_finish = _scurve_this_leg.runme(scurve_J1, scurve_A1, scurve_V1, scurve_P1);
-    Vector3f target_accel = _pos_delta_unit*scurve_A1*_track_scaler_dt;
-    Vector3f target_vel = _pos_delta_unit*scurve_V1 * MIN(_track_scaler_dt * 1.1f, 1.0f);
-    Vector3f target_pos = _origin + _pos_delta_unit*scurve_P1;
-
-    float scurve_P2, scurve_V2, scurve_A2, scurve_J2;
-    _scurve_last_leg.advance_time(_track_scaler_dt * dt);
-    _scurve_last_leg.runme(scurve_J2, scurve_A2, scurve_V2, scurve_P2);
-    target_accel += _pos_delta_unit_last*scurve_A2*_track_scaler_dt;
-    target_vel += _pos_delta_unit_last*scurve_V2 * MIN(_track_scaler_dt * 1.1f, 1.0f);
-    target_pos += _pos_delta_unit_last*(scurve_P2 - _scurve_last_leg.pos_end());
+    Vector3f target_pos, target_vel, target_accel;
+    target_pos = _origin;
+    _scurve_last_leg.move_from_pos_vel_accel(dt, _track_scaler_dt, target_pos, target_vel, target_accel);
+    bool s_finish = _scurve_this_leg.move_to_pos_vel_accel(dt, _track_scaler_dt, target_pos, target_vel, target_accel);
 
     // convert target_pos.z to altitude above the ekf origin
     target_pos.z += terr_offset;
@@ -472,11 +441,10 @@ bool AC_WPNav::advance_wp_target_along_track(float dt)
 
     if (_flags.fast_waypoint && _scurve_this_leg.breaking()) {
         float time_to_destination = _scurve_this_leg.time_to_end();
-        _scurve_this_leg.runme(_scurve_this_leg.time_now() + time_to_destination/2.0, scurve_J1, scurve_A1, scurve_V1, scurve_P1);
-        _scurve_next_leg.runme(time_to_destination/2.0, scurve_J2, scurve_A2, scurve_V2, scurve_P2);
-        Vector3f turn_pos = _pos_delta_unit * (scurve_P1 - _scurve_this_leg.pos_end()) + _pos_delta_unit_next * scurve_P2;
-        Vector3f turn_vel = _pos_delta_unit * scurve_V1 + _pos_delta_unit_next * scurve_V2;
-        Vector3f turn_accel = _pos_delta_unit * scurve_A1 + _pos_delta_unit_next * scurve_A2;
+        Vector3f turn_pos, turn_vel, turn_accel;
+        turn_pos = -_scurve_this_leg.get_pos_end();
+        _scurve_this_leg.move_to_time_pos_vel_accel(_scurve_this_leg.time_now() + time_to_destination/2.0, 1.0, turn_pos, turn_vel, turn_accel);
+        _scurve_next_leg.move_to_time_pos_vel_accel(time_to_destination/2.0, _track_scaler_dt, turn_pos, turn_vel, turn_accel);
 //      s_finish = s_finish || ((_scurve_this_leg.time_to_end() < _scurve_next_leg.time_end()/2.0) && (turn_pos.length() < _wp_radius_cm) && (Vector2f(turn_vel.x, turn_vel.y).length() < _wp_speed_cms));
         s_finish = s_finish || ((_scurve_this_leg.time_to_end() < _scurve_next_leg.time_end()/2.0) && (turn_pos.length() < _wp_radius_cm) && (Vector2f(turn_vel.x, turn_vel.y).length() < _wp_speed_cms) && (Vector2f(turn_accel.x, turn_accel.y).length() < 2*_wp_accel_cmss));
     }
@@ -519,17 +487,19 @@ bool AC_WPNav::advance_wp_target_along_track(float dt)
         set_yaw_cds(turn_rate*degrees(100));
     }
 
-        AP::logger().Write("LEN2", "TimeUS,tvx,tvy,tax,tay,ltx,lty,tr,ta,ts", "Qfffffffff",
-                                                      AP_HAL::micros64(),
-                                                      (double)target_vel.x,
-                                                      (double)target_vel.y,
-                                                      (double)target_accel.x,
-                                                      (double)target_accel.y,
-                                                      (double)accel_turn.x,
-                                                      (double)accel_turn.y,
-                                                      (double)degrees(turn_rate),
-                                                      (double)heading_vel/100.0f,
-                                                      (double)_track_scaler_dt);
+        AP::logger().Write("LEN2",
+                "TimeUS,tvx,tvy,tax,tay,ltx,lty,tr,ta,ts",
+                "Qfffffffff",
+                AP_HAL::micros64(),
+                (double)target_vel.x,
+                (double)target_vel.y,
+                (double)target_accel.x,
+                (double)target_accel.y,
+                (double)accel_turn.x,
+                (double)accel_turn.y,
+                (double)degrees(turn_rate),
+                (double)heading_vel/100.0f,
+                (double)_track_scaler_dt);
 
     // successfully advanced along track
     return true;
