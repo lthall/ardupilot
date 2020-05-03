@@ -81,7 +81,7 @@ void ModeAuto::run()
         break;
 
     case Auto_Spline:
-        spline_run();
+        wp_run();
         break;
 
     case Auto_NavGuided:
@@ -189,7 +189,7 @@ void ModeAuto::takeoff_start(const Location& dest_loc)
 }
 
 // auto_wp_start - initialises waypoint controller to implement flying to a particular destination
-void ModeAuto::wp_start(const Location& dest_loc)
+void ModeAuto::wp_this(const Location& dest_loc)
 {
     _mode = Auto_WP;
 
@@ -786,46 +786,6 @@ void ModeAuto::wp_run()
     }
 }
 
-// auto_spline_run - runs the auto spline controller
-//      called by auto_run at 100hz or more
-void ModeAuto::spline_run()
-{
-    // if not armed set throttle to zero and exit immediately
-    if (is_disarmed_or_landed()) {
-        make_safe_spool_down();
-        wp_nav->wp_and_spline_init();
-        return;
-    }
-
-    // process pilot's yaw input
-    float target_yaw_rate = 0;
-    if (!copter.failsafe.radio) {
-        // get pilot's desired yaw rat
-        target_yaw_rate = get_pilot_desired_yaw_rate(channel_yaw->get_control_in());
-        if (!is_zero(target_yaw_rate)) {
-            auto_yaw.set_mode(AUTO_YAW_HOLD);
-        }
-    }
-
-    // set motors to full range
-    motors->set_desired_spool_state(AP_Motors::DesiredSpoolState::THROTTLE_UNLIMITED);
-
-    // run waypoint controller
-    wp_nav->update_spline();
-
-    // call z-axis position controller (wpnav should have already updated it's alt target)
-    pos_control->update_z_controller();
-
-    // call attitude controller
-    if (auto_yaw.mode() == AUTO_YAW_HOLD) {
-        // roll & pitch from waypoint controller, yaw rate from pilot
-        attitude_control->input_euler_angle_roll_pitch_euler_rate_yaw(wp_nav->get_roll(), wp_nav->get_pitch(), target_yaw_rate);
-    } else {
-        // roll, pitch from waypoint controller, yaw heading from auto_heading()
-        attitude_control->input_euler_angle_roll_pitch_yaw(wp_nav->get_roll(), wp_nav->get_pitch(), auto_yaw.yaw(), true);
-    }
-}
-
 // auto_land_run - lands in auto mode
 //      called by auto_run at 100hz or more
 void ModeAuto::land_run()
@@ -1120,7 +1080,7 @@ Location ModeAuto::loc_from_cmd(const AP_Mission::Mission_Command& cmd) const
 void ModeAuto::do_nav_wp(const AP_Mission::Mission_Command& cmd)
 {
     Location target_loc = loc_from_cmd(cmd);
-    wp_start(target_loc);
+    wp_this(target_loc);
 
     // this will be used to remember the time in millis after we reach or pass the WP.
     loiter_time = 0;
@@ -1171,7 +1131,7 @@ void ModeAuto::do_land(const AP_Mission::Mission_Command& cmd)
 
         const Location target_loc = terrain_adjusted_location(cmd);
 
-        wp_start(target_loc);
+        wp_this(target_loc);
     } else {
         // set landing state
         state = State::Descending;
@@ -1213,7 +1173,7 @@ void ModeAuto::do_loiter_unlimited(const AP_Mission::Mission_Command& cmd)
     }
 
     // start way point navigator and provide it the desired location
-    wp_start(target_loc);
+    wp_this(target_loc);
 }
 
 // do_circle - initiate moving in a circle
@@ -1476,7 +1436,7 @@ void ModeAuto::do_payload_place(const AP_Mission::Mission_Command& cmd)
 
         const Location target_loc = terrain_adjusted_location(cmd);
 
-        wp_start(target_loc);
+        wp_this(target_loc);
     } else {
         nav_payload_place.state = PayloadPlaceStateType_Calibrating_Hover_Start;
 
@@ -1686,7 +1646,7 @@ bool ModeAuto::verify_payload_place()
     case PayloadPlaceStateType_Ascending_Start: {
         Location target_loc = inertial_nav.get_position();
         target_loc.alt = nav_payload_place.descend_start_altitude;
-        wp_start(target_loc);
+        wp_this(target_loc);
         nav_payload_place.state = PayloadPlaceStateType_Ascending;
         }
         FALLTHROUGH;

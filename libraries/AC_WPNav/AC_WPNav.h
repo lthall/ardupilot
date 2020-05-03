@@ -162,13 +162,6 @@ public:
     /// update_wpnav - run the wp controller - should be called at 100hz or higher
     virtual bool update_wpnav();
 
-    // check_wp_leash_length - check recalc_wp_leash flag and calls calculate_wp_leash_length() if necessary
-    //  should be called after _pos_control.update_xy_controller which may have changed the position controller leash lengths
-    void check_wp_leash_length();
-
-    /// calculate_wp_leash_length - calculates track speed, acceleration and leash lengths for waypoint controller
-    void calculate_wp_leash_length();
-
     ///
     /// spline methods
     ///
@@ -253,25 +246,6 @@ protected:
         uint8_t wp_yaw_set              : 1;    // true if yaw target has been set
     } _flags;
 
-    /// calc_slow_down_distance - calculates distance before waypoint that target point should begin to slow-down assuming it is traveling at full speed
-    void calc_slow_down_distance(float speed_cms, float accel_cmss);
-
-    /// get_slow_down_speed - returns target speed of target point based on distance from the destination (in cm)
-    float get_slow_down_speed(float dist_from_dest_cm, float accel_cmss);
-
-    /// spline protected functions
-
-    /// update_spline_solution - recalculates hermite_spline_solution grid
-    void update_spline_solution(const Vector3f& origin, const Vector3f& dest, const Vector3f& origin_vel, const Vector3f& dest_vel);
-
-    /// advance_spline_target_along_track - move target location along track from origin to destination
-    ///     returns false if it is unable to advance (most likely because of missing terrain data)
-    bool advance_spline_target_along_track(float dt);
-
-    /// calc_spline_pos_vel - update position and velocity from given spline time
-    /// 	relies on update_spline_solution being called since the previous
-    void calc_spline_pos_vel(float spline_time, Vector3f& position, Vector3f& velocity);
-
     // get terrain's altitude (in cm above the ekf origin) at the current position (+ve means terrain below vehicle is above ekf origin's altitude)
     bool get_terrain_offset(float& offset_cm);
 
@@ -308,29 +282,15 @@ protected:
     uint32_t    _wp_last_update;        // time of last update_wpnav call
     Vector3f    _origin;                // starting point of trip to next waypoint in cm from ekf origin
     Vector3f    _destination;           // target destination in cm from ekf origin
-    Vector3f    _pos_delta_unit;        // each axis's percentage of the total track from origin to destination
-    Vector3f    _pos_delta_unit_next;        // each axis's percentage of the total track from origin to destination
-    Vector3f    _pos_delta_unit_last;   // each axis's percentage of the total track from origin to destination
     float       _track_error_xy;        // horizontal error of the actual position vs the desired position
-    float       _track_length;          // distance in cm between origin and destination
-    float       _track_length_xy;       // horizontal distance in cm between origin and destination
     float       _track_desired;         // our desired distance along the track in cm
     float       _track_scaler_dt;       // our desired distance along the track in cm
-    float       _limited_speed_xy_cms;  // horizontal speed in cm/s used to advance the intermediate target towards the destination.  used to limit extreme acceleration after passing a waypoint
-    float       _track_accel;           // acceleration along track
-    float       _track_speed;           // speed in cm/s along track
-    float       _track_leash_length;    // leash length along track
-    float       _slow_down_dist;        // vehicle should begin to slow down once it is within this distance from the destination
-
-    // spline variables
-    float       _spline_time;           // current spline time between origin and destination
-    float       _spline_time_scale;     // current spline time between origin and destination
-    Vector3f    _spline_origin_vel;     // the target velocity vector at the origin of the spline segment
-    Vector3f    _spline_destination_vel;// the target velocity vector at the destination point of the spline segment
-    Vector3f    _hermite_spline_solution[4]; // array describing spline path between origin and destination
-    float       _spline_vel_scaler;	    //
     float       _yaw;                   // heading according to yaw
     float       _yaw_rate;
+
+    // spline variables
+    Vector3f    _spline_origin_vel;     // the target velocity vector at the origin of the spline segment
+    Vector3f    _spline_destination_vel;// the target velocity vector at the destination point of the spline segment
 
     // terrain following variables
     bool        _terrain_alt;   // true if origin and destination.z are alt-above-terrain, false if alt-above-ekf-origin

@@ -351,7 +351,7 @@ public:
     bool loiter_start();
     void rtl_start();
     void takeoff_start(const Location& dest_loc);
-    void wp_start(const Location& dest_loc);
+    void wp_this(const Location& dest_loc);
     void wp_next(const Location& next_dest_loc);
     void land_start();
     void land_start(const Vector3f& destination);
@@ -401,7 +401,6 @@ private:
 
     void takeoff_run();
     void wp_run();
-    void spline_run();
     void land_run();
     void rtl_run();
     void circle_run();

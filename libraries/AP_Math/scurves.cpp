@@ -42,6 +42,27 @@ void scurves::calculate_leg(Vector3f origin, Vector3f destination)
     }
 }
 
+void scurves::calculate_spline_leg(Vector3f origin, Vector3f destination, Vector3f origin_vector, Vector3f destination_vector)
+{
+    Vector3f pos_delta = destination - origin;
+    float track_length = pos_delta.length();
+    if (is_zero(track_length)) {
+        // avoid possible divide by zero
+        _pos_delta_unit.x = 0;
+        _pos_delta_unit.y = 0;
+        _pos_delta_unit.z = 0;
+    }else{
+        _pos_delta_unit = pos_delta/track_length;
+    }
+    Cal_Init(0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+    Cal_Ps(track_length);
+
+    hal.console->printf("T, Jt, J, A, V, P\n");
+    for (uint8_t i = 0; i < num_items; i++) {
+        hal.console->printf("%4.2f, %4.2f, %4.2f, %4.2f, %4.2f, %4.2f\n", oT[i], (float)oJtype[i], oJ[i], oA[i], oV[i], oP[i]);
+    }
+}
+
 bool scurves::move_to_pos_vel_accel(float dt, float time_scale, Vector3f &pos, Vector3f &vel, Vector3f &accel)
 {
     advance_time(time_scale * dt);
