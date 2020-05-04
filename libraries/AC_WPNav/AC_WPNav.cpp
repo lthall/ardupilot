@@ -93,8 +93,6 @@ AC_WPNav::AC_WPNav(const AP_InertialNav& inav, const AP_AHRS_View& ahrs, AC_PosC
     // init flags
     _flags.reached_destination = false;
     _flags.fast_waypoint = false;
-    _flags.slowing_down = false;
-    _flags.recalc_wp_leash = false;
     _flags.segment_type = SEGMENT_STRAIGHT;
 
     // sanity check some parameters
@@ -182,8 +180,6 @@ void AC_WPNav::set_speed_xy(float speed_cms)
     // range check new target speed and update position controller
     if (speed_cms >= WPNAV_WP_SPEED_MIN) {
         _pos_control.set_max_speed_xy(speed_cms);
-        // flag that wp leash must be recalculated
-        _flags.recalc_wp_leash = true;
     }
 }
 
@@ -191,16 +187,12 @@ void AC_WPNav::set_speed_xy(float speed_cms)
 void AC_WPNav::set_speed_up(float speed_up_cms)
 {
     _pos_control.set_max_speed_z(_pos_control.get_max_speed_down(), speed_up_cms);
-    // flag that wp leash must be recalculated
-    _flags.recalc_wp_leash = true;
 }
 
 /// set current target descent rate during wp navigation
 void AC_WPNav::set_speed_down(float speed_down_cms)
 {
     _pos_control.set_max_speed_z(speed_down_cms, _pos_control.get_max_speed_up());
-    // flag that wp leash must be recalculated
-    _flags.recalc_wp_leash = true;
 }
 
 /// set_wp_destination waypoint using location class

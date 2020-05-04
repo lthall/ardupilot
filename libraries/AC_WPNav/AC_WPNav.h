@@ -239,9 +239,6 @@ protected:
     struct wpnav_flags {
         uint8_t reached_destination     : 1;    // true if we have reached the destination
         uint8_t fast_waypoint           : 1;    // true if we should ignore the waypoint radius and consider the waypoint complete once the intermediate target has reached the waypoint
-        uint8_t slowing_down            : 1;    // true when target point is slowing down before reaching the destination
-        uint8_t recalc_wp_leash         : 1;    // true if we need to recalculate the leash lengths because of changes in speed or acceleration
-        uint8_t new_wp_destination      : 1;    // true if we have just received a new destination.  allows us to freeze the position controller's xy feed forward
         SegmentType segment_type        : 1;    // active segment is either straight or spline
         uint8_t wp_yaw_set              : 1;    // true if yaw target has been set
     } _flags;
