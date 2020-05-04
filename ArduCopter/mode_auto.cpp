@@ -172,7 +172,7 @@ void ModeAuto::takeoff_start(const Location& dest_loc)
     }
 
     // set waypoint controller target
-    if (!wp_nav->set_wp_destination(dest)) {
+    if (!wp_nav->set_wp_destination_loc(dest)) {
         // failure to set destination can only be because of missing terrain data
         copter.failsafe_terrain_on_event();
         return;
@@ -194,7 +194,7 @@ void ModeAuto::wp_this(const Location& dest_loc)
     _mode = Auto_WP;
 
     // send target to waypoint controller
-    if (!wp_nav->set_wp_destination(dest_loc)) {
+    if (!wp_nav->set_wp_destination_loc(dest_loc)) {
         // failure to set destination can only be because of missing terrain data
         copter.failsafe_terrain_on_event();
         return;
@@ -211,7 +211,7 @@ void ModeAuto::wp_this(const Location& dest_loc)
 void ModeAuto::wp_next(const Location& next_dest_loc)
 {
     // send target to waypoint controller
-    if (!wp_nav->set_wp_destination_next(next_dest_loc)) {
+    if (!wp_nav->set_wp_destination_loc_next(next_dest_loc)) {
         // failure to set destination can only be because of missing terrain data
         copter.failsafe_terrain_on_event();
         return;
@@ -282,7 +282,7 @@ void ModeAuto::circle_movetoedge_start(const Location &circle_center, float radi
         circle_edge.set_alt_cm(circle_center.alt, circle_center.get_alt_frame());
 
         // initialise wpnav to move to edge of circle
-        if (!wp_nav->set_wp_destination(circle_edge)) {
+        if (!wp_nav->set_wp_destination_loc(circle_edge)) {
             // failure to set destination can only be because of missing terrain data
             copter.failsafe_terrain_on_event();
         }
@@ -324,7 +324,7 @@ void ModeAuto::spline_start(const Location& destination, bool stopped_at_start,
     _mode = Auto_Spline;
 
     // initialise wpnav
-    if (!wp_nav->set_spline_destination(destination, stopped_at_start, seg_end_type, next_destination)) {
+    if (!wp_nav->set_spline_destination_loc(destination, stopped_at_start, seg_end_type, next_destination)) {
         // failure to set destination can only be because of missing terrain data
         copter.failsafe_terrain_on_event();
         return;

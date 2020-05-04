@@ -104,36 +104,49 @@ public:
     const Vector3f &get_wp_origin() const { return _origin; }
 
     /// true if origin.z and destination.z are alt-above-terrain, false if alt-above-ekf-origin
-    bool origin_and_destination_are_terrain_alt() const { return _terrain_alt; }
-
-    /// set_wp_destination waypoint using location class
-    ///     provide the next_destination if known
-    ///     returns false if conversion from location to vector from ekf origin cannot be calculated
-    bool set_wp_destination(const Location& destination);
-    bool set_wp_destination_next(const Location& next_destination);
+    bool origin_and_destination_are_terrain_alt() const { return false; }
 
     // returns wp location using location class.
     // returns false if unable to convert from target vector to global
     // coordinates
-    bool get_wp_destination(Location& destination) const;
+    bool get_wp_destination_loc(Location& destination) const;
 
-    // returns object avoidance adjusted destination which is always the same as get_wp_destination
-    // having this function unifies the AC_WPNav_OA and AC_WPNav interfaces making vehicle code simpler
-    virtual bool get_oa_wp_destination(Location& destination) const { return get_wp_destination(destination); }
-
-    /// set_wp_destination waypoint using position vector (distance from ekf origin in cm)
-    ///     terrain_alt should be true if destination.z is a desired altitude above terrain
-    virtual bool set_wp_destination(const Vector3f& destination, bool terrain_alt = false);
-
-    /// set next destination using position vector (distance from ekf origin in cm)
-    ///     terrain_alt should be true if destination.z is a desired altitude above terrain
-    ///     provide next_destination and next_dest_terrain_alt if known
-    bool set_wp_destination_next(const Vector3f& next_destination, bool next_dest_terrain_alt);
+    /// set_wp_destination waypoint using location class
+    ///     provide the next_destination if known
+    ///     returns false if conversion from location to vector from ekf origin cannot be calculated
+    bool set_wp_destination_loc(const Location& destination);
+    bool set_wp_destination_loc_next(const Location& destination);
 
     /// set waypoint destination using NED position vector from ekf origin in meters
     ///     provide next_destination_NED if known
     bool set_wp_destination_NED(const Vector3f& destination_NED);
     bool set_wp_destination_NED(const Vector3f& destination_NED, const Vector3f& next_destination_NED);
+
+    /// set_wp_destination waypoint using position vector (distance from ekf origin in cm)
+    ///     terrain_alt should be true if destination.z is a desired altitude above terrain
+    virtual bool set_wp_destination(const Vector3f& destination);
+    bool set_wp_destination_next(const Vector3f& next_destination);
+
+    /// set_spline_destination waypoint using location class
+    ///     returns false if conversion from location to vector from ekf origin cannot be calculated
+    ///     terrain_alt should be true if destination.z is a desired altitude above terrain (false if its desired altitude above ekf origin)
+    ///     stopped_at_start should be set to true if vehicle is stopped at the origin
+    ///     seg_end_type should be set to stopped, straight or spline depending upon the next segment's type
+    ///     next_destination should be set to the next segment's destination if the seg_end_type is SEGMENT_END_STRAIGHT or SEGMENT_END_SPLINE
+    bool set_spline_destination_loc(const Location& destination, bool stopped_at_start, spline_segment_end_type seg_end_type, Location next_destination);
+
+    /// set_spline_destination waypoint using position vector (distance from ekf origin in cm)
+    ///     returns false if conversion from location to vector from ekf origin cannot be calculated
+    ///     terrain_alt should be true if destination.z is a desired altitudes above terrain (false if its desired altitudes above ekf origin)
+    ///     stopped_at_start should be set to true if vehicle is stopped at the origin
+    ///     seg_end_type should be set to stopped, straight or spline depending upon the next segment's type
+    ///     next_destination should be set to the next segment's destination if the seg_end_type is SEGMENT_END_STRAIGHT or SEGMENT_END_SPLINE
+    ///     next_destination.z  must be in the same "frame" as destination.z (i.e. if destination is a alt-above-terrain, next_destination should be too)
+    bool set_spline_destination(const Vector3f& destination, bool stopped_at_start, spline_segment_end_type seg_end_type, const Vector3f& next_destination);
+
+    // returns object avoidance adjusted destination which is always the same as get_wp_destination
+    // having this function unifies the AC_WPNav_OA and AC_WPNav interfaces making vehicle code simpler
+    virtual bool get_oa_wp_destination(Location& destination) const { return get_wp_destination_loc(destination); }
 
     /// shift_wp_origin_to_current_pos - shifts the origin and destination so the origin starts at the current position
     ///     used to reset the position just before takeoff
@@ -180,30 +193,6 @@ public:
     // get target yaw in centi-degrees (used for wp and spline navigation)
     float get_yaw() const;
     float get_yaw_rate() const;
-
-    /// set_spline_destination waypoint using location class
-    ///     returns false if conversion from location to vector from ekf origin cannot be calculated
-    ///     terrain_alt should be true if destination.z is a desired altitude above terrain (false if its desired altitude above ekf origin)
-    ///     stopped_at_start should be set to true if vehicle is stopped at the origin
-    ///     seg_end_type should be set to stopped, straight or spline depending upon the next segment's type
-    ///     next_destination should be set to the next segment's destination if the seg_end_type is SEGMENT_END_STRAIGHT or SEGMENT_END_SPLINE
-    bool set_spline_destination(const Location& destination, bool stopped_at_start, spline_segment_end_type seg_end_type, Location next_destination);
-
-    /// set_spline_destination waypoint using position vector (distance from ekf origin in cm)
-    ///     returns false if conversion from location to vector from ekf origin cannot be calculated
-    ///     terrain_alt should be true if destination.z is a desired altitudes above terrain (false if its desired altitudes above ekf origin)
-    ///     stopped_at_start should be set to true if vehicle is stopped at the origin
-    ///     seg_end_type should be set to stopped, straight or spline depending upon the next segment's type
-    ///     next_destination should be set to the next segment's destination if the seg_end_type is SEGMENT_END_STRAIGHT or SEGMENT_END_SPLINE
-    ///     next_destination.z  must be in the same "frame" as destination.z (i.e. if destination is a alt-above-terrain, next_destination should be too)
-    bool set_spline_destination(const Vector3f& destination, bool terrain_alt, bool stopped_at_start, spline_segment_end_type seg_end_type, const Vector3f& next_destination);
-
-    /// set_spline_origin_and_destination - set origin and destination waypoints using position vectors (distance from ekf origin in cm)
-    ///     terrain_alt should be true if origin.z and destination.z are desired altitudes above terrain (false if desired altitudes above ekf origin)
-    ///     stopped_at_start should be set to true if vehicle is stopped at the origin
-    ///     seg_end_type should be set to stopped, straight or spline depending upon the next segment's type
-    ///     next_destination should be set to the next segment's destination if the seg_end_type is SEGMENT_END_STRAIGHT or SEGMENT_END_SPLINE
-    bool set_spline_origin_and_destination(const Vector3f& origin, const Vector3f& destination, bool terrain_alt, bool stopped_at_start, spline_segment_end_type seg_end_type, const Vector3f& next_destination);
 
     /// reached_spline_destination - true when we have come within RADIUS cm of the waypoint
     bool reached_spline_destination() const { return _flags.reached_destination; }
@@ -290,7 +279,6 @@ protected:
     Vector3f    _spline_destination_vel;// the target velocity vector at the destination point of the spline segment
 
     // terrain following variables
-    bool        _terrain_alt;   // true if origin and destination.z are alt-above-terrain, false if alt-above-ekf-origin
     bool        _rangefinder_available;
     AP_Int8     _rangefinder_use;
     bool        _rangefinder_healthy;
