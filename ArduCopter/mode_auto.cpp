@@ -1087,9 +1087,15 @@ void ModeAuto::do_nav_wp(const AP_Mission::Mission_Command& cmd)
     // this is the delay, stored in seconds
     loiter_time_max = cmd.p1;
 
+    do_next_wp(cmd);
+}
+
+// do_next_wp - checks the next waypoint and adds it if needed
+void ModeAuto::do_next_wp(const AP_Mission::Mission_Command& cmd)
+{
     // if no delay as well as not final waypoint set the waypoint as "fast"
     AP_Mission::Mission_Command temp_cmd;
-    if (loiter_time_max == 0 && mission.get_next_nav_cmd(cmd.index+1, temp_cmd)) {
+    if (cmd.p1 == 0 && mission.get_next_nav_cmd(cmd.index+1, temp_cmd)) {
 
         // whether vehicle should stop at the target position depends upon the next command
         switch (temp_cmd.id) {

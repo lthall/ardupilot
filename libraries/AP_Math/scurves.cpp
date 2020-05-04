@@ -55,7 +55,11 @@ void scurves::calculate_spline_leg(Vector3f origin, Vector3f destination, Vector
         _pos_delta_unit = pos_delta/track_length;
     }
     Cal_Init(0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
-    Cal_Ps(track_length);
+    if (origin_vector.is_zero() && destination_vector.is_zero()){
+        Cal_Ps(track_length);
+    } else {
+        Cal_Ps(track_length);
+    }
 
     hal.console->printf("T, Jt, J, A, V, P\n");
     for (uint8_t i = 0; i < num_items; i++) {
