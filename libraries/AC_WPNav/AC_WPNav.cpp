@@ -263,13 +263,18 @@ bool AC_WPNav::set_wp_destination(const Vector3f& destination)
 
     // initialise intermediate point to the origin
     _flags.reached_destination = false;
-    _flags.fast_waypoint = false;   // default waypoint back to slow
     _flags.wp_yaw_set = false;
+    _flags.fast_waypoint = false;   // default waypoint back to slow
 
     // store destination location
     _destination = destination;
     _scurve_last_leg = _scurve_this_leg;
-    _scurve_this_leg.calculate_leg(_origin, _destination);
+    if (_flags.fast_waypoint) {
+        _scurve_this_leg = _scurve_next_leg;
+    } else {
+        _scurve_this_leg.calculate_leg(_origin, _destination);
+    }
+    _scurve_next_leg.Cal_Init(0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
 
     return true;
 }
@@ -277,9 +282,9 @@ bool AC_WPNav::set_wp_destination(const Vector3f& destination)
 /// set next destination using position vector (distance from ekf origin in cm)
 ///     terrain_alt should be true if destination.z is a desired altitude above terrain
 ///     provide next_destination
-bool AC_WPNav::set_wp_destination_next(const Vector3f& next_destination)
+bool AC_WPNav::set_wp_destination_next(const Vector3f& destination)
 {
-    _scurve_next_leg.calculate_leg(_destination, next_destination);
+    _scurve_next_leg.calculate_leg(_destination, destination);
 
     // next destination provided so fast waypoint
     _flags.fast_waypoint = true;
@@ -296,30 +301,36 @@ bool AC_WPNav::set_wp_destination_next(const Vector3f& next_destination)
 ///     stopped_at_start should be set to true if vehicle is stopped at the origin
 ///     seg_end_type should be set to stopped, straight or spline depending upon the next segment's type
 ///     next_destination should be set to the next segment's destination if the seg_end_type is SEGMENT_END_STRAIGHT or SEGMENT_END_SPLINE
-bool AC_WPNav::set_spline_destination_loc(const Location& destination, bool stopped_at_start, spline_segment_end_type seg_end_type, Location next_destination)
+bool AC_WPNav::set_spline_destination_loc(const Location& destination, Location next_destination, bool spline_next)
 {
     // convert destination location to vector
     Vector3f destination_NEU;
     if (!destination.get_vector_from_origin_NEU(destination_NEU)) {
         return false;
     }
-
-    Vector3f next_destination_NEU; // left uninitialised for valgrind
-    if (seg_end_type == SEGMENT_END_STRAIGHT ||
-        seg_end_type == SEGMENT_END_SPLINE) {
-        // make altitude frames consistent
-        if (!next_destination.change_alt_frame(destination.get_alt_frame())) {
-            return false;
-        }
-
-        // convert next destination to vector
-        if (!next_destination.get_vector_from_origin_NEU(next_destination_NEU)) {
-            return false;
-        }
+    Vector3f next_destination_NEU;
+    if (!next_destination.get_vector_from_origin_NEU(next_destination_NEU)) {
+        return false;
     }
 
     // set target as vector from EKF origin
-    return set_spline_destination(destination_NEU, stopped_at_start, seg_end_type, next_destination_NEU);
+    return set_spline_destination(destination_NEU, next_destination_NEU, spline_next);
+}
+
+bool AC_WPNav::set_spline_destination_next_loc(const Location& destination, Location next_destination, bool spline_next)
+{
+    // convert destination location to vector
+    Vector3f destination_NEU;
+    if (!destination.get_vector_from_origin_NEU(destination_NEU)) {
+        return false;
+    }
+    Vector3f next_destination_NEU;
+    if (!next_destination.get_vector_from_origin_NEU(next_destination_NEU)) {
+        return false;
+    }
+
+    // set target as vector from EKF origin
+    return set_spline_destination_next(destination_NEU, next_destination_NEU, spline_next);
 }
 
 /// set_spline_destination waypoint using position vector (distance from home in cm)
@@ -328,67 +339,34 @@ bool AC_WPNav::set_spline_destination_loc(const Location& destination, bool stop
 ///     stopped_at_start should be set to true if vehicle is stopped at the origin
 ///     seg_end_type should be set to stopped, straight or spline depending upon the next segment's type
 ///     next_destination should be set to the next segment's destination if the seg_end_type is SEGMENT_END_STRAIGHT or SEGMENT_END_SPLINE
-bool AC_WPNav::set_spline_destination(const Vector3f& destination, bool stopped_at_start, spline_segment_end_type seg_end_type, const Vector3f& next_destination)
+bool AC_WPNav::set_spline_destination(const Vector3f& destination, const Vector3f& next_destination, bool spline_next)
 {
-    Vector3f origin = _destination;
-
-    // segment start types
-    // stop - vehicle is not moving at origin
-    // straight-fast - vehicle is moving, previous segment is straight.  vehicle will fly straight through the waypoint before beginning it's spline path to the next wp
-    //     _flag.segment_type holds whether prev segment is straight vs spline but we don't know if it has a delay
-    // spline-fast - vehicle is moving, previous segment is splined, vehicle will fly through waypoint but previous segment should have it flying in the correct direction (i.e. exactly parallel to position difference vector from previous segment's origin to this segment's destination)
-
-    // calculate spline velocity at origin
-    if (stopped_at_start) {
-        // if vehicle is stopped at the origin, set origin velocity to 0.02 * distance vector from origin to destination
-        _spline_origin_vel.zero();
-    }else{
-        // look at previous segment to determine velocity at origin
-        if (_flags.segment_type == SEGMENT_STRAIGHT) {
-            // previous segment is straight, vehicle is moving so vehicle should fly straight through the origin
-            // before beginning it's spline path to the next waypoint. Note: we are using the previous segment's origin and destination
-            _spline_origin_vel = (_destination - _origin);
-        }else{
-            // previous segment is splined, vehicle will fly through origin
-            // we can use the previous segment's destination velocity as this segment's origin velocity
-            // Note: previous segment will leave destination velocity parallel to position difference vector
-            //       from previous segment's origin to this segment's destination)
-            _spline_origin_vel = _spline_destination_vel;
-        }
-    }
-
-    // calculate spline velocity at destination
-    switch (seg_end_type) {
-
-    case SEGMENT_END_STOP:
-        // if vehicle stops at the destination set destination velocity to 0.02 * distance vector from origin to destination
-        _spline_destination_vel = (destination - origin);
-        _flags.fast_waypoint = false;
-        break;
-
-    case SEGMENT_END_STRAIGHT:
-        // if next segment is straight, vehicle's final velocity should face along the next segment's position
-        _spline_destination_vel = (next_destination - destination);
-        _flags.fast_waypoint = true;
-        break;
-
-    case SEGMENT_END_SPLINE:
-        // if next segment is splined, vehicle's final velocity should face parallel to the line from the origin to the next destination
-        _spline_destination_vel = (next_destination - origin);
-        _flags.fast_waypoint = true;
-        break;
-    }
-
-    // store origin and destination locations
-    _origin = origin;
-    _destination = destination;
-
-    _scurve_this_leg.calculate_spline_leg(_origin, _destination, _spline_origin_vel, _spline_destination_vel);
+    _origin = _destination;
 
     // initialise intermediate point to the origin
     _flags.reached_destination = false;
-    _flags.segment_type = SEGMENT_SPLINE;
     _flags.wp_yaw_set = false;
+    _flags.fast_waypoint = false;   // default waypoint back to slow
+
+    // store destination location
+    _destination = destination;
+    _scurve_last_leg = _scurve_this_leg;
+    if (_flags.fast_waypoint) {
+        _scurve_this_leg = _scurve_next_leg;
+    } else {
+        _scurve_this_leg.calculate_leg(_origin, _destination);
+    }
+    _scurve_next_leg.Cal_Init(0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+
+    return true;
+}
+
+bool AC_WPNav::set_spline_destination_next(const Vector3f& destination, const Vector3f& next_destination, bool spline_next)
+{
+    _scurve_next_leg.calculate_leg(_destination, destination);
+
+    // next destination provided so fast waypoint
+    _flags.fast_waypoint = true;
 
     return true;
 }
@@ -503,7 +481,7 @@ bool AC_WPNav::advance_wp_target_along_track(float dt)
         heading_vel = get_bearing_cd(Vector3f(), target_vel);
         // todo: add feed forward yaw for coordinated turns
         set_yaw_cd(heading_vel);
-        set_yaw_cds(turn_rate*degrees(100));
+        set_yaw_cds(turn_rate*degrees(100.0f));
     }
 
         AP::logger().Write("LEN2",
@@ -517,7 +495,7 @@ bool AC_WPNav::advance_wp_target_along_track(float dt)
                 (double)accel_turn.x,
                 (double)accel_turn.y,
                 (double)degrees(turn_rate),
-                (double)heading_vel/100.0f,
+                (double)get_yaw()/100.0f,
                 (double)_track_scaler_dt);
 
     // successfully advanced along track
@@ -567,6 +545,7 @@ bool AC_WPNav::update_wpnav()
 // returns target yaw in centi-degrees (used for wp and spline navigation)
 float AC_WPNav::get_yaw() const
 {
+    return _yaw;
     if (_flags.wp_yaw_set) {
         return _yaw;
     } else {

@@ -125,24 +125,17 @@ public:
     /// set_wp_destination waypoint using position vector (distance from ekf origin in cm)
     ///     terrain_alt should be true if destination.z is a desired altitude above terrain
     virtual bool set_wp_destination(const Vector3f& destination);
-    bool set_wp_destination_next(const Vector3f& next_destination);
+    bool set_wp_destination_next(const Vector3f& destination);
 
     /// set_spline_destination waypoint using location class
     ///     returns false if conversion from location to vector from ekf origin cannot be calculated
-    ///     terrain_alt should be true if destination.z is a desired altitude above terrain (false if its desired altitude above ekf origin)
     ///     stopped_at_start should be set to true if vehicle is stopped at the origin
     ///     seg_end_type should be set to stopped, straight or spline depending upon the next segment's type
     ///     next_destination should be set to the next segment's destination if the seg_end_type is SEGMENT_END_STRAIGHT or SEGMENT_END_SPLINE
-    bool set_spline_destination_loc(const Location& destination, bool stopped_at_start, spline_segment_end_type seg_end_type, Location next_destination);
-
-    /// set_spline_destination waypoint using position vector (distance from ekf origin in cm)
-    ///     returns false if conversion from location to vector from ekf origin cannot be calculated
-    ///     terrain_alt should be true if destination.z is a desired altitudes above terrain (false if its desired altitudes above ekf origin)
-    ///     stopped_at_start should be set to true if vehicle is stopped at the origin
-    ///     seg_end_type should be set to stopped, straight or spline depending upon the next segment's type
-    ///     next_destination should be set to the next segment's destination if the seg_end_type is SEGMENT_END_STRAIGHT or SEGMENT_END_SPLINE
-    ///     next_destination.z  must be in the same "frame" as destination.z (i.e. if destination is a alt-above-terrain, next_destination should be too)
-    bool set_spline_destination(const Vector3f& destination, bool stopped_at_start, spline_segment_end_type seg_end_type, const Vector3f& next_destination);
+    bool set_spline_destination_loc(const Location& destination, Location next_destination, bool spline_next);
+    bool set_spline_destination_next_loc(const Location& destination, Location next_destination, bool spline_next);
+    bool set_spline_destination(const Vector3f& destination, const Vector3f& next_destination, bool spline_next);
+    bool set_spline_destination_next(const Vector3f& destination, const Vector3f& next_destination, bool spline_next);
 
     // returns object avoidance adjusted destination which is always the same as get_wp_destination
     // having this function unifies the AC_WPNav_OA and AC_WPNav interfaces making vehicle code simpler
