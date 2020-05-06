@@ -147,6 +147,9 @@ void Mode::auto_takeoff_run()
     if (!motors->armed() || !copter.ap.auto_armed) {
         make_safe_spool_down();
         wp_nav->shift_takeoff_origin_to_current_pos(constrain_float(g.pilot_takeoff_alt,0.0f,1000.0f));
+        wp_nav->shift_takeoff_origin_and_destination_to_stopping_point_xy();
+        pos_control->set_limit_accel_xy();
+        pos_control->relax_velocity_controller_xy();
         pos_control->init_baseline_velocity();
         return;
     }
