@@ -25,6 +25,7 @@ void scurves::calculate_leg(Vector3f origin, Vector3f destination)
 {
     Vector3f pos_delta = destination - origin;
     float track_length = pos_delta.length();
+    Cal_Init(0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
     if (is_zero(track_length)) {
         // avoid possible divide by zero
         _pos_delta_unit.x = 0;
@@ -32,9 +33,8 @@ void scurves::calculate_leg(Vector3f origin, Vector3f destination)
         _pos_delta_unit.z = 0;
     }else{
         _pos_delta_unit = pos_delta/track_length;
+        Cal_Ps(track_length);
     }
-    Cal_Init(0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
-    Cal_Ps(track_length);
 
     hal.console->printf("T, Jt, J, A, V, P\n");
     for (uint8_t i = 0; i < num_items; i++) {
@@ -46,6 +46,7 @@ void scurves::calculate_spline_leg(Vector3f origin, Vector3f destination, Vector
 {
     Vector3f pos_delta = destination - origin;
     float track_length = pos_delta.length();
+    Cal_Init(0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
     if (is_zero(track_length)) {
         // avoid possible divide by zero
         _pos_delta_unit.x = 0;
@@ -53,12 +54,7 @@ void scurves::calculate_spline_leg(Vector3f origin, Vector3f destination, Vector
         _pos_delta_unit.z = 0;
     }else{
         _pos_delta_unit = pos_delta/track_length;
-    }
-    Cal_Init(0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
-    if (origin_vector.is_zero() && destination_vector.is_zero()){
-        Cal_Ps(track_length);
-    } else {
-        Cal_Ps(track_length);
+        Cal_Pc(track_length);
     }
 
     hal.console->printf("T, Jt, J, A, V, P\n");
@@ -93,10 +89,6 @@ bool scurves::move_to_time_pos_vel_accel(float time, float time_scale, Vector3f 
 }
 
 void scurves::Segment(float T, enum jtype_t Jtype, float J, float A, float V, float P) {
-    if (num_items >= array_size_max) {
-        hal.console->printf("You fucked up");
-        return;
-    }
     oT[num_items] = T;
     oJtype[num_items] = Jtype;
     oJ[num_items] = J;
@@ -209,7 +201,8 @@ void scurves::Cal_Ps(float Pp) {
 }
 
 void scurves::Cal_Pc(float Pp) {
-    hal.console->printf("Cal_Pc : %4.2f, otj %4.2f, oJp %4.2f, oAp %4.2f, oVp %4.2f\n", Pp, otj, oJp, oAp, oVp);
+//    hal.console->printf("Cal_Pc : %4.2f, otj %4.2f, oJp %4.2f, oAp %4.2f, oVp %4.2f\n", Pp, otj, oJp, oAp, oVp);
+
     _t = 0.0f;
 
     if (is_zero(Pp)) {
@@ -223,23 +216,25 @@ void scurves::Cal_Pc(float Pp) {
     float Js;
     float Vs;
     float Ps;
-    float tc;
-    float Jc;
-    float Ac;
-    float Vc;
-    float Pc;
+    float tc = 0;
+    float Jc = 0;
+    float Ac = 0;
+    float Vc = 0;
+    float Pc = 0;
 
     if (0.5 * Pp < Ap * (tj * tj) * 4.0) {
+        Vs = Vp;
         Ps = 0.5 * Pp;
     } else {
         if (Ap < Jp * tj) {
-            Vs = Ap * (tj - safe_sqrt((Pp * 6.0) / Ap + tj * tj)) * (-1.0 / 3.0);
+            Vs = -Ap * (tj - safe_sqrt((Pp * 6.0) / Ap + tj * tj)) / 3.0;
             Ps = Vs * tj + ((Vs * Vs) * (1.0 / 2.0)) / Ap;
         } else {
             Vs = Ap * tj * (-1.0 / 6.0) - (Ap * (Ap - safe_sqrt(Ap * Ap + (Jp * Jp) * (tj * tj) + Ap * Jp * tj * 2.0 + ((Jp * Jp) * Pp * 2.4E1) / Ap)) / 6.0) / Jp;
             Ps = ((Vs * Vs) * (1.0 / 2.0)) / Ap + (Vs * (Ap + Jp * tj) * (1.0 / 2.0)) / Jp;
         }
     }
+//    hal.console->printf("Cal_Pc Ps: %4.2f, Vs %4.2f \n", Ps, Vs);
 
     float t2, t4, t6;
     Cal_PosFast(tj, Jp, Ap, Vp, Ps, Js, t2, t4, t6);
@@ -249,15 +244,22 @@ void scurves::Cal_Pc(float Pp) {
 
     Pc = Pp - oP[num_items - 1];
     Vc = oV[num_items - 1];
+
+//    hal.console->printf("T, Jt, J, A, V, P\n");
+//    for (uint8_t i = 0; i < num_items; i++) {
+//        hal.console->printf("%4.2f, %4.2f, %4.2f, %4.2f, %4.2f, %4.2f\n", oT[i], (float)oJtype[i], oJ[i], oA[i], oV[i], oP[i]);
+//    }
+
     Ac = MIN(MIN(Pc / (4 * tj * tj), Vc * Vc / Pc), powf((Jp * Jp) * Pc, 1.0 / 3.0) * 6.299605249474365E-1);
 
     Jc = powf(Ac, 3.0 / 2.0) * 1.0 / safe_sqrt(Pc) * 2.0;
     tc = Ac / Jc;
+//    hal.console->printf("Cal_Pc Pc: %4.2f, Vc %4.2f, Ac %4.2f, Jc %4.2f, tc %4.2f \n", Pc, Vc, Ac, Jc, tc);
 
-    Cal_T(tc, -Jc);
-    Cal_T(tc, -Jc);
-    Cal_T(tc, Jc);
-    Cal_T(tc, Jc);
+    Cal_JS1(tc, -Jc);
+    Cal_JS2(tc, -Jc);
+    Cal_JS1(tc, Jc);
+    Cal_JS2(tc, Jc);
 }
 
 void scurves::Cal_Pos(float tj, float V0, float P0, float Jp, float Ap, float Vp, float Pp, float &Jp_out, float &t2_out, float &t4_out, float &t6_out) {
@@ -310,12 +312,14 @@ void scurves::Cal_PosFast(float tj, float Jp, float Ap, float Vp, float Pp, floa
             t6_out = t2_out;
         }
     }
-    hal.console->printf("Cal_PosFast Pp : %4.2f, Vp %4.2f, Ap %4.2f, Jp %4.2f, tj %4.2f, Jp_out %4.2f, t2_out %4.2f, t4_out %4.2f, t6_out %4.2f\n", Pp, Vp, Ap, Jp, tj, Jp_out, t2_out, t4_out, t6_out);
+    Jp_out = Jp;
+//    hal.console->printf("Cal_PosFast Pp : %4.2f, Vp %4.2f, Ap %4.2f, Jp %4.2f, tj %4.2f, Jp_out %4.2f, t2_out %4.2f, t4_out %4.2f, t6_out %4.2f\n", Pp, Vp, Ap, Jp, tj, Jp_out, t2_out, t4_out, t6_out);
 }
 
 bool scurves::runme(float t, float &Jt_out, float &At_out, float &Vt_out, float &Pt_out) {
     jtype_t Jtype;
     int8_t pnt = num_items;
+    float tj;
     float Jp, T0, A0, V0, P0;
 
     for (uint8_t i = 0; i < num_items; i++) {
@@ -340,6 +344,7 @@ bool scurves::runme(float t, float &Jt_out, float &At_out, float &Vt_out, float 
     } else {
         Jtype = oJtype[pnt];
         Jp = oJ[pnt];
+        tj = oT[pnt]-oT[pnt - 1];
         T0 = oT[pnt - 1];
         A0 = oA[pnt - 1];
         V0 = oV[pnt - 1];
@@ -348,10 +353,10 @@ bool scurves::runme(float t, float &Jt_out, float &At_out, float &Vt_out, float 
 
     switch (Jtype) {
     case JTYPE_POSITIVE:
-        JSegment1(t - T0, Jp, A0, V0, P0, Jt_out, At_out, Vt_out, Pt_out);
+        JSegment1(t - T0, tj, Jp, A0, V0, P0, Jt_out, At_out, Vt_out, Pt_out);
         break;
     case JTYPE_NEGATIVE:
-        JSegment2(t - T0, Jp, A0, V0, P0, Jt_out, At_out, Vt_out, Pt_out);
+        JSegment2(t - T0, tj, Jp, A0, V0, P0, Jt_out, At_out, Vt_out, Pt_out);
         break;
     default:
         JConst(t - T0, Jp, A0, V0, P0, Jt_out, At_out, Vt_out, Pt_out);
@@ -373,8 +378,7 @@ void scurves::JConst(float t, float J0, float A0, float V0, float P0, float &Jt,
     Pt = P0 + V0 * t + 0.5 * A0 * (t * t) + (1 / 6.0) * J0 * (t * t * t);
 }
 
-void scurves::JSegment1(float t, float Jp, float A0, float V0, float P0, float &Jt, float &At, float &Vt, float &Pt) {
-    float tj = otj;
+void scurves::JSegment1(float t, float tj, float Jp, float A0, float V0, float P0, float &Jt, float &At, float &Vt, float &Pt) {
     float Alpha = Jp / 2.0;
     float Beta = M_PI / tj;
     Jt = Alpha * (1.0 - cosf(Beta * t));
@@ -383,8 +387,7 @@ void scurves::JSegment1(float t, float Jp, float A0, float V0, float P0, float &
     Pt = P0 + V0 * t + 0.5 * A0 * (t * t) + (-Alpha / (Beta * Beta)) * t + Alpha * (t * t * t) / 6.0 + (Alpha / (Beta * Beta * Beta)) * sinf(Beta * t);
 }
 
-void scurves::JSegment2(float t, float Jp, float A0, float V0, float P0, float &Jt, float &At, float &Vt, float &Pt) {
-    float tj = otj;
+void scurves::JSegment2(float t, float tj, float Jp, float A0, float V0, float P0, float &Jt, float &At, float &Vt, float &Pt) {
     float Alpha = Jp / 2.0;
     float Beta = M_PI / tj;
     float AT = Alpha * tj;

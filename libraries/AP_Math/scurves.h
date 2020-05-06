@@ -44,8 +44,8 @@ public:
         return runme(_t, Jt_out, At_out, Vt_out, Pt_out);
     }
     void JConst(float t, float J0, float A0, float V0, float P0, float &Jt, float &At, float &Vt, float &Pt);
-    void JSegment1(float t, float Jp, float A0, float V0, float P0, float &Jt, float &At, float &Vt, float &Pt);
-    void JSegment2(float t, float Jp, float A0, float V0, float P0, float &Jt, float &At, float &Vt, float &Pt);
+    void JSegment1(float t, float tj, float Jp, float A0, float V0, float P0, float &Jt, float &At, float &Vt, float &Pt);
+    void JSegment2(float t, float tj, float Jp, float A0, float V0, float P0, float &Jt, float &At, float &Vt, float &Pt);
 
     float pos_end() {
         return oP[num_items - 1];
