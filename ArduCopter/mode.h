@@ -426,7 +426,7 @@ private:
     void do_loiter_time(const AP_Mission::Mission_Command& cmd);
     void do_loiter_to_alt(const AP_Mission::Mission_Command& cmd);
     void do_spline_wp(const AP_Mission::Mission_Command& cmd);
-    void get_spline(AP_Mission::Mission_Command& cmd, Location& to_loc, Location& out_loc, bool& spline_at_end);
+    void get_spline(const AP_Mission::Mission_Command& cmd, Location& to_loc, Location& out_loc, bool& spline_at_end);
 #if NAV_GUIDED == ENABLED
     void do_nav_guided_enable(const AP_Mission::Mission_Command& cmd);
     void do_guided_limits(const AP_Mission::Mission_Command& cmd);

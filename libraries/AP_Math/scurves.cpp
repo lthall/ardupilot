@@ -179,12 +179,12 @@ void scurves::Cal_tj_Jp_Tcj(float tj, float Jp, float Tcj) {
 void scurves::Cal_Ps(float Pp) {
     _t = 0.0f;
 //    timer == 40;
+    hal.console->printf("Cal_Ps : %4.2f, otj %4.2f, oJp %4.2f, oAp %4.2f, oVp %4.2f\n", Pp, otj, oJp, oAp, oVp);
 
     if (is_zero(Pp)) {
         return;
     }
 
-    hal.console->printf("Cal_Ps : %4.2f, otj %4.2f, oJp %4.2f, oAp %4.2f, oVp %4.2f\n", Pp, otj, oJp, oAp, oVp);
     float tj = otj;
     float Jp = oJp;
     float Ap = oAp;
@@ -209,19 +209,20 @@ void scurves::Cal_Ps(float Pp) {
 }
 
 void scurves::Cal_Pc(float Pp) {
+    hal.console->printf("Cal_Pc : %4.2f, otj %4.2f, oJp %4.2f, oAp %4.2f, oVp %4.2f\n", Pp, otj, oJp, oAp, oVp);
     _t = 0.0f;
 
     if (is_zero(Pp)) {
         return;
     }
 
-    hal.console->printf("Cal_Ps : %4.2f, otj %4.2f, oJp %4.2f, oAp %4.2f, oVp %4.2f\n", Pp, otj, oJp, oAp, oVp);
     float tj = otj;
     float Jp = oJp;
     float Ap = oAp;
     float Vp = oVp;
-    float Ps;
+    float Js;
     float Vs;
+    float Ps;
     float tc;
     float Jc;
     float Ac;
@@ -232,25 +233,25 @@ void scurves::Cal_Pc(float Pp) {
         Ps = 0.5 * Pp;
     } else {
         if (Ap < Jp * tj) {
-            Vs = -Ap * (tj - sqrt((Pp * 6.0) / Ap + tj * tj)) / 3.0;
+            Vs = Ap * (tj - safe_sqrt((Pp * 6.0) / Ap + tj * tj)) * (-1.0 / 3.0);
             Ps = Vs * tj + ((Vs * Vs) * (1.0 / 2.0)) / Ap;
         } else {
-            Vs = Ap * tj * (-1.0 / 6.0) - (Ap * (Ap - sqrt(Ap * Ap + (Jp * Jp) * (tj * tj) + Ap * Jp * tj * 2.0 + ((Jp * Jp) * Pp * 2.4E1) / Ap)) / 6.0) / Jp;
+            Vs = Ap * tj * (-1.0 / 6.0) - (Ap * (Ap - safe_sqrt(Ap * Ap + (Jp * Jp) * (tj * tj) + Ap * Jp * tj * 2.0 + ((Jp * Jp) * Pp * 2.4E1) / Ap)) / 6.0) / Jp;
             Ps = ((Vs * Vs) * (1.0 / 2.0)) / Ap + (Vs * (Ap + Jp * tj) * (1.0 / 2.0)) / Jp;
         }
     }
 
     float t2, t4, t6;
-    Cal_PosFast(tj, Jp, Ap, Vp, Ps, Jp, t2, t4, t6);
-    Cal_tj_Jp_Tcj(tj, Jp, t2);
+    Cal_PosFast(tj, Jp, Ap, Vp, Ps, Js, t2, t4, t6);
+    Cal_tj_Jp_Tcj(tj, Js, t2);
     Cal_T(t4, 0.0);
-    Cal_tj_Jp_Tcj(tj, -Jp, t6);
+    Cal_tj_Jp_Tcj(tj, -Js, t6);
 
     Pc = Pp - oP[num_items - 1];
     Vc = oV[num_items - 1];
-    Ac = MIN(MIN(Pc / (4 * tj * tj), Vc * Vc / Pc), pow((Jp * Jp) * Pc, 1.0 / 3.0) * 6.299605249474365E-1);
+    Ac = MIN(MIN(Pc / (4 * tj * tj), Vc * Vc / Pc), powf((Jp * Jp) * Pc, 1.0 / 3.0) * 6.299605249474365E-1);
 
-    Jc = pow(Ac, 3.0 / 2.0) * 1.0 / sqrt(Pc) * 2.0;
+    Jc = powf(Ac, 3.0 / 2.0) * 1.0 / safe_sqrt(Pc) * 2.0;
     tc = Ac / Jc;
 
     Cal_T(tc, -Jc);
@@ -291,13 +292,14 @@ void scurves::Cal_PosFast(float tj, float Jp, float Ap, float Vp, float Pp, floa
         t6_out = 0;
     } else if (Ap < Jp * tj) {
 // solution = 2 - t6 t4 t2 = 0 1 0
+        Jp = Ap / tj;
         t2_out = 0;
         t4_out = MIN((Vp - Ap * tj * 2.0) / Ap, -3.0 * tj + safe_sqrt((Pp * 2.0) / Ap + tj * tj));
         t6_out = 0;
     } else {
-        if ((Vp < Ap * tj + (Ap * Ap) / Jp) || (Pp < Ap * 1.0 / (Jp * Jp) * pow(Ap + Jp * tj, 2.0))) {
+        if ((Vp < Ap * tj + (Ap * Ap) / Jp) || (Pp < Ap * 1.0 / (Jp * Jp) * powf(Ap + Jp * tj, 2.0))) {
 // solution = 5 - t6 t4 t2 = 1 0 1
-            Ap = MIN(Ap, MIN(-Jp * tj * (1.0 / 2.0) + safe_sqrt(Jp * Vp * 4.0 + (Jp * Jp) * (tj * tj)) * (1.0 / 2.0), pow(Jp * tj - pow((Jp * Jp) * Pp * (1.0 / 2.0) + safe_sqrt((Jp * Jp * Jp * Jp) * (Pp * Pp) * (1.0 / 4.0) + (Jp * Jp * Jp * Jp * Jp) * Pp * (tj * tj * tj) * (1.0 / 2.7E1)) + (Jp * Jp * Jp) * (tj * tj * tj) * (1.0 / 2.7E1), 1.0 / 3.0) * 3.0, 2.0) * 1.0 / pow((Jp * Jp) * Pp * (1.0 / 2.0) + safe_sqrt((Jp * Jp * Jp * Jp) * (Pp * Pp) * (1.0 / 4.0) + (Jp * Jp * Jp * Jp * Jp) * Pp * (tj * tj * tj) * (1.0 / 2.7E1)) + (Jp * Jp * Jp) * (tj * tj * tj) * (1.0 / 2.7E1), 1.0 / 3.0) * (1.0 / 9.0)));
+            Ap = MIN(Ap, MIN(-Jp * tj * (1.0 / 2.0) + safe_sqrt(Jp * Vp * 4.0 + (Jp * Jp) * (tj * tj)) * (1.0 / 2.0), powf(Jp * tj - powf((Jp * Jp) * Pp * (1.0 / 2.0) + safe_sqrt((Jp * Jp * Jp * Jp) * (Pp * Pp) * (1.0 / 4.0) + (Jp * Jp * Jp * Jp * Jp) * Pp * (tj * tj * tj) * (1.0 / 2.7E1)) + (Jp * Jp * Jp) * (tj * tj * tj) * (1.0 / 2.7E1), 1.0 / 3.0) * 3.0, 2.0) * 1.0 / powf((Jp * Jp) * Pp * (1.0 / 2.0) + safe_sqrt((Jp * Jp * Jp * Jp) * (Pp * Pp) * (1.0 / 4.0) + (Jp * Jp * Jp * Jp * Jp) * Pp * (tj * tj * tj) * (1.0 / 2.7E1)) + (Jp * Jp * Jp) * (tj * tj * tj) * (1.0 / 2.7E1), 1.0 / 3.0) * (1.0 / 9.0)));
             t2_out = Ap / Jp - tj;
             t4_out = 0;
             t6_out = t2_out;
@@ -308,6 +310,7 @@ void scurves::Cal_PosFast(float tj, float Jp, float Ap, float Vp, float Pp, floa
             t6_out = t2_out;
         }
     }
+    hal.console->printf("Cal_PosFast Pp : %4.2f, Vp %4.2f, Ap %4.2f, Jp %4.2f, tj %4.2f, Jp_out %4.2f, t2_out %4.2f, t4_out %4.2f, t6_out %4.2f\n", Pp, Vp, Ap, Jp, tj, Jp_out, t2_out, t4_out, t6_out);
 }
 
 bool scurves::runme(float t, float &Jt_out, float &At_out, float &Vt_out, float &Pt_out) {

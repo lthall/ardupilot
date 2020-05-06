@@ -259,12 +259,12 @@ bool AC_WPNav::set_wp_destination_NED(const Vector3f& destination_NED, const Vec
 ///     returns false on failure (likely caused by missing terrain data)
 bool AC_WPNav::set_wp_destination(const Vector3f& destination)
 {
+    hal.console->printf("set_wp_destination \n");
     _origin = _destination;
 
     // initialise intermediate point to the origin
     _flags.reached_destination = false;
     _flags.wp_yaw_set = false;
-    _flags.fast_waypoint = false;   // default waypoint back to slow
 
     // store destination location
     _destination = destination;
@@ -274,6 +274,7 @@ bool AC_WPNav::set_wp_destination(const Vector3f& destination)
     } else {
         _scurve_this_leg.calculate_leg(_origin, _destination);
     }
+    _flags.fast_waypoint = false;   // default waypoint back to slow
     _scurve_next_leg.Cal_Init(0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
 
     return true;
@@ -284,6 +285,8 @@ bool AC_WPNav::set_wp_destination(const Vector3f& destination)
 ///     provide next_destination
 bool AC_WPNav::set_wp_destination_next(const Vector3f& destination)
 {
+    hal.console->printf("set_wp_destination_next \n");
+
     _scurve_next_leg.calculate_leg(_destination, destination);
 
     // next destination provided so fast waypoint
@@ -341,12 +344,12 @@ bool AC_WPNav::set_spline_destination_next_loc(const Location& destination, Loca
 ///     next_destination should be set to the next segment's destination if the seg_end_type is SEGMENT_END_STRAIGHT or SEGMENT_END_SPLINE
 bool AC_WPNav::set_spline_destination(const Vector3f& destination, const Vector3f& next_destination, bool spline_next)
 {
+    hal.console->printf("set_spline_destination \n");
     _origin = _destination;
 
     // initialise intermediate point to the origin
     _flags.reached_destination = false;
     _flags.wp_yaw_set = false;
-    _flags.fast_waypoint = false;   // default waypoint back to slow
 
     // store destination location
     _destination = destination;
@@ -354,8 +357,9 @@ bool AC_WPNav::set_spline_destination(const Vector3f& destination, const Vector3
     if (_flags.fast_waypoint) {
         _scurve_this_leg = _scurve_next_leg;
     } else {
-        _scurve_this_leg.calculate_leg(_origin, _destination);
+        _scurve_this_leg.calculate_spline_leg(_origin, _destination, _origin, _destination);
     }
+    _flags.fast_waypoint = false;   // default waypoint back to slow
     _scurve_next_leg.Cal_Init(0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
 
     return true;
@@ -363,7 +367,8 @@ bool AC_WPNav::set_spline_destination(const Vector3f& destination, const Vector3
 
 bool AC_WPNav::set_spline_destination_next(const Vector3f& destination, const Vector3f& next_destination, bool spline_next)
 {
-    _scurve_next_leg.calculate_leg(_destination, destination);
+    hal.console->printf("set_spline_destination_next \n");
+    _scurve_next_leg.calculate_spline_leg(_destination, destination, _origin, _destination);
 
     // next destination provided so fast waypoint
     _flags.fast_waypoint = true;

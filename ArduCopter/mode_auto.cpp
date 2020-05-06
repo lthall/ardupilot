@@ -1045,8 +1045,10 @@ void ModeAuto::do_nav_wp(const AP_Mission::Mission_Command& cmd)
 void ModeAuto::do_spline_wp(const AP_Mission::Mission_Command& cmd)
 {
     _mode = Auto_WP;
-    Location dest_loc = loc_from_cmd(cmd);
-    wp_nav->set_wp_destination_loc(dest_loc);
+    Location to_loc, out_loc;
+    bool spline_at_end;
+    get_spline(cmd, to_loc, out_loc, spline_at_end);
+    wp_nav->set_spline_destination_loc(to_loc, out_loc, spline_at_end);
 
     // this will be used to remember the time in millis after we reach or pass the WP.
     loiter_time = 0;
@@ -1063,7 +1065,7 @@ void ModeAuto::do_spline_wp(const AP_Mission::Mission_Command& cmd)
 }
 
 // get_spline - Calculates the spline type for a given spline waypoint mission command
-void ModeAuto::get_spline(AP_Mission::Mission_Command& cmd, Location& to_loc, Location& out_loc, bool& spline_at_end)
+void ModeAuto::get_spline(const AP_Mission::Mission_Command& cmd, Location& to_loc, Location& out_loc, bool& spline_at_end)
 {
     to_loc = loc_from_cmd(cmd);
 
@@ -1112,7 +1114,10 @@ void ModeAuto::do_next_wp(const AP_Mission::Mission_Command& cmd)
             case MAV_CMD_NAV_SPLINE_WAYPOINT:
                 // if next command's lat, lon is specified then provide as next destination
                 if ((temp_cmd.content.location.lat != 0) || (temp_cmd.content.location.lng != 0)) {
-                    wp_nav->set_wp_destination_loc_next(loc_from_cmd(temp_cmd));
+                    Location to_loc, out_loc;
+                    bool spline_at_end;
+                    get_spline(temp_cmd, to_loc, out_loc, spline_at_end);
+                    wp_nav->set_spline_destination_next_loc(to_loc, out_loc, spline_at_end);
                 }
                 break;
             case MAV_CMD_NAV_RETURN_TO_LAUNCH:
