@@ -45,17 +45,48 @@ void scurves::calculate_leg(Vector3f origin, Vector3f destination) {
 void scurves::calculate_spline_leg(Vector3f origin, Vector3f destination, Vector3f origin_vector, Vector3f destination_vector) {
     streight = false;
     _track = destination - origin;
+    float track_angle = Vector2f(_track.x, _track.y).angle();
     float track_length = _track.length();
-    Cal_Init(0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
-    if (is_zero(track_length)) {
-        // avoid possible divide by zero
-        _delta_unit_1.x = 0;
-        _delta_unit_1.y = 0;
-        _delta_unit_1.z = 0;
+
+    float phi = wrap_PI(track_angle - Vector2f(origin_vector.x, origin_vector.y).angle());
+    float alpha = wrap_PI(M_PI - track_angle + Vector2f(-destination_vector.x, -destination_vector.y).angle());
+
+//    float phi = 0.0f;
+//    float alpha = 0.0f;
+    float x;
+    if (is_zero(phi) && is_zero(alpha)) {
+        x = 0.25;
+    } else if (abs(phi) + abs(alpha) < M_PI) {
+        x = (cosf(alpha) + cosf(phi) - safe_sqrt((sinf(alpha) - sinf(phi) + 2.0) * (-sinf(alpha) + sinf(phi) + 2.0))) / (cosf(alpha+phi) * 2.0 - 2.0);
+        x = MIN(x, 0.5);
     } else {
-        _delta_unit_1 = _track.normalized();
-        Cal_Pc(track_length / 2);
+        x = 0.5;
     }
+
+    Cal_Init(0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+    _delta_unit_1.zero();
+    _delta_unit_2.zero();
+    _delta_unit_3.zero();
+    if (!is_zero(track_length)) {
+        if (!origin_vector.is_zero()) {
+        _delta_unit_1 = origin_vector.normalized();
+        }
+        if (!destination_vector.is_zero()) {
+            _delta_unit_3 = destination_vector.normalized();
+        }
+        Vector3f track_2 = _track - (_delta_unit_1 + _delta_unit_3)*(track_length*x);
+        _delta_unit_2 = track_2.normalized();
+        Cal_Pc(track_length * x);
+    }
+    hal.console->printf("origin - x %4.2f, y %4.2f, z %4.2f \n", origin.x, origin.y, origin.z);
+    hal.console->printf("destination - x %4.2f, y %4.2f, z %4.2f \n", destination.x, destination.y, destination.z);
+    hal.console->printf("origin_vector - x %4.2f, y %4.2f, z %4.2f \n", origin_vector.x, origin_vector.y, origin_vector.z);
+    hal.console->printf("destination_vector - x %4.2f, y %4.2f, z %4.2f \n", destination_vector.x, destination_vector.y, destination_vector.z);
+    hal.console->printf("_track - x %4.2f, y %4.2f, z %4.2f \n", _track.x, _track.y, _track.z);
+    hal.console->printf("_delta_unit_1 - x %4.2f, y %4.2f, z %4.2f \n", _delta_unit_1.x, _delta_unit_1.y, _delta_unit_1.z);
+    hal.console->printf("_delta_unit_3 - x %4.2f, y %4.2f, z %4.2f \n", _delta_unit_3.x, _delta_unit_3.y, _delta_unit_3.z);
+    hal.console->printf("_delta_unit_2 - x %4.2f, y %4.2f, z %4.2f \n", _delta_unit_2.x, _delta_unit_2.y, _delta_unit_2.z);
+    hal.console->printf("track_length %4.2f, phi %4.2f, alpha %4.2f, x %4.2f \n", track_length, phi, alpha, x);
 
     hal.console->printf("T, Jt, J, A, V, P\n");
     for (uint8_t i = 0; i < num_items; i++) {
@@ -123,18 +154,35 @@ bool scurves::move_from_pva_spline(float dt, float time_scale, Vector3f &pos, Ve
 }
 
 bool scurves::move_to_time_pva_spline(float time, float time_scale, Vector3f &pos, Vector3f &vel, Vector3f &accel) {
+    bool finish;
     float scurve_P1, scurve_V1, scurve_A1, scurve_J1;
     float time_start = oT[7];
+    float time_mid = oT[num_items - 1] + oT[7];
 
-    runme(time, scurve_J1, scurve_A1, scurve_V1, scurve_P1);
-    pos += _delta_unit_1 * scurve_P1;
-    vel += _delta_unit_1 * scurve_V1;
-    accel += _delta_unit_1 * scurve_A1;
+    if (time < time_mid) {
+        runme(time, scurve_J1, scurve_A1, scurve_V1, scurve_P1);
+        pos += _delta_unit_1 * scurve_P1;
+        vel += _delta_unit_1 * scurve_V1;
+        accel += _delta_unit_1 * scurve_A1;
 
-    bool finish = runme_rev(time-time_start, scurve_J1, scurve_A1, scurve_V1, scurve_P1);
-    pos += _delta_unit_1 * scurve_P1;
-    vel += _delta_unit_1 * scurve_V1;
-    accel += _delta_unit_1 * scurve_A1;
+        finish = runme_rev(time-time_start, scurve_J1, scurve_A1, scurve_V1, scurve_P1);
+        pos += _delta_unit_2 * scurve_P1;
+        vel += _delta_unit_2 * scurve_V1;
+        accel += _delta_unit_2 * scurve_A1;
+    } else {
+        pos += _delta_unit_1 * oP[num_items - 1];
+        pos += _delta_unit_2 * oP[num_items - 1];
+
+        runme(time-time_mid, scurve_J1, scurve_A1, scurve_V1, scurve_P1);
+        pos += _delta_unit_2 * scurve_P1;
+        vel += _delta_unit_2 * scurve_V1;
+        accel += _delta_unit_2 * scurve_A1;
+
+        finish = runme_rev(time-time_start-time_mid, scurve_J1, scurve_A1, scurve_V1, scurve_P1);
+        pos += _delta_unit_3 * scurve_P1;
+        vel += _delta_unit_3 * scurve_V1;
+        accel += _delta_unit_3 * scurve_A1;
+    }
 
     vel *=  MIN(time_scale * 1.1f, 1.0f);
     accel *= time_scale;
@@ -159,9 +207,9 @@ float scurves::time_end() {
 
 float scurves::time_to_end() {
     if (streight) {
-        return time_end_streight();
+        return time_to_end_streight();
     } else {
-        return time_end_spline();
+        return time_to_end_spline();
     }
 }
 
@@ -190,19 +238,19 @@ bool scurves::breaking_streight() {
 }
 
 float scurves::pos_end_spline() {
-    return oP[num_items - 1]*2;
+    return oP[num_items - 1]*4;
 }
 
 float scurves::time_end_spline() {
-    return oT[num_items - 1] + oT[7];
+    return (oT[num_items - 1] + oT[7]) * 2.0f;
 }
 
 float scurves::time_to_end_spline() {
-    return oT[num_items - 1] + oT[7] - _t;
+    return time_end_spline() - _t;
 }
 
 bool scurves::breaking_spline() {
-    return _t > oT[num_items - 1];
+    return _t > time_end_spline() - oT[7];
 }
 
 void scurves::Segment(float T, enum jtype_t Jtype, float J, float A, float V, float P) {

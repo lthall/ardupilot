@@ -32,7 +32,7 @@ public:
     bool move_from_pva_spline(float dt, float time_scale, Vector3f &pos, Vector3f &vel, Vector3f &accel);
     bool move_to_time_pva_spline(float time, float time_scale, Vector3f &pos, Vector3f &vel, Vector3f &accel);
 
-    Vector3f get_pos_end() { return _delta_unit_1 * oP[num_items - 1]; };
+    Vector3f get_pos_end() { return _track; };
 
     void Cal_Init(float T0, float J0, float A0, float V0, float P0);
     void Cal_T(float tin, float J0);
@@ -60,6 +60,8 @@ public:
     float time_now() {
         return _t;
     }
+
+    bool is_streight(){return streight;}
 
     float pos_end();
     float time_end();

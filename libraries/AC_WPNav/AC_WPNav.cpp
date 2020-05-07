@@ -345,6 +345,15 @@ bool AC_WPNav::set_spline_destination_next_loc(const Location& destination, Loca
 bool AC_WPNav::set_spline_destination(const Vector3f& destination, const Vector3f& next_destination, bool spline_next)
 {
     hal.console->printf("set_spline_destination \n");
+
+    Vector3f origin_vector, destination_vector;
+    origin_vector = _destination - _origin;
+    if (spline_next) {
+        destination_vector = next_destination - _destination;
+    } else {
+        destination_vector = next_destination - destination;
+    }
+
     _origin = _destination;
 
     // initialise intermediate point to the origin
@@ -357,7 +366,7 @@ bool AC_WPNav::set_spline_destination(const Vector3f& destination, const Vector3
     if (_flags.fast_waypoint) {
         _scurve_this_leg = _scurve_next_leg;
     } else {
-        _scurve_this_leg.calculate_spline_leg(_origin, _destination, _origin, _destination);
+        _scurve_this_leg.calculate_spline_leg(_origin, _destination, origin_vector, destination_vector);
     }
     _flags.fast_waypoint = false;   // default waypoint back to slow
     _scurve_next_leg.Cal_Init(0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
@@ -368,7 +377,20 @@ bool AC_WPNav::set_spline_destination(const Vector3f& destination, const Vector3
 bool AC_WPNav::set_spline_destination_next(const Vector3f& destination, const Vector3f& next_destination, bool spline_next)
 {
     hal.console->printf("set_spline_destination_next \n");
-    _scurve_next_leg.calculate_spline_leg(_destination, destination, _origin, _destination);
+
+    Vector3f origin_vector, destination_vector;
+    if (_scurve_this_leg.is_streight()) {
+        origin_vector = _destination - _origin;
+    } else {
+        origin_vector = destination - _origin;
+    }
+    if (spline_next) {
+        destination_vector = next_destination - _destination;
+    } else {
+        destination_vector = next_destination - destination;
+    }
+
+    _scurve_next_leg.calculate_spline_leg(_destination, destination, origin_vector, destination_vector);
 
     // next destination provided so fast waypoint
     _flags.fast_waypoint = true;
@@ -449,6 +471,18 @@ bool AC_WPNav::advance_wp_target_along_track(float dt)
         _scurve_next_leg.move_to_time_pos_vel_accel(time_to_destination/2.0, _track_scaler_dt, turn_pos, turn_vel, turn_accel);
 //      s_finish = s_finish || ((_scurve_this_leg.time_to_end() < _scurve_next_leg.time_end()/2.0) && (turn_pos.length() < _wp_radius_cm) && (Vector2f(turn_vel.x, turn_vel.y).length() < _wp_speed_cms));
         s_finish = s_finish || ((_scurve_this_leg.time_to_end() < _scurve_next_leg.time_end()/2.0) && (turn_pos.length() < _wp_radius_cm) && (Vector2f(turn_vel.x, turn_vel.y).length() < _wp_speed_cms) && (Vector2f(turn_accel.x, turn_accel.y).length() < 2*_wp_accel_cmss));
+        AP::logger().Write("LENF",
+                "TimeUS,td,te,ne2,tpl,tvl,ws,tal,wa",
+                "Qffffffff",
+                AP_HAL::micros64(),
+                (double)time_to_destination,
+                (double)_scurve_this_leg.time_to_end(),
+                (double)_scurve_next_leg.time_end()/2.0,
+                (double)turn_pos.length(),
+                (double)Vector2f(turn_vel.x, turn_vel.y).length(),
+                (double)_wp_speed_cms,
+                (double)Vector2f(turn_accel.x, turn_accel.y).length(),
+                (double)2*_wp_accel_cmss);
     }
 
     // check if we've reached the waypoint

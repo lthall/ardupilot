@@ -1070,12 +1070,11 @@ void ModeAuto::get_spline(const AP_Mission::Mission_Command& cmd, Location& to_l
     to_loc = loc_from_cmd(cmd);
 
     // if there is no delay at the end of this segment get next nav command
-    Location next_loc;
     AP_Mission::Mission_Command temp_cmd;
     if (cmd.p1 == 0 && mission.get_next_nav_cmd(cmd.index+1, temp_cmd)) {
         out_loc = temp_cmd.content.location;
         // default lat, lon to first waypoint's lat, lon
-        if (next_loc.lat == 0 && next_loc.lng == 0) {
+        if (out_loc.lat == 0 && out_loc.lng == 0) {
             out_loc = to_loc;
             spline_at_end = false;
         } else {
