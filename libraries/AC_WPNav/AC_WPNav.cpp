@@ -489,19 +489,37 @@ bool AC_WPNav::advance_wp_target_along_track(float dt)
         set_yaw_cds(turn_rate*degrees(100.0f));
     }
 
-        AP::logger().Write("LEN2",
-                "TimeUS,tvx,tvy,tax,tay,ltx,lty,tr,ta,ts",
-                "Qfffffffff",
-                AP_HAL::micros64(),
-                (double)target_vel.x,
-                (double)target_vel.y,
-                (double)target_accel.x,
-                (double)target_accel.y,
-                (double)accel_turn.x,
-                (double)accel_turn.y,
-                (double)degrees(turn_rate),
-                (double)get_yaw()/100.0f,
-                (double)_track_scaler_dt);
+//    AP::logger().Write("LEN2",
+//            "TimeUS,tvx,tvy,tax,tay,ltx,lty,tr,ta,ts",
+//            "Qfffffffff",
+//            AP_HAL::micros64(),
+//            (double)target_vel.x,
+//            (double)target_vel.y,
+//            (double)target_accel.x,
+//            (double)target_accel.y,
+//            (double)accel_turn.x,
+//            (double)accel_turn.y,
+//            (double)degrees(turn_rate),
+//            (double)get_yaw()/100.0f,
+//            (double)_track_scaler_dt);
+
+    float tt, tp, tv, ta, tj, lt, lp, lv, la, lj;
+    tt = _scurve_this_leg.time_now();
+    _scurve_this_leg.runme(tt, tj, ta, tv, tp);
+    lt = _scurve_last_leg.time_now();
+    _scurve_last_leg.runme(lt, lj, la, lv, lp);
+    AP::logger().Write("LENS",
+            "TimeUS,tt,tp,tv,ta,lt,lp,lv,la",
+            "Qffffffff",
+            AP_HAL::micros64(),
+            (double)tt,
+            (double)tp,
+            (double)tv,
+            (double)ta,
+            (double)lt,
+            (double)lp,
+            (double)lv,
+            (double)la);
 
     // successfully advanced along track
     return true;

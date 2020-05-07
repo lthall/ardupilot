@@ -21,71 +21,188 @@
 
 extern const AP_HAL::HAL &hal;
 
-void scurves::calculate_leg(Vector3f origin, Vector3f destination)
-{
-    Vector3f pos_delta = destination - origin;
-    float track_length = pos_delta.length();
+void scurves::calculate_leg(Vector3f origin, Vector3f destination) {
+    streight = true;
+    _track = destination - origin;
+    float track_length = _track.length();
     Cal_Init(0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
     if (is_zero(track_length)) {
         // avoid possible divide by zero
-        _pos_delta_unit.x = 0;
-        _pos_delta_unit.y = 0;
-        _pos_delta_unit.z = 0;
-    }else{
-        _pos_delta_unit = pos_delta/track_length;
+        _delta_unit_1.x = 0;
+        _delta_unit_1.y = 0;
+        _delta_unit_1.z = 0;
+    } else {
+        _delta_unit_1 = _track.normalized();
         Cal_Ps(track_length);
     }
 
     hal.console->printf("T, Jt, J, A, V, P\n");
     for (uint8_t i = 0; i < num_items; i++) {
-        hal.console->printf("%4.2f, %4.2f, %4.2f, %4.2f, %4.2f, %4.2f\n", oT[i], (float)oJtype[i], oJ[i], oA[i], oV[i], oP[i]);
+        hal.console->printf("%4.2f, %4.2f, %4.2f, %4.2f, %4.2f, %4.2f\n", oT[i], (float) oJtype[i], oJ[i], oA[i], oV[i], oP[i]);
     }
 }
 
-void scurves::calculate_spline_leg(Vector3f origin, Vector3f destination, Vector3f origin_vector, Vector3f destination_vector)
-{
-    Vector3f pos_delta = destination - origin;
-    float track_length = pos_delta.length();
+void scurves::calculate_spline_leg(Vector3f origin, Vector3f destination, Vector3f origin_vector, Vector3f destination_vector) {
+    streight = false;
+    _track = destination - origin;
+    float track_length = _track.length();
     Cal_Init(0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
     if (is_zero(track_length)) {
         // avoid possible divide by zero
-        _pos_delta_unit.x = 0;
-        _pos_delta_unit.y = 0;
-        _pos_delta_unit.z = 0;
-    }else{
-        _pos_delta_unit = pos_delta/track_length;
-        Cal_Pc(track_length);
+        _delta_unit_1.x = 0;
+        _delta_unit_1.y = 0;
+        _delta_unit_1.z = 0;
+    } else {
+        _delta_unit_1 = _track.normalized();
+        Cal_Pc(track_length / 2);
     }
 
     hal.console->printf("T, Jt, J, A, V, P\n");
     for (uint8_t i = 0; i < num_items; i++) {
-        hal.console->printf("%4.2f, %4.2f, %4.2f, %4.2f, %4.2f, %4.2f\n", oT[i], (float)oJtype[i], oJ[i], oA[i], oV[i], oP[i]);
+        hal.console->printf("%4.2f, %4.2f, %4.2f, %4.2f, %4.2f, %4.2f\n", oT[i], (float) oJtype[i], oJ[i], oA[i], oV[i], oP[i]);
     }
 }
 
-bool scurves::move_to_pos_vel_accel(float dt, float time_scale, Vector3f &pos, Vector3f &vel, Vector3f &accel)
-{
+bool scurves::move_to_pos_vel_accel(float dt, float time_scale, Vector3f &pos, Vector3f &vel, Vector3f &accel) {
+    if (streight) {
+        return move_to_pva_streight(dt, time_scale, pos, vel, accel);
+    } else {
+        return move_to_pva_spline(dt, time_scale, pos, vel, accel);
+    }
+}
+
+bool scurves::move_from_pos_vel_accel(float dt, float time_scale, Vector3f &pos, Vector3f &vel, Vector3f &accel) {
+    if (streight) {
+        return move_from_pva_streight(dt, time_scale, pos, vel, accel);
+    } else {
+        return move_from_pva_spline(dt, time_scale, pos, vel, accel);
+    }
+}
+
+bool scurves::move_to_time_pos_vel_accel(float time, float time_scale, Vector3f &pos, Vector3f &vel, Vector3f &accel) {
+    if (streight) {
+        return move_to_time_pva_streight(time, time_scale, pos, vel, accel);
+    } else {
+        return move_to_time_pva_spline(time, time_scale, pos, vel, accel);
+    }
+}
+
+bool scurves::move_to_pva_streight(float dt, float time_scale, Vector3f &pos, Vector3f &vel, Vector3f &accel) {
     advance_time(time_scale * dt);
-    bool finish = move_to_time_pos_vel_accel(_t, time_scale, pos, vel, accel);
+    bool finish = move_to_time_pva_streight(_t, time_scale, pos, vel, accel);
     return finish;
 }
 
-bool scurves::move_from_pos_vel_accel(float dt, float time_scale, Vector3f &pos, Vector3f &vel, Vector3f &accel)
-{
+bool scurves::move_from_pva_streight(float dt, float time_scale, Vector3f &pos, Vector3f &vel, Vector3f &accel) {
     advance_time(time_scale * dt);
-    bool finish = move_to_time_pos_vel_accel(_t, time_scale, pos, vel, accel);
-    pos -= _pos_delta_unit*oP[num_items - 1];
+    bool finish = move_to_time_pva_streight(_t, time_scale, pos, vel, accel);
+    pos -= _track;
     return finish;
 }
 
-bool scurves::move_to_time_pos_vel_accel(float time, float time_scale, Vector3f &pos, Vector3f &vel, Vector3f &accel)
-{
+bool scurves::move_to_time_pva_streight(float time, float time_scale, Vector3f &pos, Vector3f &vel, Vector3f &accel) {
     float scurve_P1, scurve_V1, scurve_A1, scurve_J1;
     bool finish = runme(time, scurve_J1, scurve_A1, scurve_V1, scurve_P1);
-    pos += _pos_delta_unit*scurve_P1;
-    vel += _pos_delta_unit*scurve_V1 * MIN(time_scale * 1.1f, 1.0f);
-    accel += _pos_delta_unit*scurve_A1 * time_scale;
+    pos += _delta_unit_1 * scurve_P1;
+    vel += _delta_unit_1 * scurve_V1 * MIN(time_scale * 1.1f, 1.0f);
+    accel += _delta_unit_1 * scurve_A1 * time_scale;
     return finish;
+}
+
+bool scurves::move_to_pva_spline(float dt, float time_scale, Vector3f &pos, Vector3f &vel, Vector3f &accel) {
+    advance_time(time_scale * dt);
+    bool finish = move_to_time_pva_spline(_t, time_scale, pos, vel, accel);
+    return finish;
+}
+
+bool scurves::move_from_pva_spline(float dt, float time_scale, Vector3f &pos, Vector3f &vel, Vector3f &accel) {
+    advance_time(time_scale * dt);
+    bool finish = move_to_time_pva_spline(_t, time_scale, pos, vel, accel);
+    pos -= _track;
+    return finish;
+}
+
+bool scurves::move_to_time_pva_spline(float time, float time_scale, Vector3f &pos, Vector3f &vel, Vector3f &accel) {
+    float scurve_P1, scurve_V1, scurve_A1, scurve_J1;
+    float time_start = oT[7];
+
+    runme(time, scurve_J1, scurve_A1, scurve_V1, scurve_P1);
+    pos += _delta_unit_1 * scurve_P1;
+    vel += _delta_unit_1 * scurve_V1;
+    accel += _delta_unit_1 * scurve_A1;
+
+    bool finish = runme_rev(time-time_start, scurve_J1, scurve_A1, scurve_V1, scurve_P1);
+    pos += _delta_unit_1 * scurve_P1;
+    vel += _delta_unit_1 * scurve_V1;
+    accel += _delta_unit_1 * scurve_A1;
+
+    vel *=  MIN(time_scale * 1.1f, 1.0f);
+    accel *= time_scale;
+    return finish;
+}
+
+float scurves::pos_end() {
+    if (streight) {
+        return pos_end_streight();
+    } else {
+        return pos_end_spline();
+    }
+}
+
+float scurves::time_end() {
+    if (streight) {
+        return time_end_streight();
+    } else {
+        return time_end_spline();
+    }
+}
+
+float scurves::time_to_end() {
+    if (streight) {
+        return time_end_streight();
+    } else {
+        return time_end_spline();
+    }
+}
+
+bool scurves::breaking() {
+    if (streight) {
+        return breaking_streight();
+    } else {
+        return breaking_spline();
+    }
+}
+
+float scurves::pos_end_streight() {
+    return oP[num_items - 1];
+}
+
+float scurves::time_end_streight() {
+    return oT[num_items - 1];
+}
+
+float scurves::time_to_end_streight() {
+    return oT[num_items - 1] - _t;
+}
+
+bool scurves::breaking_streight() {
+    return _t > oT[9];
+}
+
+float scurves::pos_end_spline() {
+    return oP[num_items - 1]*2;
+}
+
+float scurves::time_end_spline() {
+    return oT[num_items - 1] + oT[7];
+}
+
+float scurves::time_to_end_spline() {
+    return oT[num_items - 1] + oT[7] - _t;
+}
+
+bool scurves::breaking_spline() {
+    return _t > oT[num_items - 1];
 }
 
 void scurves::Segment(float T, enum jtype_t Jtype, float J, float A, float V, float P) {
@@ -316,6 +433,14 @@ void scurves::Cal_PosFast(float tj, float Jp, float Ap, float Vp, float Pp, floa
 //    hal.console->printf("Cal_PosFast Pp : %4.2f, Vp %4.2f, Ap %4.2f, Jp %4.2f, tj %4.2f, Jp_out %4.2f, t2_out %4.2f, t4_out %4.2f, t6_out %4.2f\n", Pp, Vp, Ap, Jp, tj, Jp_out, t2_out, t4_out, t6_out);
 }
 
+bool scurves::runme_rev(float t, float &Jt_out, float &At_out, float &Vt_out, float &Pt_out) {
+    bool finish = (t > oT[num_items - 1]);
+    runme(oT[num_items - 1] - t, Jt_out, At_out, Vt_out, Pt_out);
+    Pt_out = oP[num_items - 1] - Pt_out;
+    At_out = -At_out;
+    return finish;
+}
+
 bool scurves::runme(float t, float &Jt_out, float &At_out, float &Vt_out, float &Pt_out) {
     jtype_t Jtype;
     int8_t pnt = num_items;
@@ -344,7 +469,7 @@ bool scurves::runme(float t, float &Jt_out, float &At_out, float &Vt_out, float 
     } else {
         Jtype = oJtype[pnt];
         Jp = oJ[pnt];
-        tj = oT[pnt]-oT[pnt - 1];
+        tj = oT[pnt] - oT[pnt - 1];
         T0 = oT[pnt - 1];
         A0 = oA[pnt - 1];
         V0 = oV[pnt - 1];

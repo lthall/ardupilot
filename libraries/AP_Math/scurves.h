@@ -20,10 +20,19 @@ public:
 
     void calculate_leg(Vector3f origin, Vector3f destination);
     void calculate_spline_leg(Vector3f origin, Vector3f destination, Vector3f origin_vector, Vector3f destination_vector);
+
     bool move_to_pos_vel_accel(float dt, float time_scale, Vector3f &pos, Vector3f &vel, Vector3f &accel);
     bool move_from_pos_vel_accel(float dt, float time_scale, Vector3f &pos, Vector3f &vel, Vector3f &accel);
     bool move_to_time_pos_vel_accel(float time, float time_scale, Vector3f &pos, Vector3f &vel, Vector3f &accel);
-    Vector3f get_pos_end() { return _pos_delta_unit * oP[num_items - 1]; };
+
+    bool move_to_pva_streight(float dt, float time_scale, Vector3f &pos, Vector3f &vel, Vector3f &accel);
+    bool move_from_pva_streight(float dt, float time_scale, Vector3f &pos, Vector3f &vel, Vector3f &accel);
+    bool move_to_time_pva_streight(float time, float time_scale, Vector3f &pos, Vector3f &vel, Vector3f &accel);
+    bool move_to_pva_spline(float dt, float time_scale, Vector3f &pos, Vector3f &vel, Vector3f &accel);
+    bool move_from_pva_spline(float dt, float time_scale, Vector3f &pos, Vector3f &vel, Vector3f &accel);
+    bool move_to_time_pva_spline(float time, float time_scale, Vector3f &pos, Vector3f &vel, Vector3f &accel);
+
+    Vector3f get_pos_end() { return _delta_unit_1 * oP[num_items - 1]; };
 
     void Cal_Init(float T0, float J0, float A0, float V0, float P0);
     void Cal_T(float tin, float J0);
@@ -39,6 +48,7 @@ public:
     void advance_time(float dt) {
         _t += dt;
     }
+    bool runme_rev(float t, float &Jt_out, float &At_out, float &Vt_out, float &Pt_out);
     bool runme(float t, float &Jt_out, float &At_out, float &Vt_out, float &Pt_out);
     bool runme(float &Jt_out, float &At_out, float &Vt_out, float &Pt_out) {
         return runme(_t, Jt_out, At_out, Vt_out, Pt_out);
@@ -47,21 +57,25 @@ public:
     void JSegment1(float t, float tj, float Jp, float A0, float V0, float P0, float &Jt, float &At, float &Vt, float &Pt);
     void JSegment2(float t, float tj, float Jp, float A0, float V0, float P0, float &Jt, float &At, float &Vt, float &Pt);
 
-    float pos_end() {
-        return oP[num_items - 1];
-    }
     float time_now() {
         return _t;
     }
-    float time_end() {
-        return oT[num_items - 1];
-    }
-    float time_to_end() {
-        return oT[num_items - 1] - _t;
-    }
-    bool breaking() {
-        return _t > oT[9];
-    }
+
+    float pos_end();
+    float time_end();
+    float time_to_end();
+    bool breaking();
+
+    float pos_end_streight();
+    float time_end_streight();
+    float time_to_end_streight();
+    bool breaking_streight();
+
+    float pos_end_spline();
+    float time_end_spline();
+    float time_to_end_spline();
+    bool breaking_spline();
+
 
 private:
 
@@ -90,5 +104,9 @@ private:
     float oP[array_size_max];
 
     uint16_t timer;
-    Vector3f _pos_delta_unit;
+    Vector3f _track;
+    Vector3f _delta_unit_1;
+    Vector3f _delta_unit_2;
+    Vector3f _delta_unit_3;
+    bool streight;
 };
