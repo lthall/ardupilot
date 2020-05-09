@@ -41,7 +41,7 @@ public:
     void Cal_tj_Jp_Tcj(float tj, float Jp, float Tcj);
 
     void Cal_Ps(float Pp);
-    void Cal_Pc(float Pp);
+    void Cal_Pc(float Pp, float Pm);
     void Cal_Pos(float tj, float V0, float P0, float Jp, float Ap, float Vp, float Pp, float &Jp_out, float &t2_out, float &t4_out, float &t6_out);
     void Cal_PosFast(float tj, float Jp, float Ap, float Vp, float Pp, float &Jp_out, float &t2_out, float &t4_out, float &t6_out);
 
@@ -81,7 +81,7 @@ public:
 
 private:
 
-    const static uint16_t array_size_max = 17;
+    const static uint16_t array_size_max = 21;
 
     // scurve segment types
     enum jtype_t {

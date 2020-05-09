@@ -470,13 +470,12 @@ bool AC_WPNav::advance_wp_target_along_track(float dt)
         _scurve_this_leg.move_to_time_pos_vel_accel(_scurve_this_leg.time_now() + time_to_destination/2.0, 1.0, turn_pos, turn_vel, turn_accel);
         _scurve_next_leg.move_to_time_pos_vel_accel(time_to_destination/2.0, _track_scaler_dt, turn_pos, turn_vel, turn_accel);
 //      s_finish = s_finish || ((_scurve_this_leg.time_to_end() < _scurve_next_leg.time_end()/2.0) && (turn_pos.length() < _wp_radius_cm) && (Vector2f(turn_vel.x, turn_vel.y).length() < _wp_speed_cms));
-        s_finish = s_finish || ((_scurve_this_leg.time_to_end() < _scurve_next_leg.time_end()/2.0) && (turn_pos.length() < _wp_radius_cm) && (Vector2f(turn_vel.x, turn_vel.y).length() < _wp_speed_cms) && (Vector2f(turn_accel.x, turn_accel.y).length() < 2*_wp_accel_cmss));
+//        s_finish = s_finish || ((_scurve_this_leg.time_to_end() < _scurve_next_leg.time_end()/2.0) && (turn_pos.length() < _wp_radius_cm) && (Vector2f(turn_vel.x, turn_vel.y).length() < _wp_speed_cms) && (Vector2f(turn_accel.x, turn_accel.y).length() < 2*_wp_accel_cmss));
         AP::logger().Write("LENF",
-                "TimeUS,td,te,ne2,tpl,tvl,ws,tal,wa",
-                "Qffffffff",
+                "TimeUS,td,ne2,tpl,tvl,ws,tal,wa",
+                "Qfffffff",
                 AP_HAL::micros64(),
                 (double)time_to_destination,
-                (double)_scurve_this_leg.time_to_end(),
                 (double)_scurve_next_leg.time_end()/2.0,
                 (double)turn_pos.length(),
                 (double)Vector2f(turn_vel.x, turn_vel.y).length(),
@@ -537,23 +536,24 @@ bool AC_WPNav::advance_wp_target_along_track(float dt)
 //            (double)get_yaw()/100.0f,
 //            (double)_track_scaler_dt);
 
-    float tt, tp, tv, ta, tj, lt, lp, lv, la, lj;
+    float tt, lt;
     tt = _scurve_this_leg.time_now();
-    _scurve_this_leg.runme(tt, tj, ta, tv, tp);
+    Vector3f tp, tv, ta, lp, lv, la;
+    _scurve_this_leg.move_to_time_pos_vel_accel(tt, 1.0, tp, tv, ta);
     lt = _scurve_last_leg.time_now();
-    _scurve_last_leg.runme(lt, lj, la, lv, lp);
+    _scurve_last_leg.move_to_time_pos_vel_accel(lt, 1.0, lp, lv, la);
     AP::logger().Write("LENS",
             "TimeUS,tt,tp,tv,ta,lt,lp,lv,la",
             "Qffffffff",
             AP_HAL::micros64(),
             (double)tt,
-            (double)tp,
-            (double)tv,
-            (double)ta,
+            (double)tp.length(),
+            (double)tv.length(),
+            (double)ta.length(),
             (double)lt,
-            (double)lp,
-            (double)lv,
-            (double)la);
+            (double)lp.length(),
+            (double)lv.length(),
+            (double)la.length());
 
     // successfully advanced along track
     return true;
