@@ -195,7 +195,7 @@ void ModeZigZag::save_or_move_to_destination(Destination ab_dest)
             bool terr_alt;
             if (calculate_next_dest(ab_dest, stage == AUTO, next_dest, terr_alt)) {
                 wp_nav->wp_and_spline_init();
-                if (wp_nav->set_wp_destination(next_dest, terr_alt)) {
+                if (wp_nav->set_wp_destination(next_dest)) {
                     stage = AUTO;
                     auto_stage = AutoState::AB_MOVING;
                     ab_dest_stored = ab_dest;
