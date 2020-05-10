@@ -44,6 +44,26 @@ void ModeRTL::run(bool disarm_on_land)
     if (!motors->armed()) {
         return;
     }
+#if GRIPPER_ENABLED == ENABLED
+    switch (_state) {
+    case RTL_Starting:
+    case RTL_InitialClimb:
+    case RTL_ReturnHome:
+    case RTL_LoiterAtHome:
+        if (g2.gripper.enabled() && g2.gripper.grabbed()){
+            g2.gripper.release();
+            Log_Write_Event(DATA_GRIPPER_RELEASE);
+        }
+        break;
+    case RTL_FinalDescent:
+    case RTL_Land:
+        if (g2.gripper.enabled() && g2.gripper.released()){
+            g2.gripper.grab();
+            Log_Write_Event(DATA_GRIPPER_GRAB);
+        }
+        break;
+    }
+#endif
 
     // check if we need to move to next state
     if (_state_complete) {
