@@ -102,7 +102,7 @@ void ModeZigZag::save_or_move_to_destination(uint8_t dest_num)
             bool terr_alt;
             if (calculate_next_dest(dest_num, stage == AUTO, next_dest, terr_alt)) {
                 wp_nav->wp_and_spline_init();
-                if (wp_nav->set_wp_destination(next_dest, terr_alt)) {
+                if (wp_nav->set_wp_destination(next_dest)) {
                     stage = AUTO;
                     reach_wp_time_ms = 0;
                     if (dest_num == 0) {

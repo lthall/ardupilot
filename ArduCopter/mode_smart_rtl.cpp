@@ -162,7 +162,7 @@ bool ModeSmartRTL::get_wp(Location& destination)
     case SmartRTL_PathFollow:
     case SmartRTL_PreLandPosition:
     case SmartRTL_Descend:
-        return wp_nav->get_wp_destination(destination);
+        return wp_nav->get_wp_destination_loc(destination);
     case SmartRTL_Land:
         return false;
     }

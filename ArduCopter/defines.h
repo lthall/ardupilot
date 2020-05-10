@@ -90,7 +90,6 @@ enum AutoMode {
     Auto_RTL,
     Auto_CircleMoveToEdge,
     Auto_Circle,
-    Auto_Spline,
     Auto_NavGuided,
     Auto_Loiter,
     Auto_LoiterToAlt,
