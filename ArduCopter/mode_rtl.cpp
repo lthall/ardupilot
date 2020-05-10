@@ -123,7 +123,7 @@ void ModeRTL::climb_start()
     }
 
     // set the destination
-    if (!wp_nav->set_wp_destination(rtl_path.climb_target, rtl_path.return_target)) {
+    if (!(wp_nav->set_wp_destination_loc(rtl_path.climb_target) && wp_nav->set_wp_destination_loc_next( rtl_path.return_target))) {
         // this should not happen because rtl_build_path will have checked terrain data was available
         gcs().send_text(MAV_SEVERITY_CRITICAL,"RTL: unexpected error setting climb target");
         AP::logger().Write_Error(LogErrorSubsystem::NAVIGATION, LogErrorCode::FAILED_TO_SET_DESTINATION);
@@ -141,7 +141,7 @@ void ModeRTL::return_start()
     _state = RTL_ReturnHome;
     _state_complete = false;
 
-    if (!wp_nav->set_wp_destination(rtl_path.return_target)) {
+    if (!wp_nav->set_wp_destination_loc(rtl_path.return_target)) {
         // failure must be caused by missing terrain data, restart RTL
         restart_without_terrain();
     }
