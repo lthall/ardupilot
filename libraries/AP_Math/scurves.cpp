@@ -408,24 +408,13 @@ void scurves::Cal_Pc(float Pp,  float Pm) {
     float Vc = 0;
     float Pc = 0;
 
-    if (0.5 * Pp < Ap * (tj * tj) * 4.0) {
-        Vs = Vp;
-        Ps = 0.5 * Pp;
-    } else {
-        if (Ap < Jp * tj) {
-            Vs = -Ap * (tj - safe_sqrt((Pp * 6.0) / Ap + tj * tj)) / 3.0;
-            Ps = Vs * tj + ((Vs * Vs) * (1.0 / 2.0)) / Ap;
-        } else {
-            Vs = Ap * tj * (-1.0 / 6.0) - (Ap * (Ap - safe_sqrt(Ap * Ap + (Jp * Jp) * (tj * tj) + Ap * Jp * tj * 2.0 + ((Jp * Jp) * Pp * 2.4E1) / Ap)) / 6.0) / Jp;
-            Ps = ((Vs * Vs) * (1.0 / 2.0)) / Ap + (Vs * (Ap + Jp * tj) * (1.0 / 2.0)) / Jp;
-        }
-    }
+    Pc = Pp*2.0/3.0;
+    Ps = Pp - Pc;
+    Vs = MIN(Vp, MIN(MIN(safe_sqrt(Ap*Pc), powf(0.5*Jp*sq(Pc), 1.0/3.0)), Pc/(2*tj)));
 //    hal.console->printf("Cal_Pc Ps: %4.2f, Vs %4.2f \n", Ps, Vs);
 
     float t2, t4, t6;
-    Pc = Pp - Ps;
-    Vp = MIN(Vp, MIN(safe_sqrt(Ap*Pc), powf(0.5*Jp*sq(Pc), 1.0/3.0)));
-    Cal_PosFast(tj, Jp, Ap, Vp, Ps, Js, t2, t4, t6);
+    Cal_PosFast(tj, Jp, Ap, Vs, Ps, Js, t2, t4, t6);
     Cal_tj_Jp_Tcj(tj, Js, t2);
     Cal_T(t4, 0.0);
     Cal_tj_Jp_Tcj(tj, -Js, t6);
