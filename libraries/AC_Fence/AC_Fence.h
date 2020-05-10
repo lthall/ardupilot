@@ -82,6 +82,12 @@ public:
     /// get_safe_alt_min - returns the minimum safe altitude (i.e. alt_min - margin)
     float get_safe_alt_min() const { return _alt_min + _margin; }
 
+    /// get_alt_min - returns the minimum safe altitude
+    float get_alt_min() const { return _alt_min; }
+
+    /// get_alt_min - returns the minimum safe altitude
+    float get_alt_min_rad() const { return _alt_min_rad; }
+
     /// get_radius - returns the fence radius in meters
     float get_radius() const { return _circle_radius.get(); }
 
@@ -147,6 +153,7 @@ private:
     AP_Int8         _action;                // recovery action specified by user
     AP_Float        _alt_max;               // altitude upper limit in meters
     AP_Float        _alt_min;               // altitude lower limit in meters
+    AP_Float        _alt_min_rad;           // radius that altitude lower limit is enforced
     AP_Float        _circle_radius;         // circle fence radius in meters
     AP_Float        _margin;                // distance in meters that autopilot's should maintain from the fence to avoid a breach
     AP_Int8         _total;                 // number of polygon points saved in eeprom
