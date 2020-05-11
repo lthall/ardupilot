@@ -168,7 +168,7 @@ const AP_Param::GroupInfo AP_BattMonitor_Params::var_info[] = {
     // @Units: V
     // @Increment: 0.1
     // @User: Standard
-    AP_GROUPINFO("OVER_AMP", 20, AP_BattMonitor_Params, _over_current, 100.0f),
+    AP_GROUPINFO("OVER_AMP", 20, AP_BattMonitor_Params, _over_current, 0.0f),
 
     // @Param: OVER_TMR
     // @DisplayName: Over current timer
@@ -177,7 +177,7 @@ const AP_Param::GroupInfo AP_BattMonitor_Params::var_info[] = {
     // @Increment: 1
     // @Range: 0 120
     // @User: Advanced
-    AP_GROUPINFO("OVER_TMR", 21, AP_BattMonitor_Params, _over_current_timeout, 4),
+    AP_GROUPINFO("OVER_TMR", 21, AP_BattMonitor_Params, _over_current_timeout, 0),
 
     AP_GROUPEND
 
