@@ -74,7 +74,7 @@ const AP_Param::GroupInfo AC_Fence::var_info[] = {
     // @Range: -100 100
     // @Increment: 1
     // @User: Standard
-    AP_GROUPINFO("ALT_MIN",     7,  AC_Fence,   _alt_min,       10),
+    AP_GROUPINFO("ALT_MIN",     7,  AC_Fence,   _alt_min,       0.0f),
 
     // @Param: AMIN_RAD
     // @DisplayName: Fence Minimum Altitude Radius
@@ -83,7 +83,7 @@ const AP_Param::GroupInfo AC_Fence::var_info[] = {
     // @Range: -100 100
     // @Increment: 1
     // @User: Standard
-    AP_GROUPINFO("AMIN_RAD",     8,  AC_Fence,   _alt_min_rad,       30),
+    AP_GROUPINFO("AMIN_RAD",     8,  AC_Fence,   _alt_min_rad,       0.0f),
 
     AP_GROUPEND
 };
