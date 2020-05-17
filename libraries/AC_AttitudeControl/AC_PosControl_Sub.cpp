@@ -55,7 +55,7 @@ void AC_PosControl_Sub::set_alt_target_from_climb_rate_ff(float climb_rate_cms, 
     accel_z_cms = constrain_float(accel_z_cms, 0.0f, 750.0f);
 
     // jerk_z is calculated to reach full acceleration in 1000ms.
-    float jerk_z = accel_z_cms * POSCONTROL_JERK_RATIO;
+    float jerk_z = accel_z_cms * _jerk_ratio;
 
     float accel_z_max = MIN(accel_z_cms, safe_sqrt(2.0f*fabsf(_vel_desired.z - climb_rate_cms)*jerk_z));
 
