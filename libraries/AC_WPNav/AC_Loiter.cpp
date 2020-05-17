@@ -189,6 +189,12 @@ void AC_Loiter::set_pilot_desired_acceleration(float euler_roll_angle_cd, float 
     // rotate acceleration vectors input to lat/lon frame
     _predicted_accel.x = (pilot_predicted_accel_fwd_cms*_ahrs.cos_yaw() - pilot_predicted_accel_rgt_cms*_ahrs.sin_yaw());
     _predicted_accel.y = (pilot_predicted_accel_fwd_cms*_ahrs.sin_yaw() + pilot_predicted_accel_rgt_cms*_ahrs.cos_yaw());
+
+    Vector3f target_ang_vel = _attitude_control.get_target_ang_vel();
+    Vector3f desired_velocity = _pos_control.get_desired_velocity();
+    Vector2f turn_accel = Vector2f(-desired_velocity.y*target_ang_vel.z, desired_velocity.x*target_ang_vel.z);
+    _desired_accel += turn_accel;
+    _predicted_accel += turn_accel;
 }
 
 /// get vector to stopping point based on a horizontal position and velocity

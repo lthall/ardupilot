@@ -105,6 +105,8 @@ public:
     // Sets and saves the yaw acceleration limit in centidegrees/s/s
     void save_accel_yaw_max(float accel_yaw_max) { _accel_yaw_max.set_and_save(accel_yaw_max); }
 
+    Vector3f get_target_ang_vel() const { return _attitude_target_ang_vel; }
+
     // set the rate control input smoothing time constant
     void set_input_tc(float input_tc) { _input_tc = constrain_float(input_tc, 0.0f, 1.0f); }
 
