@@ -439,13 +439,16 @@ void AC_WPNav::get_wp_stopping_point(Vector3f& stopping_point) const
 /// advance_wp_target_along_track - move target location along track from origin to destination
 bool AC_WPNav::advance_wp_target_along_track(float dt)
 {
+    // ToDo: Do we need to handle a false return?
+    float origin_terr_offset = 0.0f;
+    get_terrain_offset(origin_terr_offset);
 
     // get current location
-    const Vector3f &curr_pos = _inav.get_position();
-//    const Vector3f &curr_vel = _inav.get_velocity();
+    const Vector3f &curr_pos = _inav.get_position() - Vector3f(0,0,origin_terr_offset);
     const Vector3f &desired_vel = _pos_control.get_desired_velocity();
     float track_desired_vel = desired_vel.length();
 
+//    const Vector3f &curr_vel = _inav.get_velocity();
 //    float nav_tc = 1.0f;
 //    if (is_positive(track_desired_vel)) {
 //        float track_vel = (curr_vel.x * desired_vel.x + curr_vel.y * desired_vel.y + curr_vel.z * desired_vel.z) / track_desired_vel;
@@ -461,6 +464,7 @@ bool AC_WPNav::advance_wp_target_along_track(float dt)
     _scurve_last_leg.move_from_pos_vel_accel(dt, _track_scaler_dt, target_pos, target_vel, target_accel);
     bool s_finish = _scurve_this_leg.move_to_pos_vel_accel(dt, _track_scaler_dt, target_pos, target_vel, target_accel);
 
+    target_pos += Vector3f(0,0,origin_terr_offset);
     _pos_control.set_pos_vel_accel(target_pos, target_vel, target_accel);
 
     if (_flags.fast_waypoint && _scurve_this_leg.breaking()) {
