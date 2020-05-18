@@ -170,8 +170,8 @@ void AC_WPNav::wp_and_spline_init()
     // initialise yaw heading to current heading target
     _flags.wp_yaw_set = false;
 
-    _scurve_this_leg.Cal_Init(0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
-    _scurve_last_leg.Cal_Init(0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+    _scurve_this_leg.cal_Init(0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+    _scurve_last_leg.cal_Init(0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
 }
 
 /// set_speed_xy - allows main code to pass target horizontal velocity for wp navigation
@@ -275,7 +275,7 @@ bool AC_WPNav::set_wp_destination(const Vector3f& destination)
         _scurve_this_leg.calculate_leg(_origin, _destination);
     }
     _flags.fast_waypoint = false;   // default waypoint back to slow
-    _scurve_next_leg.Cal_Init(0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+    _scurve_next_leg.cal_Init(0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
 
     return true;
 }
@@ -369,7 +369,7 @@ bool AC_WPNav::set_spline_destination(const Vector3f& destination, const Vector3
         _scurve_this_leg.calculate_spline_leg(_origin, _destination, origin_vector, destination_vector);
     }
     _flags.fast_waypoint = false;   // default waypoint back to slow
-    _scurve_next_leg.Cal_Init(0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+    _scurve_next_leg.cal_Init(0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
 
     return true;
 }
@@ -379,7 +379,7 @@ bool AC_WPNav::set_spline_destination_next(const Vector3f& destination, const Ve
     hal.console->printf("set_spline_destination_next \n");
 
     Vector3f origin_vector, destination_vector;
-    if (_scurve_this_leg.is_streight()) {
+    if (_scurve_this_leg.is_straight()) {
         origin_vector = _destination - _origin;
     } else {
         origin_vector = destination - _origin;
@@ -467,7 +467,7 @@ bool AC_WPNav::advance_wp_target_along_track(float dt)
     target_pos += Vector3f(0,0,origin_terr_offset);
     _pos_control.set_pos_vel_accel(target_pos, target_vel, target_accel);
 
-    if (_flags.fast_waypoint && _scurve_this_leg.breaking()) {
+    if (_flags.fast_waypoint && _scurve_this_leg.braking()) {
         float time_to_destination = _scurve_this_leg.time_to_end();
         Vector3f turn_pos, turn_vel, turn_accel;
         turn_pos = -_scurve_this_leg.get_pos_end();
