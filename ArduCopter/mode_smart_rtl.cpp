@@ -97,7 +97,8 @@ void ModeSmartRTL::path_follow_run()
                 // peek at the next point
                 Vector3f next_next_point;
                 if (g2.smart_rtl.peek_point(next_next_point)) {
-                    wp_nav->set_wp_destination_NED(next_point, next_next_point);
+                    wp_nav->set_wp_destination_NED(next_point);
+                    wp_nav->set_wp_destination_NED_next(next_next_point);
                 } else {
                     // this should never happen but send next point anyway
                     wp_nav->set_wp_destination_NED(next_point);

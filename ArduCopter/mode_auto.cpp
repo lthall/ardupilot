@@ -1045,10 +1045,10 @@ void ModeAuto::do_nav_wp(const AP_Mission::Mission_Command& cmd)
 void ModeAuto::do_spline_wp(const AP_Mission::Mission_Command& cmd)
 {
     _mode = Auto_WP;
-    Location to_loc, out_loc;
+    Location dest_loc, next_dest_loc;
     bool spline_at_end;
-    get_spline(cmd, to_loc, out_loc, spline_at_end);
-    wp_nav->set_spline_destination_loc(to_loc, out_loc, spline_at_end);
+    get_spline_from_cmd(cmd, dest_loc, next_dest_loc, spline_at_end);
+    wp_nav->set_spline_destination_loc(dest_loc, next_dest_loc, spline_at_end);
 
     // this will be used to remember the time in millis after we reach or pass the WP.
     loiter_time = 0;
@@ -1064,21 +1064,21 @@ void ModeAuto::do_spline_wp(const AP_Mission::Mission_Command& cmd)
     }
 }
 
-// get_spline - Calculates the spline type for a given spline waypoint mission command
-void ModeAuto::get_spline(const AP_Mission::Mission_Command& cmd, Location& to_loc, Location& out_loc, bool& spline_at_end)
+// get_spline_from_cmd - Calculates the spline type for a given spline waypoint mission command
+void ModeAuto::get_spline_from_cmd(const AP_Mission::Mission_Command& cmd, Location& dest_loc, Location& next_dest_loc, bool& spline_at_end)
 {
-    to_loc = loc_from_cmd(cmd);
+    dest_loc = loc_from_cmd(cmd);
 
     // if there is no delay at the end of this segment get next nav command
     AP_Mission::Mission_Command temp_cmd;
     if (cmd.p1 == 0 && mission.get_next_nav_cmd(cmd.index+1, temp_cmd)) {
-        out_loc = temp_cmd.content.location;
+        next_dest_loc = temp_cmd.content.location;
         // default lat, lon to first waypoint's lat, lon
-        if (out_loc.lat == 0 && out_loc.lng == 0) {
-            out_loc = to_loc;
+        if (next_dest_loc.lat == 0 && next_dest_loc.lng == 0) {
+            next_dest_loc = dest_loc;
             spline_at_end = false;
         } else {
-            out_loc = loc_from_cmd(temp_cmd);
+            next_dest_loc = loc_from_cmd(temp_cmd);
             if (temp_cmd.id == MAV_CMD_NAV_WAYPOINT) {
                 spline_at_end = false;
             } else {
@@ -1086,7 +1086,7 @@ void ModeAuto::get_spline(const AP_Mission::Mission_Command& cmd, Location& to_l
             }
         }
     } else {
-        out_loc = to_loc;
+        next_dest_loc = dest_loc;
         spline_at_end = false;
     }
 }
@@ -1113,15 +1113,14 @@ void ModeAuto::do_next_wp(const AP_Mission::Mission_Command& cmd)
             case MAV_CMD_NAV_SPLINE_WAYPOINT:
                 // if next command's lat, lon is specified then provide as next destination
                 if ((temp_cmd.content.location.lat != 0) || (temp_cmd.content.location.lng != 0)) {
-                    Location to_loc, out_loc;
+                    Location dest_loc, next_dest_loc;
                     bool spline_at_end;
-                    get_spline(temp_cmd, to_loc, out_loc, spline_at_end);
-                    wp_nav->set_spline_destination_next_loc(to_loc, out_loc, spline_at_end);
+                    get_spline_from_cmd(temp_cmd, dest_loc, next_dest_loc, spline_at_end);
+                    wp_nav->set_spline_destination_next_loc(dest_loc, next_dest_loc, spline_at_end);
                 }
                 break;
             case MAV_CMD_NAV_RETURN_TO_LAUNCH:
                 // do not stop for RTL
-//                fast_waypoint = true;
                 break;
             case MAV_CMD_NAV_TAKEOFF:
             default:
