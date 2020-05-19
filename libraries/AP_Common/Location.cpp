@@ -195,6 +195,20 @@ bool Location::get_vector_xy_from_origin_NE(Vector2f &vec_ne) const
     return true;
 }
 
+bool Location::get_vector_NEU(Vector3f &vec_neu, AltFrame &frame) const
+{
+    // convert lat, lon
+    Vector2f vec_ne;
+    if (!get_vector_xy_from_origin_NE(vec_ne)) {
+        return false;
+    }
+    vec_neu.x = vec_ne.x;
+    vec_neu.y = vec_ne.y;
+    vec_neu.z = alt;
+    frame = get_alt_frame();
+    return true;
+}
+
 bool Location::get_vector_from_origin_NEU(Vector3f &vec_neu) const
 {
     // convert lat, lon
