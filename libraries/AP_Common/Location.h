@@ -57,6 +57,7 @@ public:
     // happen if the EKF origin has not been set yet
     // x, y and z are in centimetres
     bool get_vector_xy_from_origin_NE(Vector2f &vec_ne) const WARN_IF_UNUSED;
+    bool get_vector_NEU(Vector3f &vec_neu, AltFrame &frame) const;
     bool get_vector_from_origin_NEU(Vector3f &vec_neu) const WARN_IF_UNUSED;
 
     // return distance in meters between two locations
