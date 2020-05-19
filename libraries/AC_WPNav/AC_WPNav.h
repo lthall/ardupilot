@@ -120,11 +120,12 @@ public:
     /// set waypoint destination using NED position vector from ekf origin in meters
     ///     provide next_destination_NED if known
     bool set_wp_destination_NED(const Vector3f& destination_NED);
-    bool set_wp_destination_NED(const Vector3f& destination_NED, const Vector3f& next_destination_NED);
+    bool set_wp_destination_NED_next(const Vector3f& destination_NED);
 
     /// set_wp_destination waypoint using position vector (distance from ekf origin in cm)
     ///     terrain_alt should be true if destination.z is a desired altitude above terrain
-    virtual bool set_wp_destination(const Vector3f& destination);
+    virtual bool set_wp_destination(const Vector3f& destination, Location::AltFrame frame);
+    virtual bool set_wp_destination(const Vector3f& destination) {return set_wp_destination(destination, Location::AltFrame::ABOVE_ORIGIN);}
     bool set_wp_destination_next(const Vector3f& destination);
 
     /// set_spline_destination waypoint using location class
@@ -226,11 +227,7 @@ protected:
     } _flags;
 
     // get terrain's altitude (in cm above the ekf origin) at the current position (+ve means terrain below vehicle is above ekf origin's altitude)
-    bool get_terrain_offset(float& offset_cm);
-
-    // convert location to vector from ekf origin.  terrain_alt is set to true if resulting vector's z-axis should be treated as alt-above-terrain
-    //      returns false if conversion failed (likely because terrain data was not available)
-    bool get_vector_NEU(const Location &loc, Vector3f &vec, bool &terrain_alt);
+    bool get_terrain_offset(Location::AltFrame frame, float& offset_cm);
 
     // set heading used for spline and waypoint navigation
     void set_yaw_cd(float heading_cd);
@@ -266,6 +263,7 @@ protected:
     float       _track_scaler_dt;       // our desired distance along the track in cm
     float       _yaw;                   // heading according to yaw
     float       _yaw_rate;
+    Location::AltFrame _frame;
 
     // spline variables
     Vector3f    _spline_origin_vel;     // the target velocity vector at the origin of the spline segment

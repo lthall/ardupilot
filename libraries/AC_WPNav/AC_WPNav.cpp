@@ -211,14 +211,14 @@ bool AC_WPNav::get_wp_destination_loc(Location& destination) const
 bool AC_WPNav::set_wp_destination_loc(const Location& destination)
 {
     Vector3f destination_NEU;
-
+    Location::AltFrame frame;
     // convert destination location to vector
-    if (!destination.get_vector_from_origin_NEU(destination_NEU)) {
+    if (!destination.get_vector_NEU(destination_NEU, frame)) {
         return false;
     }
 
     // set target as vector from EKF origin
-    return set_wp_destination(destination_NEU);
+    return set_wp_destination(destination_NEU, frame);
 }
 
 /// set_wp_destination waypoint using location class
@@ -227,9 +227,9 @@ bool AC_WPNav::set_wp_destination_loc(const Location& destination)
 bool AC_WPNav::set_wp_destination_loc_next(const Location& destination)
 {
     Vector3f destination_NEU;
-
-    // convert destination location to vector
-    if (!destination.get_vector_from_origin_NEU(destination_NEU)) {
+    Location::AltFrame frame;
+    // convert destination location to vectorLocation::AltFrame frame;
+    if (!destination.get_vector_NEU(destination_NEU, frame)) {
         return false;
     }
 
@@ -245,21 +245,19 @@ bool AC_WPNav::set_wp_destination_NED(const Vector3f& destination_NED)
 }
 
 /// set waypoint destination using NED position vector from ekf origin in meters
-bool AC_WPNav::set_wp_destination_NED(const Vector3f& destination_NED, const Vector3f& next_destination_NED)
+bool AC_WPNav::set_wp_destination_NED_next(const Vector3f& destination_NED)
 {
     // convert NED to NEU and do not use terrain following
-    if (!set_wp_destination(Vector3f(destination_NED.x * 100.0f, destination_NED.y * 100.0f, -destination_NED.z * 100.0f))) {
-        return false;
-    }
     return set_wp_destination_next(Vector3f(destination_NED.x * 100.0f, destination_NED.y * 100.0f, -destination_NED.z * 100.0f));
 }
 
 /// set_wp_destination - set destination waypoints using position vectors (distance from ekf origin in cm)
 ///     terrain_alt should be true if origin.z and destination.z are desired altitudes above terrain (false if these are alt-above-ekf-origin)
 ///     returns false on failure (likely caused by missing terrain data)
-bool AC_WPNav::set_wp_destination(const Vector3f& destination)
+bool AC_WPNav::set_wp_destination(const Vector3f& destination, Location::AltFrame frame)
 {
     hal.console->printf("set_wp_destination \n");
+    _frame = frame;
     _origin = _destination;
 
     // initialise intermediate point to the origin
@@ -308,11 +306,15 @@ bool AC_WPNav::set_spline_destination_loc(const Location& destination, Location 
 {
     // convert destination location to vector
     Vector3f destination_NEU;
-    if (!destination.get_vector_from_origin_NEU(destination_NEU)) {
+    Location::AltFrame frame;
+    // convert destination location to vector
+    if (!destination.get_vector_NEU(destination_NEU, frame)) {
         return false;
     }
     Vector3f next_destination_NEU;
-    if (!next_destination.get_vector_from_origin_NEU(next_destination_NEU)) {
+    Location::AltFrame next_frame;
+    // convert destination location to vector
+    if (!next_destination.get_vector_NEU(next_destination_NEU, next_frame)) {
         return false;
     }
 
@@ -324,11 +326,15 @@ bool AC_WPNav::set_spline_destination_next_loc(const Location& destination, Loca
 {
     // convert destination location to vector
     Vector3f destination_NEU;
-    if (!destination.get_vector_from_origin_NEU(destination_NEU)) {
+    Location::AltFrame frame;
+    // convert destination location to vector
+    if (!destination.get_vector_NEU(destination_NEU, frame)) {
         return false;
     }
     Vector3f next_destination_NEU;
-    if (!next_destination.get_vector_from_origin_NEU(next_destination_NEU)) {
+    Location::AltFrame next_frame;
+    // convert destination location to vector
+    if (!next_destination.get_vector_NEU(next_destination_NEU, next_frame)) {
         return false;
     }
 
@@ -441,7 +447,7 @@ bool AC_WPNav::advance_wp_target_along_track(float dt)
 {
     // ToDo: Do we need to handle a false return?
     float origin_terr_offset = 0.0f;
-    get_terrain_offset(origin_terr_offset);
+    get_terrain_offset(_frame, origin_terr_offset);
 
     // get current location
     const Vector3f &curr_pos = _inav.get_position() - Vector3f(0,0,origin_terr_offset);
@@ -463,7 +469,7 @@ bool AC_WPNav::advance_wp_target_along_track(float dt)
     target_pos = _origin;
     _scurve_last_leg.move_from_pos_vel_accel(dt, _track_scaler_dt, target_pos, target_vel, target_accel);
     bool s_finish = _scurve_this_leg.move_to_pos_vel_accel(dt, _track_scaler_dt, target_pos, target_vel, target_accel);
-
+float tr = target_pos.z;
     target_pos += Vector3f(0,0,origin_terr_offset);
     _pos_control.set_pos_vel_accel(target_pos, target_vel, target_accel);
 
@@ -526,38 +532,46 @@ bool AC_WPNav::advance_wp_target_along_track(float dt)
         set_yaw_cds(turn_rate*degrees(100.0f));
     }
 
-//    AP::logger().Write("LEN2",
-//            "TimeUS,tvx,tvy,tax,tay,ltx,lty,tr,ta,ts",
-//            "Qfffffffff",
-//            AP_HAL::micros64(),
-//            (double)target_vel.x,
-//            (double)target_vel.y,
-//            (double)target_accel.x,
-//            (double)target_accel.y,
-//            (double)accel_turn.x,
-//            (double)accel_turn.y,
-//            (double)degrees(turn_rate),
-//            (double)get_yaw()/100.0f,
-//            (double)_track_scaler_dt);
+        AP::logger().Write("LENT",
+                "TimeUS,tr,tt,to",
+                "Qfff",
+                AP_HAL::micros64(),
+                (double)tr,
+                (double)target_pos.z,
+                (double)origin_terr_offset);
 
-    float tt, lt;
-    tt = _scurve_this_leg.time_now();
-    Vector3f tp, tv, ta, lp, lv, la;
-    _scurve_this_leg.move_to_time_pos_vel_accel(tt, 1.0, tp, tv, ta);
-    lt = _scurve_last_leg.time_now();
-    _scurve_last_leg.move_to_time_pos_vel_accel(lt, 1.0, lp, lv, la);
-    AP::logger().Write("LENS",
-            "TimeUS,tt,tp,tv,ta,lt,lp,lv,la",
-            "Qffffffff",
-            AP_HAL::micros64(),
-            (double)tt,
-            (double)tp.length(),
-            (double)tv.length(),
-            (double)ta.length(),
-            (double)lt,
-            (double)lp.length(),
-            (double)lv.length(),
-            (double)la.length());
+    //    AP::logger().Write("LEN2",
+    //            "TimeUS,tvx,tvy,tax,tay,ltx,lty,tr,ta,ts",
+    //            "Qfffffffff",
+    //            AP_HAL::micros64(),
+    //            (double)target_vel.x,
+    //            (double)target_vel.y,
+    //            (double)target_accel.x,
+    //            (double)target_accel.y,
+    //            (double)accel_turn.x,
+    //            (double)accel_turn.y,
+    //            (double)degrees(turn_rate),
+    //            (double)get_yaw()/100.0f,
+    //            (double)_track_scaler_dt);
+
+//    float tt, lt;
+//    tt = _scurve_this_leg.time_now();
+//    Vector3f tp, tv, ta, lp, lv, la;
+//    _scurve_this_leg.move_to_time_pos_vel_accel(tt, 1.0, tp, tv, ta);
+//    lt = _scurve_last_leg.time_now();
+//    _scurve_last_leg.move_to_time_pos_vel_accel(lt, 1.0, lp, lv, la);
+//    AP::logger().Write("LENS",
+//            "TimeUS,tt,tp,tv,ta,lt,lp,lv,la",
+//            "Qffffffff",
+//            AP_HAL::micros64(),
+//            (double)tt,
+//            (double)tp.length(),
+//            (double)tv.length(),
+//            (double)ta.length(),
+//            (double)lt,
+//            (double)lp.length(),
+//            (double)lv.length(),
+//            (double)la.length());
 
     // successfully advanced along track
     return true;
@@ -640,64 +654,37 @@ void AC_WPNav::set_yaw_cds(float heading_cds)
 }
 
 // get terrain's altitude (in cm above the ekf origin) at the current position (+ve means terrain below vehicle is above ekf origin's altitude)
-bool AC_WPNav::get_terrain_offset(float& offset_cm)
+bool AC_WPNav::get_terrain_offset(Location::AltFrame frame, float& offset_cm)
 {
     // calculate offset based on source (rangefinder or terrain database)
-    switch (get_terrain_source()) {
-    case AC_WPNav::TerrainSource::TERRAIN_UNAVAILABLE:
-        return false;
-    case AC_WPNav::TerrainSource::TERRAIN_FROM_RANGEFINDER:
-        if (_rangefinder_healthy) {
-            offset_cm = _inav.get_altitude() - _rangefinder_alt_cm;
-            return true;
+    switch (frame) {
+    case Location::AltFrame::ABSOLUTE:
+    case Location::AltFrame::ABOVE_HOME:
+    case Location::AltFrame::ABOVE_ORIGIN:
+        offset_cm = 0.0f;
+        return true;
+    case Location::AltFrame::ABOVE_TERRAIN:
+        switch (get_terrain_source()) {
+        case AC_WPNav::TerrainSource::TERRAIN_UNAVAILABLE:
+            return false;
+        case AC_WPNav::TerrainSource::TERRAIN_FROM_RANGEFINDER:
+            if (_rangefinder_healthy) {
+                offset_cm = _inav.get_altitude() - _rangefinder_alt_cm;
+                return true;
+            }
+            return false;
+        case AC_WPNav::TerrainSource::TERRAIN_FROM_TERRAINDATABASE:
+            #if AP_TERRAIN_AVAILABLE
+                    float terr_alt = 0.0f;
+                    if (_terrain != nullptr && _terrain->height_above_terrain(terr_alt, true)) {
+                        offset_cm = _inav.get_altitude() - (terr_alt * 100.0f);
+                        return true;
+                    }
+            #endif
+            return false;
         }
-        return false;
-    case AC_WPNav::TerrainSource::TERRAIN_FROM_TERRAINDATABASE:
-#if AP_TERRAIN_AVAILABLE
-        float terr_alt = 0.0f;
-        if (_terrain != nullptr && _terrain->height_above_terrain(terr_alt, true)) {
-            offset_cm = _inav.get_altitude() - (terr_alt * 100.0f);
-            return true;
-        }
-#endif
-        return false;
     }
 
     // we should never get here but just in case
     return false;
-}
-
-// convert location to vector from ekf origin.  terrain_alt is set to true if resulting vector's z-axis should be treated as alt-above-terrain
-//      returns false if conversion failed (likely because terrain data was not available)
-bool AC_WPNav::get_vector_NEU(const Location &loc, Vector3f &vec, bool &terrain_alt)
-{
-    // convert location to NE vector2f
-    Vector2f res_vec;
-    if (!loc.get_vector_xy_from_origin_NE(res_vec)) {
-        return false;
-    }
-
-    // convert altitude
-    if (loc.get_alt_frame() == Location::AltFrame::ABOVE_TERRAIN) {
-        int32_t terr_alt;
-        if (!loc.get_alt_cm(Location::AltFrame::ABOVE_TERRAIN, terr_alt)) {
-            return false;
-        }
-        vec.z = terr_alt;
-        terrain_alt = true;
-    } else {
-        terrain_alt = false;
-        int32_t temp_alt;
-        if (!loc.get_alt_cm(Location::AltFrame::ABOVE_ORIGIN, temp_alt)) {
-            return false;
-        }
-        vec.z = temp_alt;
-        terrain_alt = false;
-    }
-
-    // copy xy (we do this to ensure we do not adjust vector unless the overall conversion is successful
-    vec.x = res_vec.x;
-    vec.y = res_vec.y;
-
-    return true;
 }
