@@ -658,30 +658,43 @@ bool AC_WPNav::get_terrain_offset(Location::AltFrame frame, float& offset_cm)
 {
     // calculate offset based on source (rangefinder or terrain database)
     switch (frame) {
-    case Location::AltFrame::ABSOLUTE:
-    case Location::AltFrame::ABOVE_HOME:
-    case Location::AltFrame::ABOVE_ORIGIN:
-        offset_cm = 0.0f;
-        return true;
-    case Location::AltFrame::ABOVE_TERRAIN:
-        switch (get_terrain_source()) {
-        case AC_WPNav::TerrainSource::TERRAIN_UNAVAILABLE:
-            return false;
-        case AC_WPNav::TerrainSource::TERRAIN_FROM_RANGEFINDER:
-            if (_rangefinder_healthy) {
-                offset_cm = _inav.get_altitude() - _rangefinder_alt_cm;
-                return true;
+    case Location::AltFrame::ABSOLUTE: {
+            // fail if we cannot get ekf origin
+            Location ekf_origin;
+            if (!AP::ahrs().get_origin(ekf_origin)) {
+                return false;
             }
-            return false;
-        case AC_WPNav::TerrainSource::TERRAIN_FROM_TERRAINDATABASE:
-            #if AP_TERRAIN_AVAILABLE
-                    float terr_alt = 0.0f;
-                    if (_terrain != nullptr && _terrain->height_above_terrain(terr_alt, true)) {
-                        offset_cm = _inav.get_altitude() - (terr_alt * 100.0f);
-                        return true;
-                    }
-            #endif
-            return false;
+            offset_cm = - ekf_origin.alt;
+            return true;
+        }
+    case Location::AltFrame::ABOVE_HOME: {
+            offset_cm = - AP::ahrs().get_home().alt;
+            return true;
+        }
+    case Location::AltFrame::ABOVE_ORIGIN: {
+            offset_cm = 0.0f;
+            return true;
+        }
+    case Location::AltFrame::ABOVE_TERRAIN: {
+            switch (get_terrain_source()) {
+            case AC_WPNav::TerrainSource::TERRAIN_UNAVAILABLE:
+                return false;
+            case AC_WPNav::TerrainSource::TERRAIN_FROM_RANGEFINDER:
+                if (_rangefinder_healthy) {
+                    offset_cm = _inav.get_altitude() - _rangefinder_alt_cm;
+                    return true;
+                }
+                return false;
+            case AC_WPNav::TerrainSource::TERRAIN_FROM_TERRAINDATABASE:
+                #if AP_TERRAIN_AVAILABLE
+                        float terr_alt = 0.0f;
+                        if (_terrain != nullptr && _terrain->height_above_terrain(terr_alt, true)) {
+                            offset_cm = _inav.get_altitude() - (terr_alt * 100.0f);
+                            return true;
+                        }
+                #endif
+                return false;
+            }
         }
     }
 
