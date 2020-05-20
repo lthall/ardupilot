@@ -469,7 +469,6 @@ bool AC_WPNav::advance_wp_target_along_track(float dt)
     target_pos = _origin;
     _scurve_last_leg.move_from_pos_vel_accel(dt, _track_scaler_dt, target_pos, target_vel, target_accel);
     bool s_finish = _scurve_this_leg.move_to_pos_vel_accel(dt, _track_scaler_dt, target_pos, target_vel, target_accel);
-float tr = target_pos.z;
     target_pos += Vector3f(0,0,origin_terr_offset);
     _pos_control.set_pos_vel_accel(target_pos, target_vel, target_accel);
 
@@ -479,19 +478,7 @@ float tr = target_pos.z;
         turn_pos = -_scurve_this_leg.get_pos_end();
         _scurve_this_leg.move_to_time_pos_vel_accel(_scurve_this_leg.time_now() + time_to_destination/2.0, 1.0, turn_pos, turn_vel, turn_accel);
         _scurve_next_leg.move_to_time_pos_vel_accel(time_to_destination/2.0, _track_scaler_dt, turn_pos, turn_vel, turn_accel);
-//      s_finish = s_finish || ((_scurve_this_leg.time_to_end() < _scurve_next_leg.time_end()/2.0) && (turn_pos.length() < _wp_radius_cm) && (Vector2f(turn_vel.x, turn_vel.y).length() < _wp_speed_cms));
         s_finish = s_finish || ((_scurve_this_leg.time_to_end() < _scurve_next_leg.time_end()/2.0) && (turn_pos.length() < _wp_radius_cm) && (Vector2f(turn_vel.x, turn_vel.y).length() < _wp_speed_cms) && (Vector2f(turn_accel.x, turn_accel.y).length() < 2*_wp_accel_cmss));
-        AP::logger().Write("LENF",
-                "TimeUS,td,ne2,tpl,tvl,ws,tal,wa",
-                "Qfffffff",
-                AP_HAL::micros64(),
-                (double)time_to_destination,
-                (double)_scurve_next_leg.time_end()/2.0,
-                (double)turn_pos.length(),
-                (double)Vector2f(turn_vel.x, turn_vel.y).length(),
-                (double)_wp_speed_cms,
-                (double)Vector2f(turn_accel.x, turn_accel.y).length(),
-                (double)2*_wp_accel_cmss);
     }
 
     // check if we've reached the waypoint
@@ -531,47 +518,6 @@ float tr = target_pos.z;
         set_yaw_cd(heading_vel);
         set_yaw_cds(turn_rate*degrees(100.0f));
     }
-
-        AP::logger().Write("LENT",
-                "TimeUS,tr,tt,to",
-                "Qfff",
-                AP_HAL::micros64(),
-                (double)tr,
-                (double)target_pos.z,
-                (double)origin_terr_offset);
-
-    //    AP::logger().Write("LEN2",
-    //            "TimeUS,tvx,tvy,tax,tay,ltx,lty,tr,ta,ts",
-    //            "Qfffffffff",
-    //            AP_HAL::micros64(),
-    //            (double)target_vel.x,
-    //            (double)target_vel.y,
-    //            (double)target_accel.x,
-    //            (double)target_accel.y,
-    //            (double)accel_turn.x,
-    //            (double)accel_turn.y,
-    //            (double)degrees(turn_rate),
-    //            (double)get_yaw()/100.0f,
-    //            (double)_track_scaler_dt);
-
-//    float tt, lt;
-//    tt = _scurve_this_leg.time_now();
-//    Vector3f tp, tv, ta, lp, lv, la;
-//    _scurve_this_leg.move_to_time_pos_vel_accel(tt, 1.0, tp, tv, ta);
-//    lt = _scurve_last_leg.time_now();
-//    _scurve_last_leg.move_to_time_pos_vel_accel(lt, 1.0, lp, lv, la);
-//    AP::logger().Write("LENS",
-//            "TimeUS,tt,tp,tv,ta,lt,lp,lv,la",
-//            "Qffffffff",
-//            AP_HAL::micros64(),
-//            (double)tt,
-//            (double)tp.length(),
-//            (double)tv.length(),
-//            (double)ta.length(),
-//            (double)lt,
-//            (double)lp.length(),
-//            (double)lv.length(),
-//            (double)la.length());
 
     // successfully advanced along track
     return true;
