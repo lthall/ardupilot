@@ -22,23 +22,62 @@ public:
         straight = true;
     }
 
-    void calculate_leg(Vector3f origin, Vector3f destination);
+    void calculate_straight_leg(Vector3f origin, Vector3f destination);
     void calculate_spline_leg(Vector3f origin, Vector3f destination, Vector3f origin_vector, Vector3f destination_vector);
 
-    bool move_to_pos_vel_accel(float dt, float time_scale, Vector3f &pos, Vector3f &vel, Vector3f &accel);
+    // return the position velocity and acceleration referenced from the origin
     bool move_from_pos_vel_accel(float dt, float time_scale, Vector3f &pos, Vector3f &vel, Vector3f &accel);
-    bool move_to_time_pos_vel_accel(float time, float time_scale, Vector3f &pos, Vector3f &vel, Vector3f &accel);
 
-    bool move_to_pva_straight(float dt, float time_scale, Vector3f &pos, Vector3f &vel, Vector3f &accel);
+    // return the position velocity and acceleration referenced to the destination
+    bool move_to_pos_vel_accel(float dt, float time_scale, Vector3f &pos, Vector3f &vel, Vector3f &accel);
+
+    // return the position velocity and acceleration at a given time referenced from the origin
+    bool move_from_time_pos_vel_accel(float time, float time_scale, Vector3f &pos, Vector3f &vel, Vector3f &accel);
+
+    // Straight and spline implementations of move_from, move_to, and move_time
     bool move_from_pva_straight(float dt, float time_scale, Vector3f &pos, Vector3f &vel, Vector3f &accel);
-    bool move_to_time_pva_straight(float time, float time_scale, Vector3f &pos, Vector3f &vel, Vector3f &accel);
-    bool move_to_pva_spline(float dt, float time_scale, Vector3f &pos, Vector3f &vel, Vector3f &accel);
+    bool move_to_pva_straight(float dt, float time_scale, Vector3f &pos, Vector3f &vel, Vector3f &accel);
+    bool move_from_time_pva_straight(float time, float time_scale, Vector3f &pos, Vector3f &vel, Vector3f &accel);
     bool move_from_pva_spline(float dt, float time_scale, Vector3f &pos, Vector3f &vel, Vector3f &accel);
-    bool move_to_time_pva_spline(float time, float time_scale, Vector3f &pos, Vector3f &vel, Vector3f &accel);
+    bool move_to_pva_spline(float dt, float time_scale, Vector3f &pos, Vector3f &vel, Vector3f &accel);
+    bool move_from_time_pva_spline(float time, float time_scale, Vector3f &pos, Vector3f &vel, Vector3f &accel);
 
     Vector3f get_pos_end() { return _track; };
 
-    void cal_Init(float T0, float J0, float A0, float V0, float P0);
+    void cal_Init();
+
+    float time_now() {
+        return _t;
+    }
+
+    bool is_straight() const {return straight;}
+
+    // magnitude of the position vector at the end of the sequence
+    float pos_end() const;
+
+    // time at the end of the sequence
+    float time_end() const;
+
+    // time left before sequence will complete
+    float time_to_end() const;
+
+    // return true if the sequence is braking to a stop
+    bool braking() const;
+
+    // Straight segment implementations of pos_end, time_end, time_to_end and braking
+    float pos_end_straight() const;
+    float time_end_straight() const;
+    float time_to_end_straight() const;
+    bool braking_straight() const;
+
+    // Spline segment implementations of pos_end, time_end, time_to_end and braking
+    float pos_end_spline() const;
+    float time_end_spline() const;
+    float time_to_end_spline() const;
+    bool braking_spline() const;
+
+
+private:
     void cal_T(float tin, float J0);
     void cal_JS1(float tj, float Jp);
     void cal_JS2(float tj, float Jp);
@@ -60,30 +99,6 @@ public:
     void JConst(float t, float J0, float A0, float V0, float P0, float &Jt, float &At, float &Vt, float &Pt);
     void JSegment1(float t, float tj, float Jp, float A0, float V0, float P0, float &Jt, float &At, float &Vt, float &Pt);
     void JSegment2(float t, float tj, float Jp, float A0, float V0, float P0, float &Jt, float &At, float &Vt, float &Pt);
-
-    float time_now() {
-        return _t;
-    }
-
-    bool is_straight() const {return straight;}
-
-    float pos_end() const;
-    float time_end() const;
-    float time_to_end() const;
-    bool braking() const;
-
-    float pos_end_straight() const;
-    float time_end_straight() const;
-    float time_to_end_straight() const;
-    bool braking_straight() const;
-
-    float pos_end_spline() const;
-    float time_end_spline() const;
-    float time_to_end_spline() const;
-    bool braking_spline() const;
-
-
-private:
 
     const static uint16_t array_size_max = 21;
 

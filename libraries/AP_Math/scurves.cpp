@@ -21,11 +21,11 @@
 
 extern const AP_HAL::HAL &hal;
 
-void scurves::calculate_leg(Vector3f origin, Vector3f destination) {
+void scurves::calculate_straight_leg(Vector3f origin, Vector3f destination) {
     straight = true;
     _track = destination - origin;
     float track_length = _track.length();
-    cal_Init(0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+    cal_Init();
     if (is_zero(track_length)) {
         // avoid possible divide by zero
         _delta_unit_1.zero();
@@ -38,10 +38,10 @@ void scurves::calculate_leg(Vector3f origin, Vector3f destination) {
 void scurves::calculate_spline_leg(Vector3f origin, Vector3f destination, Vector3f origin_vector, Vector3f destination_vector)
 {
     if (_track.is_zero() ) {
-        calculate_leg(origin, destination);
+        calculate_straight_leg(origin, destination);
         return;
     } else if (origin_vector.is_zero() && destination_vector.is_zero()) {
-        calculate_leg(origin, destination);
+        calculate_straight_leg(origin, destination);
         return;
     }
 
@@ -94,14 +94,6 @@ void scurves::calculate_spline_leg(Vector3f origin, Vector3f destination, Vector
     cal_Pc(track_length * x, track_2.length());
 }
 
-bool scurves::move_to_pos_vel_accel(float dt, float time_scale, Vector3f &pos, Vector3f &vel, Vector3f &accel) {
-    if (straight) {
-        return move_to_pva_straight(dt, time_scale, pos, vel, accel);
-    } else {
-        return move_to_pva_spline(dt, time_scale, pos, vel, accel);
-    }
-}
-
 bool scurves::move_from_pos_vel_accel(float dt, float time_scale, Vector3f &pos, Vector3f &vel, Vector3f &accel) {
     if (straight) {
         return move_from_pva_straight(dt, time_scale, pos, vel, accel);
@@ -110,28 +102,39 @@ bool scurves::move_from_pos_vel_accel(float dt, float time_scale, Vector3f &pos,
     }
 }
 
-bool scurves::move_to_time_pos_vel_accel(float time, float time_scale, Vector3f &pos, Vector3f &vel, Vector3f &accel) {
+bool scurves::move_to_pos_vel_accel(float dt, float time_scale, Vector3f &pos, Vector3f &vel, Vector3f &accel) {
     if (straight) {
-        return move_to_time_pva_straight(time, time_scale, pos, vel, accel);
+        return move_to_pva_straight(dt, time_scale, pos, vel, accel);
     } else {
-        return move_to_time_pva_spline(time, time_scale, pos, vel, accel);
+        return move_to_pva_spline(dt, time_scale, pos, vel, accel);
     }
 }
 
-bool scurves::move_to_pva_straight(float dt, float time_scale, Vector3f &pos, Vector3f &vel, Vector3f &accel) {
+bool scurves::move_from_time_pos_vel_accel(float time, float time_scale, Vector3f &pos, Vector3f &vel, Vector3f &accel) {
+    if (straight) {
+        return move_from_time_pva_straight(time, time_scale, pos, vel, accel);
+    } else {
+        return move_from_time_pva_spline(time, time_scale, pos, vel, accel);
+    }
+}
+
+// return the position velocity and acceleration referenced from the origin
+bool scurves::move_from_pva_straight(float dt, float time_scale, Vector3f &pos, Vector3f &vel, Vector3f &accel) {
     advance_time(time_scale * dt);
-    bool finish = move_to_time_pva_straight(_t, time_scale, pos, vel, accel);
+    bool finish = move_from_time_pva_straight(_t, time_scale, pos, vel, accel);
     return finish;
 }
 
-bool scurves::move_from_pva_straight(float dt, float time_scale, Vector3f &pos, Vector3f &vel, Vector3f &accel) {
+// return the position velocity and acceleration referenced to the destination
+bool scurves::move_to_pva_straight(float dt, float time_scale, Vector3f &pos, Vector3f &vel, Vector3f &accel) {
     advance_time(time_scale * dt);
-    bool finish = move_to_time_pva_straight(_t, time_scale, pos, vel, accel);
+    bool finish = move_from_time_pva_straight(_t, time_scale, pos, vel, accel);
     pos -= _track;
     return finish;
 }
 
-bool scurves::move_to_time_pva_straight(float time, float time_scale, Vector3f &pos, Vector3f &vel, Vector3f &accel) {
+// return the position velocity and acceleration at a given time referenced from the origin
+bool scurves::move_from_time_pva_straight(float time, float time_scale, Vector3f &pos, Vector3f &vel, Vector3f &accel) {
     float scurve_P1, scurve_V1, scurve_A1, scurve_J1;
     bool finish = update(time, scurve_J1, scurve_A1, scurve_V1, scurve_P1);
     pos += _delta_unit_1 * scurve_P1;
@@ -140,20 +143,20 @@ bool scurves::move_to_time_pva_straight(float time, float time_scale, Vector3f &
     return finish;
 }
 
-bool scurves::move_to_pva_spline(float dt, float time_scale, Vector3f &pos, Vector3f &vel, Vector3f &accel) {
+bool scurves::move_from_pva_spline(float dt, float time_scale, Vector3f &pos, Vector3f &vel, Vector3f &accel) {
     advance_time(time_scale * dt);
-    bool finish = move_to_time_pva_spline(_t, time_scale, pos, vel, accel);
+    bool finish = move_from_time_pva_spline(_t, time_scale, pos, vel, accel);
     return finish;
 }
 
-bool scurves::move_from_pva_spline(float dt, float time_scale, Vector3f &pos, Vector3f &vel, Vector3f &accel) {
+bool scurves::move_to_pva_spline(float dt, float time_scale, Vector3f &pos, Vector3f &vel, Vector3f &accel) {
     advance_time(time_scale * dt);
-    bool finish = move_to_time_pva_spline(_t, time_scale, pos, vel, accel);
+    bool finish = move_from_time_pva_spline(_t, time_scale, pos, vel, accel);
     pos -= _track;
     return finish;
 }
 
-bool scurves::move_to_time_pva_spline(float time, float time_scale, Vector3f &pos, Vector3f &vel, Vector3f &accel) {
+bool scurves::move_from_time_pva_spline(float time, float time_scale, Vector3f &pos, Vector3f &vel, Vector3f &accel) {
     bool finish;
     float scurve_P1, scurve_V1, scurve_A1, scurve_J1;
     float time_start = oT[7];
@@ -182,6 +185,7 @@ bool scurves::move_to_time_pva_spline(float time, float time_scale, Vector3f &po
     return finish;
 }
 
+// magnitude of the position vector at the end of the sequence
 float scurves::pos_end() const {
     if (straight) {
         return pos_end_straight();
@@ -190,6 +194,7 @@ float scurves::pos_end() const {
     }
 }
 
+// time at the end of the sequence
 float scurves::time_end() const {
     if (straight) {
         return time_end_straight();
@@ -198,6 +203,7 @@ float scurves::time_end() const {
     }
 }
 
+// time left before sequence will complete
 float scurves::time_to_end() const {
     if (straight) {
         return time_to_end_straight();
@@ -206,6 +212,7 @@ float scurves::time_to_end() const {
     }
 }
 
+// return true if the sequence is braking to a stop
 bool scurves::braking() const {
     if (straight) {
         return braking_straight();
@@ -214,34 +221,30 @@ bool scurves::braking() const {
     }
 }
 
+// Straight segment implementations of pos_end, time_end, time_to_end and braking
 float scurves::pos_end_straight() const {
     return oP[num_items - 1];
 }
-
 float scurves::time_end_straight() const {
     return oT[num_items - 1];
 }
-
 float scurves::time_to_end_straight() const {
     return oT[num_items - 1] - _t;
 }
-
 bool scurves::braking_straight() const {
     return _t > oT[9];
 }
 
+// Spline segment implementations of pos_end, time_end, time_to_end and braking
 float scurves::pos_end_spline() const {
     return oP[num_items - 1] + oP[11];
 }
-
 float scurves::time_end_spline() const {
     return oT[num_items - 1] - oT[11] + oT[7]*2.0;
 }
-
 float scurves::time_to_end_spline() const {
     return time_end_spline() - _t;
 }
-
 bool scurves::braking_spline() const {
     return _t > oT[num_items - 1] - oT[11] + oT[7];
 }
@@ -256,12 +259,10 @@ void scurves::Segment(float T, enum jtype_t Jtype, float J, float A, float V, fl
     num_items++;
 }
 
-void scurves::cal_Init(float T, float J, float A, float V, float P) {
+void scurves::cal_Init() {
     _t = 0.0f;
     num_items = 0;
-    enum jtype_t Jtype = JTYPE_CONSTANT;
-
-    Segment(T, Jtype, J, A, V, P);
+    Segment(0.0f, JTYPE_CONSTANT, 0.0f, 0.0f, 0.0f, 0.0f);
 }
 
 void scurves::cal_T(float tin, float J0) {
