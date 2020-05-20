@@ -468,9 +468,9 @@ bool AC_WPNav::advance_wp_target_along_track(float dt)
     // generate current position, velocity and acceleration
     Vector3f target_pos, target_vel, target_accel;
     target_pos = _origin;
-    _scurve_last_leg.move_from_pos_vel_accel(dt, _track_scaler_dt, target_pos, target_vel, target_accel);
-    bool s_finish = _scurve_this_leg.move_to_pos_vel_accel(dt, _track_scaler_dt, target_pos, target_vel, target_accel);
-    target_pos += Vector3f(0,0,origin_terr_offset);
+    _scurve_last_leg.move_to_pos_vel_accel(dt, _track_scaler_dt, target_pos, target_vel, target_accel);
+    bool s_finish = _scurve_this_leg.move_from_pos_vel_accel(dt, _track_scaler_dt, target_pos, target_vel, target_accel);
+    terain_offset(dt, origin_terr_offset, target_pos, target_vel, target_accel);
 
     // pass new target to the position controller
     _pos_control.set_pos_vel_accel(target_pos, target_vel, target_accel);
@@ -608,19 +608,19 @@ void AC_WPNav::set_yaw_cds(float heading_cds)
 // get terrain's altitude (in cm above the ekf origin) at the current position (+ve means terrain below vehicle is above ekf origin's altitude)
 bool AC_WPNav::get_terrain_offset(Location::AltFrame frame, float& offset_cm)
 {
+    // fail if we cannot get ekf origin
+    Location ekf_origin;
+    if (!AP::ahrs().get_origin(ekf_origin)) {
+        return false;
+    }
     // calculate offset based on source (rangefinder or terrain database)
     switch (frame) {
     case Location::AltFrame::ABSOLUTE: {
-            // fail if we cannot get ekf origin
-            Location ekf_origin;
-            if (!AP::ahrs().get_origin(ekf_origin)) {
-                return false;
-            }
             offset_cm = - ekf_origin.alt;
             return true;
         }
     case Location::AltFrame::ABOVE_HOME: {
-            offset_cm = - AP::ahrs().get_home().alt;
+            offset_cm = - (AP::ahrs().get_home().alt - ekf_origin.alt);
             return true;
         }
     case Location::AltFrame::ABOVE_ORIGIN: {
@@ -652,4 +652,35 @@ bool AC_WPNav::get_terrain_offset(Location::AltFrame frame, float& offset_cm)
 
     // we should never get here but just in case
     return false;
+}
+
+void AC_WPNav::terain_offset(float dt, float origin_terr_offset, Vector3f &target_pos, Vector3f &target_vel, Vector3f &target_accel)
+{
+    float timeconstant = 2.0f;
+    float kp_v = 1.0f/timeconstant;
+    float kp_a = 4.0f/timeconstant;
+    float jerk_max = _wp_accel_z_cmss * kp_a;
+
+    float pos_error = origin_terr_offset - _offset_pos_target;
+    float accel_v_max = _wp_accel_z_cmss*(1-kp_v/kp_a);
+    float linear_error = accel_v_max / (kp_v * kp_v);
+    float pos_error_mag = fabsf(pos_error);
+    float offset_vel_target;
+    if (pos_error_mag > linear_error) {
+        float kp_s = safe_sqrt(2.0 * accel_v_max * (pos_error_mag - (linear_error / 2.0))) / pos_error_mag;
+        offset_vel_target = kp_s * pos_error;
+    } else {
+        offset_vel_target = kp_v * pos_error;
+    }
+    offset_vel_target = constrain_float(offset_vel_target, -_wp_speed_down_cms, _wp_speed_up_cms);
+
+    float vel_error = (offset_vel_target - _offset_vel_target);
+    _offset_accel_target = constrain_float(kp_a * vel_error, MAX(-_wp_accel_z_cmss, _offset_accel_target - jerk_max * dt), MIN(_wp_accel_z_cmss, _offset_accel_target + jerk_max * dt));
+
+    _offset_pos_target += _offset_vel_target * dt + _offset_accel_target * dt * dt;
+    _offset_vel_target += _offset_accel_target * dt;
+
+    target_pos.z += _offset_pos_target;
+    target_vel.z += _offset_vel_target;
+    target_accel.z += _offset_accel_target;
 }

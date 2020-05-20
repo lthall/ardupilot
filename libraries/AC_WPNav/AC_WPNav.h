@@ -208,6 +208,9 @@ public:
     /// return the crosstrack_error - horizontal error of the actual position vs the desired position
     float crosstrack_error() const { return _track_error_xy;}
 
+
+    void terain_offset(float dt, float origin_terr_offset, Vector3f &target_pos, Vector3f &target_vel, Vector3f &target_accel);
+
     static const struct AP_Param::GroupInfo var_info[];
 
 protected:
@@ -274,4 +277,8 @@ protected:
     AP_Int8     _rangefinder_use;
     bool        _rangefinder_healthy;
     float       _rangefinder_alt_cm;
+    float       _offset_pos_target;
+    float       _offset_vel_target;
+    float       _offset_accel_target;
+
 };
