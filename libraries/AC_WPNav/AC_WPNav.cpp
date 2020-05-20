@@ -170,8 +170,8 @@ void AC_WPNav::wp_and_spline_init()
     // initialise yaw heading to current heading target
     _flags.wp_yaw_set = false;
 
-    _scurve_this_leg.cal_Init(0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
-    _scurve_last_leg.cal_Init(0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+    _scurve_this_leg.cal_Init();
+    _scurve_last_leg.cal_Init();
 }
 
 /// set_speed_xy - allows main code to pass target horizontal velocity for wp navigation
@@ -270,10 +270,10 @@ bool AC_WPNav::set_wp_destination(const Vector3f& destination, Location::AltFram
     if (_flags.fast_waypoint) {
         _scurve_this_leg = _scurve_next_leg;
     } else {
-        _scurve_this_leg.calculate_leg(_origin, _destination);
+        _scurve_this_leg.calculate_straight_leg(_origin, _destination);
     }
     _flags.fast_waypoint = false;   // default waypoint back to slow
-    _scurve_next_leg.cal_Init(0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+    _scurve_next_leg.cal_Init();
 
     return true;
 }
@@ -285,7 +285,7 @@ bool AC_WPNav::set_wp_destination_next(const Vector3f& destination)
 {
     hal.console->printf("set_wp_destination_next \n");
 
-    _scurve_next_leg.calculate_leg(_destination, destination);
+    _scurve_next_leg.calculate_straight_leg(_destination, destination);
 
     // next destination provided so fast waypoint
     _flags.fast_waypoint = true;
@@ -375,7 +375,7 @@ bool AC_WPNav::set_spline_destination(const Vector3f& destination, const Vector3
         _scurve_this_leg.calculate_spline_leg(_origin, _destination, origin_vector, destination_vector);
     }
     _flags.fast_waypoint = false;   // default waypoint back to slow
-    _scurve_next_leg.cal_Init(0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+    _scurve_next_leg.cal_Init();
 
     return true;
 }
@@ -445,15 +445,15 @@ void AC_WPNav::get_wp_stopping_point(Vector3f& stopping_point) const
 /// advance_wp_target_along_track - move target location along track from origin to destination
 bool AC_WPNav::advance_wp_target_along_track(float dt)
 {
+    // get terrain offset
     // ToDo: Do we need to handle a false return?
     float origin_terr_offset = 0.0f;
     get_terrain_offset(_frame, origin_terr_offset);
 
-    // get current location
+    // get current location and move it back to the navigation frame
     const Vector3f &curr_pos = _inav.get_position() - Vector3f(0,0,origin_terr_offset);
-    const Vector3f &desired_vel = _pos_control.get_desired_velocity();
-    float track_desired_vel = desired_vel.length();
 
+    // Adjust time to prevent target moving too far in front of aircraft
 //    const Vector3f &curr_vel = _inav.get_velocity();
 //    float nav_tc = 1.0f;
 //    if (is_positive(track_desired_vel)) {
@@ -465,19 +465,23 @@ bool AC_WPNav::advance_wp_target_along_track(float dt)
 //    }
     _track_scaler_dt = 1.0f;
 
+    // generate current position, velocity and acceleration
     Vector3f target_pos, target_vel, target_accel;
     target_pos = _origin;
     _scurve_last_leg.move_from_pos_vel_accel(dt, _track_scaler_dt, target_pos, target_vel, target_accel);
     bool s_finish = _scurve_this_leg.move_to_pos_vel_accel(dt, _track_scaler_dt, target_pos, target_vel, target_accel);
     target_pos += Vector3f(0,0,origin_terr_offset);
+
+    // pass new target to the position controller
     _pos_control.set_pos_vel_accel(target_pos, target_vel, target_accel);
 
+    // Check for change of led on fast waypoint
     if (_flags.fast_waypoint && _scurve_this_leg.braking()) {
         float time_to_destination = _scurve_this_leg.time_to_end();
         Vector3f turn_pos, turn_vel, turn_accel;
         turn_pos = -_scurve_this_leg.get_pos_end();
-        _scurve_this_leg.move_to_time_pos_vel_accel(_scurve_this_leg.time_now() + time_to_destination/2.0, 1.0, turn_pos, turn_vel, turn_accel);
-        _scurve_next_leg.move_to_time_pos_vel_accel(time_to_destination/2.0, _track_scaler_dt, turn_pos, turn_vel, turn_accel);
+        _scurve_this_leg.move_from_time_pos_vel_accel(_scurve_this_leg.time_now() + time_to_destination/2.0, 1.0, turn_pos, turn_vel, turn_accel);
+        _scurve_next_leg.move_from_time_pos_vel_accel(time_to_destination/2.0, _track_scaler_dt, turn_pos, turn_vel, turn_accel);
         s_finish = s_finish || ((_scurve_this_leg.time_to_end() < _scurve_next_leg.time_end()/2.0) && (turn_pos.length() < _wp_radius_cm) && (Vector2f(turn_vel.x, turn_vel.y).length() < _wp_speed_cms) && (Vector2f(turn_accel.x, turn_accel.y).length() < 2*_wp_accel_cmss));
     }
 
@@ -497,9 +501,11 @@ bool AC_WPNav::advance_wp_target_along_track(float dt)
         }
     }
 
+    // Calculate the turn rate
+    // todo: consider doing this just in the xy
     float turn_rate, accel_forward;
     Vector3f accel_turn;
-    if (is_positive(track_desired_vel) && is_positive(target_vel.length())) {
+    if ( is_positive(target_vel.length()) ) {
         accel_forward = (target_accel.x * target_vel.x + target_accel.y * target_vel.y + target_accel.z * target_vel.z)/target_vel.length();
         accel_turn = target_accel - target_vel * accel_forward / target_vel.length();
         turn_rate = accel_turn.length() / (_track_scaler_dt*target_vel.length());
