@@ -5,7 +5,7 @@
 class scurves {
 public:
     scurves() {
-        straight = true;
+        type = EMPTY;
         otj = 0.0;
         oJp = 0.0;
         oAp = 0.0;
@@ -19,7 +19,7 @@ public:
             otj(tj), oJp(Jp), oAp(Ap), oVp(Vp) {
         _t = 0.0;
         num_items = 0;
-        straight = true;
+        type = EMPTY;
     }
 
     void calculate_straight_leg(Vector3f origin, Vector3f destination);
@@ -44,13 +44,14 @@ public:
 
     Vector3f get_pos_end() { return _track; };
 
+    void debug();
     void cal_Init();
 
     float time_now() {
         return _t;
     }
 
-    bool is_straight() const {return straight;}
+    bool is_straight() const {return type == STRAIGHT;}
 
     // magnitude of the position vector at the end of the sequence
     float pos_end() const;
@@ -75,7 +76,6 @@ public:
     float time_end_spline() const;
     float time_to_end_spline() const;
     bool braking_spline() const;
-
 
 private:
     void cal_T(float tin, float J0);
@@ -128,5 +128,13 @@ private:
     Vector3f _delta_unit_1;
     Vector3f _delta_unit_2;
     Vector3f _delta_unit_3;
-    bool straight;
+
+    // segment types, either straight or spine
+    enum SegmentType {
+        EMPTY = 0,
+        STRAIGHT = 1,
+        SPLINE = 2
+    };
+
+    SegmentType type;
 };

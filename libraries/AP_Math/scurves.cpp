@@ -21,32 +21,45 @@
 
 extern const AP_HAL::HAL &hal;
 
+void scurves::debug() {
+    hal.console->printf("\n");
+    hal.console->printf("num_items: %4.2f, type: %4.2f, _t: %4.2f, otj: %4.2f, oJp: %4.2f, oAp: %4.2f, oVp: %4.2f\n", (float)num_items, (float)type, (float)_t, (float)otj, (float)oJp, (float)oAp, (float)oVp);
+    hal.console->printf("T, Jt, J, A, V, P \n");
+    for (uint8_t i = 0; i < num_items; i++) {
+        hal.console->printf("i: %4.2f, T: %4.2f, Jtype: %4.2f, J: %4.2f, A: %4.2f, V: %4.2f, P: %4.2f\n", (float)i, oT[i], (float) oJtype[i], oJ[i], oA[i], oV[i], oP[i]);
+    }
+    hal.console->printf("_track x: %4.2f, y: %4.2f, z: %4.2f\n", (float)_track.x, (float)_track.y, (float)_track.z);
+    hal.console->printf("_delta_unit_1 x: %4.2f, y: %4.2f, z: %4.2f\n", (float)_delta_unit_1.x, (float)_delta_unit_1.y, (float)_delta_unit_1.z);
+    hal.console->printf("_delta_unit_2 x: %4.2f, y: %4.2f, z: %4.2f\n", (float)_delta_unit_2.x, (float)_delta_unit_2.y, (float)_delta_unit_2.z);
+    hal.console->printf("_delta_unit_2 x: %4.2f, y: %4.2f, z: %4.2f\n", (float)_delta_unit_3.x, (float)_delta_unit_3.y, (float)_delta_unit_3.z);
+    hal.console->printf("\n");
+}
+
 void scurves::calculate_straight_leg(Vector3f origin, Vector3f destination) {
-    straight = true;
+    cal_Init();
     _track = destination - origin;
     float track_length = _track.length();
-    cal_Init();
     if (is_zero(track_length)) {
         // avoid possible divide by zero
         _delta_unit_1.zero();
     } else {
         _delta_unit_1 = _track.normalized();
+        type = STRAIGHT;
         cal_Ps(track_length);
     }
 }
 
 void scurves::calculate_spline_leg(Vector3f origin, Vector3f destination, Vector3f origin_vector, Vector3f destination_vector)
 {
+    cal_Init();
+    _track = destination - origin;
     if (_track.is_zero() ) {
-        calculate_straight_leg(origin, destination);
         return;
     } else if (origin_vector.is_zero() && destination_vector.is_zero()) {
         calculate_straight_leg(origin, destination);
         return;
     }
 
-    straight = false;
-    _track = destination - origin;
     float track_length = _track.length();
     float x, y;
     float cos_phi = 0.0f;
@@ -91,30 +104,37 @@ void scurves::calculate_spline_leg(Vector3f origin, Vector3f destination, Vector
 
     Vector3f track_2 = _track - (_delta_unit_1 + _delta_unit_3)*(track_length*x);
     _delta_unit_2 = track_2.normalized();
+    type = SPLINE;
     cal_Pc(track_length * x, track_2.length());
 }
 
 bool scurves::move_from_pos_vel_accel(float dt, float time_scale, Vector3f &pos, Vector3f &vel, Vector3f &accel) {
-    if (straight) {
+    if (type == STRAIGHT) {
         return move_from_pva_straight(dt, time_scale, pos, vel, accel);
-    } else {
+    } else if (type == SPLINE) {
         return move_from_pva_spline(dt, time_scale, pos, vel, accel);
+    } else {
+        return true;
     }
 }
 
 bool scurves::move_to_pos_vel_accel(float dt, float time_scale, Vector3f &pos, Vector3f &vel, Vector3f &accel) {
-    if (straight) {
+    if (type == STRAIGHT) {
         return move_to_pva_straight(dt, time_scale, pos, vel, accel);
-    } else {
+    } else if (type == SPLINE) {
         return move_to_pva_spline(dt, time_scale, pos, vel, accel);
+    } else {
+        return true;
     }
 }
 
 bool scurves::move_from_time_pos_vel_accel(float time, float time_scale, Vector3f &pos, Vector3f &vel, Vector3f &accel) {
-    if (straight) {
+    if (type == STRAIGHT) {
         return move_from_time_pva_straight(time, time_scale, pos, vel, accel);
-    } else {
+    } else if (type == SPLINE) {
         return move_from_time_pva_spline(time, time_scale, pos, vel, accel);
+    } else {
+        return true;
     }
 }
 
@@ -187,37 +207,45 @@ bool scurves::move_from_time_pva_spline(float time, float time_scale, Vector3f &
 
 // magnitude of the position vector at the end of the sequence
 float scurves::pos_end() const {
-    if (straight) {
+    if (type == STRAIGHT) {
         return pos_end_straight();
-    } else {
+    } else if (type == SPLINE) {
         return pos_end_spline();
+    } else {
+        return 0.0f;
     }
 }
 
 // time at the end of the sequence
 float scurves::time_end() const {
-    if (straight) {
+    if (type == STRAIGHT) {
         return time_end_straight();
-    } else {
+    } else if (type == SPLINE) {
         return time_end_spline();
+    } else {
+        return 0.0f;
     }
 }
 
 // time left before sequence will complete
 float scurves::time_to_end() const {
-    if (straight) {
+    if (type == STRAIGHT) {
         return time_to_end_straight();
-    } else {
+    } else if (type == SPLINE) {
         return time_to_end_spline();
+    } else {
+        return 0.0f;
     }
 }
 
 // return true if the sequence is braking to a stop
 bool scurves::braking() const {
-    if (straight) {
+    if (type == STRAIGHT) {
         return braking_straight();
-    } else {
+    } else if (type == SPLINE) {
         return braking_spline();
+    } else {
+        return true;
     }
 }
 
@@ -232,7 +260,7 @@ float scurves::time_to_end_straight() const {
     return oT[num_items - 1] - _t;
 }
 bool scurves::braking_straight() const {
-    return _t > oT[9];
+    return _t >= oT[8];
 }
 
 // Spline segment implementations of pos_end, time_end, time_to_end and braking
@@ -260,9 +288,14 @@ void scurves::Segment(float T, enum jtype_t Jtype, float J, float A, float V, fl
 }
 
 void scurves::cal_Init() {
+    type = EMPTY;
     _t = 0.0f;
     num_items = 0;
     Segment(0.0f, JTYPE_CONSTANT, 0.0f, 0.0f, 0.0f, 0.0f);
+    _track.zero();
+    _delta_unit_1.zero();
+    _delta_unit_2.zero();
+    _delta_unit_3.zero();
 }
 
 void scurves::cal_T(float tin, float J0) {
@@ -317,7 +350,6 @@ void scurves::cal_tj_Jp_Tcj(float tj, float Jp, float Tcj) {
 }
 
 void scurves::cal_Ps(float Pp) {
-    _t = 0.0f;
 
     if (is_zero(Pp)) {
         return;
@@ -330,21 +362,20 @@ void scurves::cal_Ps(float Pp) {
 
     float t2, t4, t6;
     cal_PosFast(tj, Jp, Ap, Vp, Pp / 2.0, Jp, t2, t4, t6);
+
     cal_tj_Jp_Tcj(tj, Jp, t2);
     cal_T(t4, 0.0);
     cal_tj_Jp_Tcj(tj, -Jp, t6);
 
-    float Tcv = (Pp / 2.0 - oP[num_items - 1]) / oV[num_items - 1];
-    cal_T(Tcv, 0.0);
-    cal_T(Tcv, 0.0);
+    float t8 = 2.0f * (Pp / 2.0 - oP[num_items - 1]) / oV[num_items - 1];
+    cal_T(t8, 0.0);
+
     cal_tj_Jp_Tcj(tj, -Jp, t6);
     cal_T(t4, 0.0);
     cal_tj_Jp_Tcj(tj, Jp, t2);
 }
 
 void scurves::cal_Pc(float Pp,  float Pm) {
-
-    _t = 0.0f;
 
     if (is_zero(Pp)) {
         return;
