@@ -259,21 +259,26 @@ bool AC_WPNav::set_wp_destination(const Vector3f& destination, Location::AltFram
     hal.console->printf("set_wp_destination \n");
     _frame = frame;
     _origin = _destination;
-
-    // initialise intermediate point to the origin
-    _flags.reached_destination = false;
-    _flags.wp_yaw_set = false;
-
-    // store destination location
     _destination = destination;
-    _scurve_last_leg = _scurve_this_leg;
-    if (_flags.fast_waypoint) {
-        _scurve_this_leg = _scurve_next_leg;
+    if(_flags.reached_destination) {
+        // initialise intermediate point to the origin
+        _flags.reached_destination = false;
+        _flags.wp_yaw_set = false;
+
+        // store destination location
+        _scurve_last_leg = _scurve_this_leg;
+        _scurve_this_leg.calculate_straight_leg(_origin, _destination);
     } else {
+        hal.console->printf("From Stopping Point");
+        hal.console->printf("_origin x: %4.2f, y: %4.2f, z: %4.2f\n", (float)_origin.x, (float)_origin.y, (float)_origin.z);
+        _pos_control.get_stopping_point_xy(_origin);
+        hal.console->printf("_origin x: %4.2f, y: %4.2f, z: %4.2f\n", (float)_origin.x, (float)_origin.y, (float)_origin.z);
+        _scurve_last_leg.cal_Init();
+        _scurve_this_leg.cal_Init();
         _scurve_this_leg.calculate_straight_leg(_origin, _destination);
     }
-    _flags.fast_waypoint = false;   // default waypoint back to slow
     _scurve_next_leg.cal_Init();
+    _flags.fast_waypoint = false;   // default waypoint back to slow
 
     return true;
 }
