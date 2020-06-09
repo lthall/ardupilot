@@ -86,6 +86,40 @@ const AP_Param::GroupInfo AC_PosControl::var_info[] = {
     // @Description: Velocity (vertical) controller P gain.  Converts the difference between desired vertical speed and actual speed into a desired acceleration that is passed to the throttle acceleration controller
     // @Range: 1.000 8.000
     // @User: Standard
+
+    // @Param: _VELZ_I
+    // @DisplayName: Velocity (vertical) controller I gain
+    // @Description: Velocity (vertical) controller I gain.  Corrects long-term difference in desired velocity to a target acceleration
+    // @Range: 0.02 1.00
+    // @Increment: 0.01
+    // @User: Advanced
+
+    // @Param: _VELZ_IMAX
+    // @DisplayName: Velocity (vertical) controller I gain maximum
+    // @Description: Velocity (vertical) controller I gain maximum.  Constrains the target acceleration that the I gain will output
+    // @Range: 1.000 8.000
+    // @User: Standard
+
+    // @Param: _VELZ_D
+    // @DisplayName: Velocity (vertical) controller D gain
+    // @Description: Velocity (vertical) controller D gain.  Corrects short-term changes in velocity
+    // @Range: 0.00 1.00
+    // @Increment: 0.001
+    // @User: Advanced
+
+    // @Param: _VELZ_FILT
+    // @DisplayName: Velocity (vertical) input filter
+    // @Description: Velocity (vertical) input filter.  This filter (in hz) is applied to the input for P and I terms
+    // @Range: 0 100
+    // @Units: Hz
+    // @User: Advanced
+
+    // @Param: _VELZ_D_FILT
+    // @DisplayName: Velocity (vertical) input filter
+    // @Description: Velocity (vertical) input filter.  This filter (in hz) is applied to the input for D terms
+    // @Range: 0 100
+    // @Units: Hz
+    // @User: Advanced
     AP_SUBGROUPINFO(_pid_vel_z, "_VELZ_", 3, AC_PosControl, AC_PID_1D),
 
     // @Param: _ACCZ_P
@@ -194,6 +228,13 @@ const AP_Param::GroupInfo AC_PosControl::var_info[] = {
     // @Description: Velocity (horizontal) input filter.  This filter (in hz) is applied to the input for P and I terms
     // @Range: 0 100
     // @Units: Hz
+    // @User: Advanced
+
+    // @Param: _VELXY_FF
+    // @DisplayName: Velocity (horizontal) feed forward gains
+    // @Description: Velocity (horizontal) feed forward gain.  Converts the difference between desired velocity to a target acceleration
+    // @Range: 0 6
+    // @Increment: 0.01
     // @User: Advanced
     AP_SUBGROUPINFO(_pid_vel_xy, "_VELXY_", 6, AC_PosControl, AC_PID_2D),
 
