@@ -42,7 +42,7 @@ public:
     bool move_to_pva_spline(float dt, float time_scale, Vector3f &pos, Vector3f &vel, Vector3f &accel);
     bool move_from_time_pva_spline(float time, float time_scale, Vector3f &pos, Vector3f &vel, Vector3f &accel);
 
-    Vector3f get_pos_end() { return _track; };
+    Vector3f get_pos_end() const { return _track; };
 
     void debug();
     void cal_Init();
@@ -134,7 +134,5 @@ private:
         EMPTY = 0,
         STRAIGHT = 1,
         SPLINE = 2
-    };
-
-    SegmentType type;
+    } type;
 };
