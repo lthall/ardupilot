@@ -29,7 +29,7 @@ public:
 
     // get_pi - get results from pid controller
     float get_p() const;
-    float get_error() const {return _error;}
+    float get_error() const { return _error; }
 
     // load gain from eeprom
     void load_gains();
