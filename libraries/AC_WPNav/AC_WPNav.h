@@ -126,7 +126,7 @@ public:
     /// set_wp_destination waypoint using position vector (distance from ekf origin in cm)
     ///     terrain_alt should be true if destination.z is a desired altitude above terrain
     virtual bool set_wp_destination(const Vector3f& destination, Location::AltFrame frame);
-    virtual bool set_wp_destination(const Vector3f& destination) {return set_wp_destination(destination, Location::AltFrame::ABOVE_ORIGIN);}
+    virtual bool set_wp_destination(const Vector3f& destination) { return set_wp_destination(destination, Location::AltFrame::ABOVE_ORIGIN); }
     bool set_wp_destination_next(const Vector3f& destination);
 
     /// set_spline_destination waypoint using location class
