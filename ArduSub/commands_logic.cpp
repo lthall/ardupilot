@@ -252,11 +252,6 @@ void Sub::do_nav_wp(const AP_Mission::Mission_Command& cmd)
 
     // Set wp navigation target
     auto_wp_start(target_loc);
-
-    // if no delay set the waypoint as "fast"
-    if (loiter_time_max == 0) {
-        wp_nav.set_fast_waypoint(true);
-    }
 }
 
 // do_surface - initiate surface procedure

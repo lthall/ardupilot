@@ -63,7 +63,7 @@ void Sub::guided_pos_control_start()
     wp_nav.get_wp_stopping_point_xy(stopping_point);
 
     // no need to check return status because terrain data is not used
-    wp_nav.set_wp_destination(stopping_point, false);
+    wp_nav.set_wp_destination(stopping_point);
 
     // initialise yaw
     set_auto_yaw_mode(get_default_auto_yaw_mode(false));
@@ -156,7 +156,7 @@ bool Sub::guided_set_destination(const Vector3f& destination)
 #endif
 
     // no need to check return status because terrain data is not used
-    wp_nav.set_wp_destination(destination, false);
+    wp_nav.set_wp_destination(destination);
 
     // log target
     Log_Write_GuidedTarget(guided_mode, destination, Vector3f());
@@ -183,7 +183,7 @@ bool Sub::guided_set_destination(const Location& dest_loc)
     }
 #endif
 
-    if (!wp_nav.set_wp_destination(dest_loc)) {
+    if (!wp_nav.set_wp_destination_loc(dest_loc)) {
         // failure to set destination can only be because of missing terrain data
         AP::logger().Write_Error(LogErrorSubsystem::NAVIGATION, LogErrorCode::FAILED_TO_SET_DESTINATION);
         // failure is propagated to GCS with NAK
