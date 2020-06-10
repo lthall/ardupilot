@@ -79,7 +79,7 @@ void Sub::auto_wp_start(const Vector3f& destination)
     auto_mode = Auto_WP;
 
     // initialise wpnav (no need to check return status because terrain data is not used)
-    wp_nav.set_wp_destination(destination, false);
+    wp_nav.set_wp_destination(destination);
 
     // initialise yaw
     // To-Do: reset the yaw only when the previous navigation command is not a WP.  this would allow removing the special check for ROI
@@ -94,7 +94,7 @@ void Sub::auto_wp_start(const Location& dest_loc)
     auto_mode = Auto_WP;
 
     // send target to waypoint controller
-    if (!wp_nav.set_wp_destination(dest_loc)) {
+    if (!wp_nav.set_wp_destination_loc(dest_loc)) {
         // failure to set destination can only be because of missing terrain data
         failsafe_terrain_on_event();
         return;
