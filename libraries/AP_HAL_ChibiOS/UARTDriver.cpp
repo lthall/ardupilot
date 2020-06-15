@@ -86,6 +86,7 @@ _baudrate(57600)
 void UARTDriver::uart_thread(void* arg)
 {
     uint32_t last_thread_run_us = 0; // last time we did a 1kHz run of uarts
+    uint8_t start_idx = 0;
 
     uart_thread_ctx = chThdGetSelfX();
     while (true) {
@@ -98,15 +99,19 @@ void UARTDriver::uart_thread(void* arg)
             last_thread_run_us = now;
         }
         for (uint8_t i=0; i<UART_MAX_DRIVERS; i++) {
-            if (uart_drivers[i] == nullptr) {
+            UARTDriver *drv = uart_drivers[(i+start_idx) % UART_MAX_DRIVERS];
+            if (drv == nullptr) {
                 continue;
             }
-            if (uart_drivers[i]->_initialised &&
+            if (drv->_initialised &&
                 (mask & EVENT_MASK(i) ||
-                 (uart_drivers[i]->hd_tx_active && (mask & EVT_TRANSMIT_END)))) {
-                uart_drivers[i]->_timer_tick();
+                 (drv->hd_tx_active && (mask & EVT_TRANSMIT_END)))) {
+                drv->_timer_tick();
             }
         }
+        // we provide fair scheduling in case of DMA contention by
+        // starting at a different index on each loop
+        start_idx = (start_idx + 1) % UART_MAX_DRIVERS;
     }
 }
 
