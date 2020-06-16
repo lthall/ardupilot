@@ -780,7 +780,19 @@ void UARTDriver::write_pending_bytes_DMA(uint32_t n)
     }
     if (!dma_handle->lock_nonblock()) {
         tx_len = 0;
+        if (_baudrate <= 115200) {
+            contention_counter += 3;
+            if (contention_counter > 1000) {
+                // more than 25% of attempts to use this DMA channel
+                // are getting contention. Switch off DMA for future
+                // transmits on this low baudrate UART
+                tx_dma_enabled = false;
+            }
+        }
         return;
+    }
+    if (contention_counter > 0) {
+        contention_counter--;
     }
     if (dma_handle->has_contention()) {
         /*
