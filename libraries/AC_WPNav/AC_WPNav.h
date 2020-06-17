@@ -219,8 +219,8 @@ public:
     /// return the crosstrack_error - horizontal error of the actual position vs the desired position
     float crosstrack_error() const { return _track_error_xy;}
 
-
-    void terain_offset(float dt, float origin_terr_offset, Vector3f &target_pos, Vector3f &target_vel, Vector3f &target_accel);
+    // update target position (an offset from ekf origin), velocity and acceleration to consume the altitude offset
+    void update_targets_with_offset(float alt_offset, Vector3f &target_pos, Vector3f &target_vel, Vector3f &target_accel, float dt);
 
     static const struct AP_Param::GroupInfo var_info[];
 
@@ -257,8 +257,9 @@ protected:
     /// 	relies on update_spline_solution being called since the previous
     void calc_spline_pos_vel(float spline_time, Vector3f& position, Vector3f& velocity);
 
-    // get terrain's altitude (in cm above the ekf origin) at the current position (+ve means terrain below vehicle is above ekf origin's altitude)
-    bool get_terrain_offset(Location::AltFrame frame, float& offset_cm);
+    // get altitude altitude (in cm) to convert from alt-above-ekf origin to specified frame
+    // returns true on success, false if offset could not be calculated
+    bool get_alt_offset(Location::AltFrame frame, float& offset_cm);
 
     // set heading used for spline and waypoint navigation
     void set_yaw_cd(float heading_cd);
@@ -280,7 +281,7 @@ protected:
     AP_Float    _wp_jerk;
     AP_Float    _wp_accel_z_cmss;        // vertical acceleration in cm/s/s during missions
 
-//    scurve
+    // scurve
     scurves _scurve_last_leg;
     scurves _scurve_this_leg;
     scurves _scurve_next_leg;
@@ -290,22 +291,20 @@ protected:
     float       _wp_desired_speed_xy_cms;   // desired wp speed in cm/sec
     Vector3f    _origin;                // starting point of trip to next waypoint in cm from ekf origin
     Vector3f    _destination;           // target destination in cm from ekf origin
+    Location::AltFrame _frame;          // altitude frame of _origin and _destination
     float       _track_error_xy;        // horizontal error of the actual position vs the desired position
     float       _track_desired;         // our desired distance along the track in cm
     float       _track_scaler_dt;       // our desired distance along the track in cm
     float       _yaw;                   // heading according to yaw
     float       _yaw_rate;
-    Location::AltFrame _frame;
-
-    // spline variables
-    Vector3f    _spline_origin_vel;     // the target velocity vector at the origin of the spline segment
-    Vector3f    _spline_destination_vel;// the target velocity vector at the destination point of the spline segment
 
     // terrain following variables
-    bool        _rangefinder_available;
-    AP_Int8     _rangefinder_use;
-    bool        _rangefinder_healthy;
-    float       _rangefinder_alt_cm;
+    bool        _rangefinder_available; // true if rangefinder is enabled (user switch can turn this true/false)
+    AP_Int8     _rangefinder_use;       // parameter that specifies if the range finder should be used for terrain following commands
+    bool        _rangefinder_healthy;   // true if rangefinder distance is healthy (i.e. between min and maximum)
+    float       _rangefinder_alt_cm;    // latest distance from the rangefinder
+
+    // position, velocity and acceleration targets passed to position controller
     float       _offset_pos_target;
     float       _offset_vel_target;
     float       _offset_accel_target;

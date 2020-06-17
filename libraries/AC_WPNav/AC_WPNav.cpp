@@ -494,13 +494,14 @@ void AC_WPNav::get_wp_stopping_point(Vector3f& stopping_point) const
 /// advance_wp_target_along_track - move target location along track from origin to destination
 bool AC_WPNav::advance_wp_target_along_track(float dt)
 {
-    // get terrain offset
-    // ToDo: Do we need to handle a false return?
-    float origin_terr_offset = 0.0f;
-    get_terrain_offset(_frame, origin_terr_offset);
+    // get origin alt offset (added to alt-above-ekf-origin to convert to _frame)
+    float origin_alt_offset = 0.0f;
+    if (!get_alt_offset(_frame, origin_alt_offset)) {
+        return false;
+    }
 
-    // get current location and move it back to the navigation frame
-    const Vector3f &curr_pos = _inav.get_position() - Vector3f(0,0,origin_terr_offset);
+    // get current position and adjust so altitude frame matches _destination's (i.e. _frame)
+    const Vector3f &curr_pos = _inav.get_position() + Vector3f(0, 0, origin_alt_offset);
 
     // Adjust time to prevent target moving too far in front of aircraft
 //    const Vector3f &curr_vel = _inav.get_velocity();
@@ -519,12 +520,12 @@ bool AC_WPNav::advance_wp_target_along_track(float dt)
     target_pos = _origin;
     _scurve_last_leg.move_to_pos_vel_accel(dt, _track_scaler_dt, target_pos, target_vel, target_accel);
     bool s_finish = _scurve_this_leg.move_from_pos_vel_accel(dt, _track_scaler_dt, target_pos, target_vel, target_accel);
-    terain_offset(dt, origin_terr_offset, target_pos, target_vel, target_accel);
+    update_targets_with_offset(origin_alt_offset, target_pos, target_vel, target_accel, dt);
 
     // pass new target to the position controller
     _pos_control.set_pos_vel_accel(target_pos, target_vel, target_accel);
 
-    // Check for change of led on fast waypoint
+    // Check for change of leg on fast waypoint
     if (_flags.fast_waypoint && _scurve_this_leg.braking()) {
         float time_to_destination = _scurve_this_leg.time_to_end();
         Vector3f turn_pos, turn_vel, turn_accel;
@@ -657,8 +658,9 @@ void AC_WPNav::set_yaw_cds(float heading_cds)
     _yaw_rate = heading_cds;
 }
 
-// get terrain's altitude (in cm above the ekf origin) at the current position (+ve means terrain below vehicle is above ekf origin's altitude)
-bool AC_WPNav::get_terrain_offset(Location::AltFrame frame, float& offset_cm)
+// get altitude altitude (in cm) that should be added to an alt-above-ekf origin to move it to the specified frame
+// returns true on success, false if offset could not be calculated
+bool AC_WPNav::get_alt_offset(Location::AltFrame frame, float& offset_cm)
 {
     // fail if we cannot get ekf origin
     Location ekf_origin;
@@ -667,25 +669,22 @@ bool AC_WPNav::get_terrain_offset(Location::AltFrame frame, float& offset_cm)
     }
     // calculate offset based on source (rangefinder or terrain database)
     switch (frame) {
-    case Location::AltFrame::ABSOLUTE: {
-            offset_cm = - ekf_origin.alt;
-            return true;
-        }
-    case Location::AltFrame::ABOVE_HOME: {
-            offset_cm = - (AP::ahrs().get_home().alt - ekf_origin.alt);
-            return true;
-        }
-    case Location::AltFrame::ABOVE_ORIGIN: {
-            offset_cm = 0.0f;
-            return true;
-        }
+    case Location::AltFrame::ABSOLUTE:
+        offset_cm = ekf_origin.alt;
+        return true;
+    case Location::AltFrame::ABOVE_HOME:
+        offset_cm = ekf_origin.alt - AP::ahrs().get_home().alt;
+        return true;
+    case Location::AltFrame::ABOVE_ORIGIN:
+        offset_cm = 0.0f;
+        return true;
     case Location::AltFrame::ABOVE_TERRAIN: {
             switch (get_terrain_source()) {
             case AC_WPNav::TerrainSource::TERRAIN_UNAVAILABLE:
                 return false;
             case AC_WPNav::TerrainSource::TERRAIN_FROM_RANGEFINDER:
                 if (_rangefinder_healthy) {
-                    offset_cm = _inav.get_altitude() - _rangefinder_alt_cm;
+                    offset_cm = _rangefinder_alt_cm - _inav.get_altitude();
                     return true;
                 }
                 return false;
@@ -693,7 +692,7 @@ bool AC_WPNav::get_terrain_offset(Location::AltFrame frame, float& offset_cm)
                 #if AP_TERRAIN_AVAILABLE
                         float terr_alt = 0.0f;
                         if (_terrain != nullptr && _terrain->height_above_terrain(terr_alt, true)) {
-                            offset_cm = _inav.get_altitude() - (terr_alt * 100.0f);
+                            offset_cm = (terr_alt * 100.0f) - _inav.get_altitude();
                             return true;
                         }
                 #endif
@@ -706,14 +705,15 @@ bool AC_WPNav::get_terrain_offset(Location::AltFrame frame, float& offset_cm)
     return false;
 }
 
-void AC_WPNav::terain_offset(float dt, float origin_terr_offset, Vector3f &target_pos, Vector3f &target_vel, Vector3f &target_accel)
+// update target position (an offset from ekf origin), velocity and acceleration to consume the altitude offset
+void AC_WPNav::update_targets_with_offset(float alt_offset, Vector3f &target_pos, Vector3f &target_vel, Vector3f &target_accel, float dt)
 {
     float timeconstant = 2.0f;
     float kp_v = 1.0f/timeconstant;
     float kp_a = 4.0f/timeconstant;
     float jerk_max = _wp_accel_z_cmss * kp_a;
 
-    float pos_error = origin_terr_offset - _offset_pos_target;
+    float pos_error = _offset_pos_target + alt_offset;
     float accel_v_max = _wp_accel_z_cmss*(1-kp_v/kp_a);
     float linear_error = accel_v_max / (kp_v * kp_v);
     float pos_error_mag = fabsf(pos_error);
