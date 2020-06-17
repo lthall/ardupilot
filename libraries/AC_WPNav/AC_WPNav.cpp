@@ -220,7 +220,7 @@ bool AC_WPNav::set_wp_destination_loc(const Location& destination)
         return false;
     }
 
-    // set target as vector from EKF origin
+    // set destination using Vector3f as vector from EKF origin
     return set_wp_destination(destination_NEU, frame);
 }
 
@@ -267,26 +267,46 @@ bool AC_WPNav::set_wp_destination(const Vector3f& destination, Location::AltFram
         gcs().send_text(MAV_SEVERITY_CRITICAL,"frame change from %d to %d", (int)_frame, (int)frame);
     }
 
-    _frame = frame;
-    _origin = _destination;
-    _destination = destination;
-    if(_flags.reached_destination) {
-        // initialise intermediate point to the origin
+    Location::AltFrame origin_frame;
+    if (_flags.reached_destination) {
+        // use previous destination as origin
+        _origin = _destination;
+        origin_frame = _frame;
+
+        // initialise flags
         _flags.reached_destination = false;
         _flags.wp_yaw_set = false;
 
-        // store destination location
+        // store last leg
         _scurve_last_leg = _scurve_this_leg;
-        _scurve_this_leg.calculate_straight_leg(_origin, _destination);
     } else {
-        hal.console->printf("From Stopping Point");
-        hal.console->printf("_origin x: %4.2f, y: %4.2f, z: %4.2f\n", (float)_origin.x, (float)_origin.y, (float)_origin.z);
-        _pos_control.get_stopping_point_xy(_origin);
-        hal.console->printf("_origin x: %4.2f, y: %4.2f, z: %4.2f\n", (float)_origin.x, (float)_origin.y, (float)_origin.z);
+        // use stopping point as the origin
+        get_wp_stopping_point(_origin);
+        origin_frame = Location::AltFrame::ABOVE_ORIGIN;
+
         _scurve_last_leg.cal_Init();
         _scurve_this_leg.cal_Init();
-        _scurve_this_leg.calculate_straight_leg(_origin, _destination);
     }
+
+    // calculate alt change due to change in frames
+    float orig_alt_offset_cm = 0.0f;
+    float dest_alt_offset_cm = 0.0f;
+    if (!get_alt_offset(origin_frame, orig_alt_offset_cm)) {
+        return false;
+    }
+    if (!get_alt_offset(_frame, dest_alt_offset_cm)) {
+        return false;
+    }
+    // convert origin's alt to be in same frame as destination
+    // (-orig_atl_offset_cm) converts it to be an alt-above-ekf-origin
+    // (+dest_alt_offset_cm) converts it to the new frame
+    _origin.z += -orig_alt_offset_cm + dest_alt_offset_cm;
+
+    // update destination
+    _frame = frame;
+    _destination = destination;
+
+    _scurve_this_leg.calculate_straight_leg(_origin, _destination);
     _scurve_next_leg.cal_Init();
     _flags.fast_waypoint = false;   // default waypoint back to slow
 
@@ -507,7 +527,7 @@ bool AC_WPNav::advance_wp_target_along_track(float dt)
         return false;
     }
 
-    // get current position and adjust so altitude frame matches _destination's (i.e. _frame)
+    // get current position and adjust altitude to origin and destination's frame (i.e. _frame)
     const Vector3f &curr_pos = _inav.get_position() + Vector3f(0, 0, origin_alt_offset);
 
     // Adjust time to prevent target moving too far in front of aircraft
