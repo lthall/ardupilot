@@ -547,7 +547,9 @@ bool AC_WPNav::advance_wp_target_along_track(float dt)
     target_pos = _origin;
     _scurve_last_leg.move_to_pos_vel_accel(dt, _track_scaler_dt, target_pos, target_vel, target_accel);
     bool s_finish = _scurve_this_leg.move_from_pos_vel_accel(dt, _track_scaler_dt, target_pos, target_vel, target_accel);
-    update_targets_with_offset(origin_alt_offset, target_pos, target_vel, target_accel, dt);
+    //update_targets_with_offset(origin_alt_offset, target_pos, target_vel, target_accel, dt);
+    update_targets_with_offset(0, target_pos, target_vel, target_accel, dt);
+    target_pos.z -= origin_alt_offset;
 
     // pass new target to the position controller
     _pos_control.set_pos_vel_accel(target_pos, target_vel, target_accel);
