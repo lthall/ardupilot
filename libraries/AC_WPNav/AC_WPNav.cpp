@@ -259,7 +259,14 @@ bool AC_WPNav::set_wp_destination_NED_next(const Vector3f& destination_NED)
 ///     returns false on failure (likely caused by missing terrain data)
 bool AC_WPNav::set_wp_destination(const Vector3f& destination, Location::AltFrame frame)
 {
-    hal.console->printf("set_wp_destination \n");
+    // debug
+    gcs().send_text(MAV_SEVERITY_CRITICAL, "set_wp_destination");
+    gcs().send_text(MAV_SEVERITY_CRITICAL, " Orig: x:%4.2f y:%4.2f z:%4.2f f:%d", (double)_destination.x, (double)_destination.y, (double)_destination.z, (int)_frame);
+    gcs().send_text(MAV_SEVERITY_CRITICAL, " Dest: x:%4.2f y:%4.2f z:%4.2f f:%d", (double)destination.x, (double)destination.y, (double)destination.z, (int)frame);
+    if (frame != _frame) {
+        gcs().send_text(MAV_SEVERITY_CRITICAL,"frame change from %d to %d", (int)_frame, (int)frame);
+    }
+
     _frame = frame;
     _origin = _destination;
     _destination = destination;
