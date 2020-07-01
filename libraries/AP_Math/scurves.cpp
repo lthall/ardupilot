@@ -21,6 +21,7 @@
 
 extern const AP_HAL::HAL &hal;
 
+// debugging messages
 void scurves::debug() {
     hal.console->printf("\n");
     hal.console->printf("num_items: %4.2f, type: %4.2f, _t: %4.2f, otj: %4.2f, oJp: %4.2f, oAp: %4.2f, oVp: %4.2f\n", (float)num_items, (float)type, (float)_t, (float)otj, (float)oJp, (float)oAp, (float)oVp);
@@ -35,6 +36,7 @@ void scurves::debug() {
     hal.console->printf("\n");
 }
 
+// generate an optimal jerk limited curve in 3D space that moves over a straight line between two points
 void scurves::calculate_straight_leg(Vector3f origin, Vector3f destination) {
     cal_Init();
     _track = destination - origin;
@@ -49,6 +51,7 @@ void scurves::calculate_straight_leg(Vector3f origin, Vector3f destination) {
     }
 }
 
+// generate jerk limited curve in 3D space approximating a spline between two points
 void scurves::calculate_spline_leg(Vector3f origin, Vector3f destination, Vector3f origin_vector, Vector3f destination_vector)
 {
     cal_Init();
@@ -108,6 +111,7 @@ void scurves::calculate_spline_leg(Vector3f origin, Vector3f destination, Vector
     cal_Pc(track_length * x, track_2.length());
 }
 
+// increment time pointer and return the position, velocity and acceleration vectors relative to the origin
 bool scurves::move_from_pos_vel_accel(float dt, float time_scale, Vector3f &pos, Vector3f &vel, Vector3f &accel) {
     if (type == STRAIGHT) {
         return move_from_pva_straight(dt, time_scale, pos, vel, accel);
@@ -118,6 +122,7 @@ bool scurves::move_from_pos_vel_accel(float dt, float time_scale, Vector3f &pos,
     }
 }
 
+// return the position, velocity and acceleration vectors relative to the destination
 bool scurves::move_to_pos_vel_accel(float dt, float time_scale, Vector3f &pos, Vector3f &vel, Vector3f &accel) {
     if (type == STRAIGHT) {
         return move_to_pva_straight(dt, time_scale, pos, vel, accel);
@@ -128,6 +133,7 @@ bool scurves::move_to_pos_vel_accel(float dt, float time_scale, Vector3f &pos, V
     }
 }
 
+// return the position, velocity and acceleration vectors relative to the origin
 bool scurves::move_from_time_pos_vel_accel(float time, float time_scale, Vector3f &pos, Vector3f &vel, Vector3f &accel) {
     if (type == STRAIGHT) {
         return move_from_time_pva_straight(time, time_scale, pos, vel, accel);
@@ -138,14 +144,14 @@ bool scurves::move_from_time_pos_vel_accel(float time, float time_scale, Vector3
     }
 }
 
-// return the position velocity and acceleration referenced from the origin
+// increment time pointer and return the position, velocity and acceleration vectors relative to the origin
 bool scurves::move_from_pva_straight(float dt, float time_scale, Vector3f &pos, Vector3f &vel, Vector3f &accel) {
     advance_time(time_scale * dt);
     bool finish = move_from_time_pva_straight(_t, time_scale, pos, vel, accel);
     return finish;
 }
 
-// return the position velocity and acceleration referenced to the destination
+// return the position, velocity and acceleration vectors relative to the origin
 bool scurves::move_to_pva_straight(float dt, float time_scale, Vector3f &pos, Vector3f &vel, Vector3f &accel) {
     advance_time(time_scale * dt);
     bool finish = move_from_time_pva_straight(_t, time_scale, pos, vel, accel);
@@ -153,7 +159,7 @@ bool scurves::move_to_pva_straight(float dt, float time_scale, Vector3f &pos, Ve
     return finish;
 }
 
-// return the position velocity and acceleration at a given time referenced from the origin
+// return the position, velocity and acceleration vectors relative to the origin
 bool scurves::move_from_time_pva_straight(float time, float time_scale, Vector3f &pos, Vector3f &vel, Vector3f &accel) {
     float scurve_P1, scurve_V1, scurve_A1, scurve_J1;
     bool finish = update(time, scurve_J1, scurve_A1, scurve_V1, scurve_P1);
@@ -163,12 +169,14 @@ bool scurves::move_from_time_pva_straight(float time, float time_scale, Vector3f
     return finish;
 }
 
+// increment time pointer and return the position, velocity and acceleration vectors relative to the origin
 bool scurves::move_from_pva_spline(float dt, float time_scale, Vector3f &pos, Vector3f &vel, Vector3f &accel) {
     advance_time(time_scale * dt);
     bool finish = move_from_time_pva_spline(_t, time_scale, pos, vel, accel);
     return finish;
 }
 
+// return the position, velocity and acceleration vectors relative to the destination
 bool scurves::move_to_pva_spline(float dt, float time_scale, Vector3f &pos, Vector3f &vel, Vector3f &accel) {
     advance_time(time_scale * dt);
     bool finish = move_from_time_pva_spline(_t, time_scale, pos, vel, accel);
@@ -176,6 +184,7 @@ bool scurves::move_to_pva_spline(float dt, float time_scale, Vector3f &pos, Vect
     return finish;
 }
 
+// return the position, velocity and acceleration vectors relative to the origin
 bool scurves::move_from_time_pva_spline(float time, float time_scale, Vector3f &pos, Vector3f &vel, Vector3f &accel) {
     bool finish;
     float scurve_P1, scurve_V1, scurve_A1, scurve_J1;
@@ -249,7 +258,7 @@ bool scurves::braking() const {
     }
 }
 
-// Straight segment implementations of pos_end, time_end, time_to_end and braking
+// straight segment implementations of pos_end, time_end, time_to_end and braking
 float scurves::pos_end_straight() const {
     return oP[num_items - 1];
 }
@@ -263,7 +272,7 @@ bool scurves::braking_straight() const {
     return _t >= oT[8];
 }
 
-// Spline segment implementations of pos_end, time_end, time_to_end and braking
+// spline segment implementations of pos_end, time_end, time_to_end and braking
 float scurves::pos_end_spline() const {
     return oP[num_items - 1] + oP[11];
 }
@@ -287,6 +296,7 @@ void scurves::Segment(float T, enum jtype_t Jtype, float J, float A, float V, fl
     num_items++;
 }
 
+// initialise the S-curve track
 void scurves::cal_Init() {
     type = EMPTY;
     _t = 0.0f;
@@ -298,6 +308,7 @@ void scurves::cal_Init() {
     _delta_unit_3.zero();
 }
 
+// generate constant jerk time segment
 void scurves::cal_T(float tin, float J0) {
     enum jtype_t Jtype = JTYPE_CONSTANT;
     float J = J0;
@@ -308,6 +319,7 @@ void scurves::cal_T(float tin, float J0) {
     Segment(T, Jtype, J, A, V, P);
 }
 
+// generate increasing jerk magnitude time segment based on a raised cosine profile
 void scurves::cal_JS1(float tj, float Jp) {
     float Beta = M_PI / tj;
     float Alpha = Jp / 2.0;
@@ -324,6 +336,7 @@ void scurves::cal_JS1(float tj, float Jp) {
     Segment(T, Jtype, J, A, V, P);
 }
 
+// generate  decreasing jerk magnitude time segment based on a raised cosine profile
 void scurves::cal_JS2(float tj, float Jp) {
     float Beta = M_PI / tj;
     float Alpha = Jp / 2.0;
@@ -343,12 +356,14 @@ void scurves::cal_JS2(float tj, float Jp) {
     Segment(T, Jtype, J, A, V, P);
 }
 
+// generate three time segment raised cosine jerk profile
 void scurves::cal_tj_Jp_Tcj(float tj, float Jp, float Tcj) {
     cal_JS1(tj, Jp);
     cal_T(Tcj, Jp);
     cal_JS2(tj, Jp);
 }
 
+// generate time segments for straight segment
 void scurves::cal_Ps(float Pp) {
 
     if (is_zero(Pp)) {
@@ -375,6 +390,7 @@ void scurves::cal_Ps(float Pp) {
     cal_tj_Jp_Tcj(tj, Jp, t2);
 }
 
+// generate time segments to generate large curved corners
 void scurves::cal_Pc(float Pp,  float Pm) {
 
     if (is_zero(Pp)) {
@@ -431,6 +447,7 @@ void scurves::cal_Pc(float Pp,  float Pm) {
     cal_JS2(tc, Jc);
 }
 
+// calculate duration of time segments for basic acceleration and deceleration curve from constant velocity to stationary.
 void scurves::cal_Pos(float tj, float V0, float P0, float Jp, float Ap, float Vp, float Pp, float &Jp_out, float &t2_out, float &t4_out, float &t6_out) {
     Ap = MIN(MIN(Ap, (Vp - V0) / (2.0 * tj)), (Pp - P0 + 4.0 * V0 * tj) / (4.0 * sq(tj)));
     if (fabsf(Ap) < Jp * tj) {
@@ -454,6 +471,7 @@ void scurves::cal_Pos(float tj, float V0, float P0, float Jp, float Ap, float Vp
     t6_out = t2_out;
 }
 
+// calculate duration of time segments for basic acceleration and deceleration curve from and to stationary.
 void scurves::cal_PosFast(float tj, float Jp, float Ap, float Vp, float Pp, float &Jp_out, float &t2_out, float &t4_out, float &t6_out) {
     if ((Vp < Jp * (tj * tj) * 2.0) || (Pp < Jp * (tj * tj * tj) * 4.0)) {
 // solution = 0 - t6 t4 t2 = 0 0 0
@@ -484,6 +502,7 @@ void scurves::cal_PosFast(float tj, float Jp, float Ap, float Vp, float Pp, floa
     Jp_out = Jp;
 }
 
+// calculate the jerk, acceleration, velocity and position at time t when running the sequence in reverse
 bool scurves::update_rev(float time, float &Jt_out, float &At_out, float &Vt_out, float &Pt_out) {
     bool finish = (time > oT[num_items - 1]);
     update(oT[num_items - 1] - time, Jt_out, At_out, Vt_out, Pt_out);
@@ -492,6 +511,7 @@ bool scurves::update_rev(float time, float &Jt_out, float &At_out, float &Vt_out
     return finish;
 }
 
+// calculate the jerk, acceleration, velocity and position at time t
 bool scurves::update(float time, float &Jt_out, float &At_out, float &Vt_out, float &Pt_out) {
     jtype_t Jtype;
     int8_t pnt = num_items;
@@ -542,6 +562,7 @@ bool scurves::update(float time, float &Jt_out, float &At_out, float &Vt_out, fl
     return pnt == num_items;
 }
 
+// calculate the jerk, acceleration, velocity and position at time t when running the constant jerk time segment
 void scurves::JConst(float time, float J0, float A0, float V0, float P0, float &Jt, float &At, float &Vt, float &Pt) {
     Jt = J0;
     At = A0 + J0 * time;
@@ -549,6 +570,7 @@ void scurves::JConst(float time, float J0, float A0, float V0, float P0, float &
     Pt = P0 + V0 * time + 0.5 * A0 * (time * time) + (1 / 6.0) * J0 * (time * time * time);
 }
 
+// Calculate the jerk, acceleration, velocity and position at time t when running the increasing jerk magnitude time segment based on a raised cosine profile
 void scurves::JSegment1(float time, float tj, float Jp, float A0, float V0, float P0, float &Jt, float &At, float &Vt, float &Pt) {
     float Alpha = Jp / 2.0;
     float Beta = M_PI / tj;
@@ -558,6 +580,7 @@ void scurves::JSegment1(float time, float tj, float Jp, float A0, float V0, floa
     Pt = P0 + V0 * time + 0.5 * A0 * (time * time) + (-Alpha / (Beta * Beta)) * time + Alpha * (time * time * time) / 6.0 + (Alpha / (Beta * Beta * Beta)) * sinf(Beta * time);
 }
 
+// Calculate the jerk, acceleration, velocity and position at time t when running the  decreasing jerk magnitude time segment based on a raised cosine profile
 void scurves::JSegment2(float time, float tj, float Jp, float A0, float V0, float P0, float &Jt, float &At, float &Vt, float &Pt) {
     float Alpha = Jp / 2.0;
     float Beta = M_PI / tj;
