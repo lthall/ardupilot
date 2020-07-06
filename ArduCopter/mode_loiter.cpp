@@ -23,6 +23,7 @@ bool ModeLoiter::init(bool ignore_checks)
         // clear out pilot desired acceleration in case radio failsafe event occurs and we do not switch to RTL for some reason
         loiter_nav->clear_pilot_desired_acceleration();
     }
+    pos_control->init_baseline_velocity();
     loiter_nav->init_target();
 
     // initialise position and desired velocity
