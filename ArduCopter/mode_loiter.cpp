@@ -78,7 +78,6 @@ void ModeLoiter::run()
     float target_yaw_rate = 0.0f;
     float target_climb_rate = 0.0f;
     float takeoff_climb_rate = 0.0f;
-    loiter_nav->use_baseline();
 
     // initialize vertical speed and acceleration
     pos_control->set_max_speed_z(-get_pilot_speed_dn(), g.pilot_speed_up);
@@ -139,6 +138,7 @@ void ModeLoiter::run()
         target_climb_rate = get_avoidance_adjusted_climbrate(target_climb_rate);
 
         // run loiter controller
+        loiter_nav->use_baseline();
         loiter_nav->update();
 
         // call attitude controller
@@ -173,6 +173,7 @@ void ModeLoiter::run()
 #endif
 
         // run loiter controller
+        loiter_nav->use_baseline();
         loiter_nav->update();
 
         // call attitude controller
