@@ -2,6 +2,7 @@
 #include "AC_PosControl.h"
 #include <AP_Math/AP_Math.h>
 #include <AP_Logger/AP_Logger.h>
+#include <AP_Follow/AP_Follow.h>
 
 extern const AP_HAL::HAL& hal;
 
@@ -1302,6 +1303,7 @@ bool AC_PosControl::pre_arm_checks(const char *param_prefix,
 /// Initialises the baseline velocity based on its state.
 void AC_PosControl::init_baseline_velocity()
 {
+    auto &follow = AP::follow();
     switch (_baselineState) {
     case OFF:
         // set baseline velocity to zero
@@ -1314,8 +1316,18 @@ void AC_PosControl::init_baseline_velocity()
         FALLTHROUGH;
     case ZERO:
         // Set baseline velocity to current velocity and change to HOLD
-        _vel_baseline = _inav.get_velocity();
-        set_baseline_state_hold();
+
+        Vector3f target;
+        Vector3f dist_vec;  // vector to lead vehicle
+        Vector3f dist_vec_offs;  // vector to lead vehicle + offset
+        Vector3f vel_of_target;  // velocity of lead vehicle
+        if (follow.get_target_dist_and_vel_ned(dist_vec, dist_vec_offs, vel_of_target)) {
+            _vel_baseline = vel_of_target * 100.0f;
+            set_baseline_state_set();
+        } else {
+            _vel_baseline = _inav.get_velocity();
+            set_baseline_state_hold();
+        }
         break;
     }
 }
@@ -1354,7 +1366,17 @@ bool AC_PosControl::set_baseline_state(enum VelBaselineState baselineState)
 /// Proportional controller with piecewise sqrt sections to constrain second derivative
 void AC_PosControl::update_baseline_velocity(float dt)
 {
+    auto &follow = AP::follow();
+
     Vector3f target;
+    Vector3f dist_vec;  // vector to lead vehicle
+    Vector3f dist_vec_offs;  // vector to lead vehicle + offset
+    Vector3f vel_of_target;  // velocity of lead vehicle
+    if (follow.get_target_dist_and_vel_ned(dist_vec, dist_vec_offs, vel_of_target)) {
+        target = vel_of_target * 100.0f;
+    } else {
+        target = _inav.get_velocity();
+    }
     switch (_baselineState) {
     case OFF:
         // Slew baseline velocity to zero
@@ -1368,7 +1390,6 @@ void AC_PosControl::update_baseline_velocity(float dt)
 
     case SET:
         // Slew baseline velocity to current velocity
-        target = _inav.get_velocity();
         break;
 
     case ZERO:

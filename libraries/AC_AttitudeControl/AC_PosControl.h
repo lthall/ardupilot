@@ -441,7 +441,7 @@ protected:
 
     // velocity baseline variables
     Vector3f    _vel_baseline;          // velocity baseline in cm/s used as zero reference for velocity based controllers
-    Vector3f    _vel_baseline_target;   // velocity baseline in cm/s used as zero reference for velocity based controllers
+
     // Baseline state
     enum VelBaselineState {
         OFF  = 0,                       // Velocity Baseline is zero and disabled
