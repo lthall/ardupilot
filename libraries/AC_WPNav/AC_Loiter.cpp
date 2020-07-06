@@ -96,7 +96,7 @@ void AC_Loiter::init_target(const Vector3f& position)
 
     // initialise desired acceleration and angles to zero to remain on station
     _predicted_accel.zero();
-    _desired_accel = _predicted_accel;
+    _desired_accel.zero();
     _predicted_euler_angle.zero();
 
     // set target position
@@ -106,9 +106,9 @@ void AC_Loiter::init_target(const Vector3f& position)
     _pos_control.set_desired_velocity_xy(0.0f,0.0f);
     _pos_control.set_desired_accel_xy(0.0f,0.0f);
 
-    _use_baseline = false;
-
     // initialise position controller if not already active
+    _pos_control.init_baseline_velocity();
+    _use_baseline = false;
     if (!_pos_control.is_active_xy()) {
         _pos_control.init_xy_controller();
     }
