@@ -1250,7 +1250,7 @@ bool AC_PosControl::limit_vector_length(float& vector_x, float& vector_y, float 
 }
 
 /// Proportional controller with piecewise sqrt sections to constrain second derivative
-Vector3f AC_PosControl::sqrt_controller(const Vector3f& error, float p, float second_ord_lim)
+Vector3f AC_PosControl::sqrt_controller( Vector3f error, float p, float second_ord_lim)
 {
     if (second_ord_lim < 0.0f || is_zero(second_ord_lim) || is_zero(p)) {
         return Vector3f(error.x * p, error.y * p, error.z);

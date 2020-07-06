@@ -43,7 +43,7 @@ void ModeFollow::run()
 
     // re-use guided mode's velocity controller
     // Note: this is safe from interference from GCSs and companion computer's whose guided mode
-    //       position and velocity requests will be ignored while the vehicle is not in guided mode
+    // position and velocity requests will be ignored while the vehicle is not in guided mode
 
     // variables to be sent to velocity controller
     Vector3f desired_velocity_neu_cms;
@@ -59,9 +59,11 @@ void ModeFollow::run()
 
         // calculate desired velocity vector in cm/s in NEU
         const float kp = g2.follow.get_pos_p().kP();
-        desired_velocity_neu_cms.x = (vel_of_target.x * 100.0f) + (dist_vec_offs_neu.x * kp);
-        desired_velocity_neu_cms.y = (vel_of_target.y * 100.0f) + (dist_vec_offs_neu.y * kp);
-        desired_velocity_neu_cms.z = (-vel_of_target.z * 100.0f) + (dist_vec_offs_neu.z * kp);
+        desired_velocity_neu_cms = AC_PosControl::sqrt_controller(dist_vec_offs_neu, kp, pos_control->get_max_accel_xy() * 0.5f);
+        desired_velocity_neu_cms.z = AC_AttitudeControl::sqrt_controller(dist_vec_offs_neu.z, kp, pos_control->get_max_accel_z(), copter.G_Dt);
+        desired_velocity_neu_cms.x += (vel_of_target.x * 100.0f);
+        desired_velocity_neu_cms.y += (vel_of_target.y * 100.0f);
+        desired_velocity_neu_cms.z += (-vel_of_target.z * 100.0f);
 
         // scale desired velocity to stay within horizontal speed limit
         float desired_speed_xy = safe_sqrt(sq(desired_velocity_neu_cms.x) + sq(desired_velocity_neu_cms.y));
@@ -84,16 +86,6 @@ void ModeFollow::run()
 
         // create horizontal desired velocity vector (required for slow down calculations)
         Vector2f desired_velocity_xy_cms(desired_velocity_neu_cms.x, desired_velocity_neu_cms.y);
-
-        // create horizontal unit vector towards target (required for slow down calculations)
-        Vector2f dir_to_target_xy(desired_velocity_xy_cms.x, desired_velocity_xy_cms.y);
-        if (!dir_to_target_xy.is_zero()) {
-            dir_to_target_xy.normalize();
-        }
-
-        // slow down horizontally as we approach target (use 1/2 of maximum deceleration for gentle slow down)
-        const float dist_to_target_xy = Vector2f(dist_vec_offs_neu.x, dist_vec_offs_neu.y).length();
-        copter.avoid.limit_velocity(pos_control->get_pos_xy_p().kP().get(), pos_control->get_max_accel_xy() * 0.5f, desired_velocity_xy_cms, dir_to_target_xy, dist_to_target_xy, copter.G_Dt);
 
         // limit the horizontal velocity to prevent fence violations
         copter.avoid.adjust_velocity(pos_control->get_pos_xy_p().kP().get(), pos_control->get_max_accel_xy(), desired_velocity_xy_cms, G_Dt);

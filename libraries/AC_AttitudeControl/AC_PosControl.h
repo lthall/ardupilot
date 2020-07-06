@@ -322,6 +322,9 @@ public:
     // update baseline velocity
     void update_baseline_velocity(float dt);
 
+    /// Proportional controller with piecewise sqrt sections to constrain second derivative
+    static Vector3f sqrt_controller( Vector3f error, float p, float second_ord_lim);
+
     static const struct AP_Param::GroupInfo var_info[];
 
 protected:
@@ -380,9 +383,6 @@ protected:
 
     /// limit vector to a given length, returns true if vector was limited
     static bool limit_vector_length(float& vector_x, float& vector_y, float max_length);
-
-    /// Proportional controller with piecewise sqrt sections to constrain second derivative
-    static Vector3f sqrt_controller(const Vector3f& error, float p, float second_ord_lim);
 
     /// initialise and check for ekf position resets
     void init_ekf_xy_reset();
