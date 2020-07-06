@@ -102,13 +102,14 @@ void AC_Loiter::init_target(const Vector3f& position)
     // set target position
     _pos_control.set_xy_target(position.x, position.y);
 
+    // initialise position controller if not already active
+    _use_baseline = false;
+
     // set vehicle velocity and acceleration to zero
-    _pos_control.set_desired_velocity_xy(0.0f,0.0f);
+    Vector3f vel_baseline = _pos_control.get_vel_baseline();
+    _pos_control.set_desired_velocity_xy(vel_baseline.x, vel_baseline.y);
     _pos_control.set_desired_accel_xy(0.0f,0.0f);
 
-    // initialise position controller if not already active
-    _pos_control.init_baseline_velocity();
-    _use_baseline = false;
     if (!_pos_control.is_active_xy()) {
         _pos_control.init_xy_controller();
     }
@@ -141,7 +142,6 @@ void AC_Loiter::init_target()
     _pos_control.set_desired_accel_xy(_desired_accel.x, _desired_accel.y);
 
     // initialise position controller
-    _pos_control.init_baseline_velocity();
     _use_baseline = false;
     _pos_control.init_xy_controller();
 }
@@ -198,7 +198,7 @@ void AC_Loiter::set_pilot_desired_acceleration(float euler_roll_angle_cd, float 
 /// get vector to stopping point based on a horizontal position and velocity
 void AC_Loiter::get_stopping_point_xy(Vector3f& stopping_point) const
 {
-    _pos_control.get_stopping_point_xy(stopping_point);
+    _pos_control.get_stopping_point_xy(stopping_point, _pos_control.get_vel_baseline());
 }
 
 /// get maximum lean angle when using loiter
