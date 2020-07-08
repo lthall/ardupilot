@@ -598,7 +598,7 @@ void AC_PosControl::run_z_controller()
     }
     float thr_out;
     if (_vibe_comp_enabled) {
-        thr_out = vibration_override();
+        thr_out = get_throttle_with_vibration_override();
     } else {
         thr_out = _pid_accel_z.update_all(_accel_target.z, z_accel_meas, (_motors.limit.throttle_lower || _motors.limit.throttle_upper)) * 0.001f;
         thr_out += _pid_accel_z.get_ff() * 0.001f;
@@ -630,7 +630,8 @@ void AC_PosControl::run_z_controller()
 //                                                  (double)thr_out);
 }
 
-float AC_PosControl::vibration_override()
+// get throttle using vibration resistant calculation (uses feed forward with manually calculated gain)
+float AC_PosControl::get_throttle_with_vibration_override()
 {
     _accel_desired.z = 0.0f;
     const float thr_per_accelz_cmss = _motors.get_throttle_hover() / (GRAVITY_MSS * 100.0f);
