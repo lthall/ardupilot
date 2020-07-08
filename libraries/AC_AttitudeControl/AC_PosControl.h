@@ -152,7 +152,6 @@ public:
 
     /// update_z_controller - fly to altitude in cm above home
     void update_z_controller();
-    float vibration_override();
 
     // get_leash_down_z, get_leash_up_z - returns vertical leash lengths in cm
     float get_leash_down_z() const { return _leash_down_z; }
@@ -339,6 +338,9 @@ protected:
     //          set_target_to_stopping_point_z
     //          init_takeoff
     void run_z_controller();
+
+    // get throttle using vibration resistant calculation (uses feed forward with manually calculated gain)
+    float get_throttle_with_vibration_override();
 
     ///
     /// xy controller private methods
