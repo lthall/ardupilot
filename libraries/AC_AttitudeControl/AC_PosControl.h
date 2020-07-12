@@ -241,6 +241,10 @@ public:
 
     /// update_xy_controller - run the horizontal position controller - should be called at 100hz or higher
     ///     when use_desired_velocity is true the desired velocity (i.e. feed forward) is incorporated at the pos_to_rate step
+    void input_pos_vel_accel_xy(Vector3f pos, Vector3f vel, Vector3f accel, float vel_max, float accel_max, float tc);
+
+    /// update_xy_controller - run the horizontal position controller - should be called at 100hz or higher
+    ///     when use_desired_velocity is true the desired velocity (i.e. feed forward) is incorporated at the pos_to_rate step
     void update_xy_controller();
 
     /// set_target_to_stopping_point_xy - sets horizontal target to reasonable stopping position in cm from home
@@ -377,12 +381,6 @@ protected:
 
     /// calc_leash_length - calculates the horizontal leash length given a maximum speed, acceleration and position kP gain
     float calc_leash_length(float speed_cms, float accel_cms, float kP) const;
-
-    /// limit vector to a given length, returns true if vector was limited
-    static bool limit_vector_length(float& vector_x, float& vector_y, float max_length);
-
-    /// Proportional controller with piecewise sqrt sections to constrain second derivative
-    static Vector3f sqrt_controller(const Vector3f& error, float p, float second_ord_lim);
 
     /// initialise and check for ekf position resets
     void init_ekf_xy_reset();
