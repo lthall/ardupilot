@@ -855,7 +855,7 @@ void AC_PosControl::standby_xyz_reset()
 }
 
 /// update_xy_controller - run the horizontal position controller - should be called at 100hz or higher
-void AC_PosControl::input_pos_vel_accel_xy(Vector3f pos, Vector3f vel, Vector3f accel, float vel_max, float accel_max, float tc)
+void AC_PosControl::input_vel_accel_xy(Vector3f vel, float vel_max, float accel_max, float tc)
 {
     // compute dt
     const uint64_t now_us = AP_HAL::micros64();
@@ -872,7 +872,36 @@ void AC_PosControl::input_pos_vel_accel_xy(Vector3f pos, Vector3f vel, Vector3f 
     // check if xy leash needs to be recalculated
     calc_leash_length_xy();
 
+    update_pos_vel_accel_xy(_pos_target, _vel_desired, _accel_desired, dt);
+    shape_vel_accel_xy(vel, _vel_desired, _accel_desired, vel_max, accel_max, tc, dt);
 
+    // run horizontal position controller
+    run_xy_controller(dt);
+
+    // update xy update time
+    _last_update_xy_us = now_us;
+}
+
+/// update_xy_controller - run the horizontal position controller - should be called at 100hz or higher
+void AC_PosControl::input_pos_vel_accel_xy(Vector3f pos, Vector3f vel, float vel_max, float accel_max, float tc)
+{
+    // compute dt
+    const uint64_t now_us = AP_HAL::micros64();
+    float dt = (now_us - _last_update_xy_us) * 1.0e-6f;
+
+    // sanity check dt
+    if (dt >= POSCONTROL_ACTIVE_TIMEOUT_US * 1.0e-6f) {
+        dt = 0.0f;
+    }
+
+    // check for ekf xy position reset
+    check_for_ekf_xy_reset();
+
+    // check if xy leash needs to be recalculated
+    calc_leash_length_xy();
+
+    update_pos_vel_accel_xy(_pos_target, _vel_desired, _accel_desired, dt);
+    shape_pos_vel_accel_xy(pos, vel, _pos_target, _vel_desired, _accel_desired, vel_max, accel_max, tc, dt);
 
     // run horizontal position controller
     run_xy_controller(dt);

@@ -239,9 +239,8 @@ public:
     // is_active_xy - returns true if the xy position controller has been run very recently
     bool is_active_xy() const;
 
-    /// update_xy_controller - run the horizontal position controller - should be called at 100hz or higher
-    ///     when use_desired_velocity is true the desired velocity (i.e. feed forward) is incorporated at the pos_to_rate step
-    void input_pos_vel_accel_xy(Vector3f pos, Vector3f vel, Vector3f accel, float vel_max, float accel_max, float tc);
+    void input_vel_accel_xy(Vector3f vel, float vel_max, float accel_max, float tc);
+    void input_pos_vel_accel_xy(Vector3f pos, Vector3f vel, float vel_max, float accel_max, float tc);
 
     /// update_xy_controller - run the horizontal position controller - should be called at 100hz or higher
     ///     when use_desired_velocity is true the desired velocity (i.e. feed forward) is incorporated at the pos_to_rate step
