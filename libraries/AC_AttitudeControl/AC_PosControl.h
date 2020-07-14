@@ -253,7 +253,8 @@ public:
     ///     results placed in stopping_position vector
     ///     set_accel_xy() should be called before this method to set vehicle acceleration
     ///     set_leash_length() should have been called before this method
-    void get_stopping_point_xy(Vector3f &stopping_point) const;
+    void get_stopping_point_xy(Vector3f &stopping_point, Vector3f curr_vel) const;
+    void get_stopping_point_xy(Vector3f &stopping_point) {get_stopping_point_xy(stopping_point, _inav.get_velocity());}
 
     /// get_distance_to_target - get horizontal distance to position target in cm (used for reporting)
     float get_distance_to_target() const;
@@ -323,7 +324,7 @@ public:
     void init_velmatch_velocity();
 
     // update velmatch velocity
-    void update_velmatch_velocity(float dt, Vector3f target);
+    void update_velmatch_velocity(float dt);
 
     static const struct AP_Param::GroupInfo var_info[];
 
@@ -425,8 +426,8 @@ protected:
     Vector3f    _pos_target;            // target location in cm from home
     Vector3f    _pos_error;             // error between desired and actual position in cm
     Vector3f    _vel_desired;           // desired velocity in cm/s
-    Vector3f    _vel_target;            // velocity target in cm/s calculated by pos_to_rate step
-    Vector3f    _vel_error;             // error between desired and actual acceleration in cm/s
+    Vector3f    _vel_target;            // velocity target in cm/s
+    Vector3f    _vel_error;             // velocity error in cm/s
     Vector3f    _vel_last;              // previous iterations velocity in cm/s
     Vector3f    _accel_desired;         // desired acceleration in cm/s/s (feed forward)
     Vector3f    _accel_target;          // acceleration target in cm/s/s
