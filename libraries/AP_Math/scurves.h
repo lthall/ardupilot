@@ -133,6 +133,8 @@ private:
     float vel_max;      // maximum velocity magnitude
     float _t;           // time
 
+public:
+
     // arrays
     const static uint16_t segments_max = 21;  // maximum number of time segments
     uint16_t num_segs;      // number of time segments being used
