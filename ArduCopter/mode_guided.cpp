@@ -67,6 +67,8 @@ bool ModeGuided::do_user_takeoff_start(float takeoff_alt_cm)
     }
     target_loc.set_alt_cm(takeoff_alt_cm, frame);
 
+    gcs().send_text(MAV_SEVERITY_CRITICAL,"takeoff to %ucm frame:%d",(unsigned)takeoff_alt_cm, (unsigned)frame);
+
     if (!wp_nav->set_wp_destination_loc(target_loc)) {
         // failure to set destination can only be because of missing terrain data
         AP::logger().Write_Error(LogErrorSubsystem::NAVIGATION, LogErrorCode::FAILED_TO_SET_DESTINATION);
