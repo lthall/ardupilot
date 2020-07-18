@@ -111,16 +111,32 @@ void QuadPlane::ship_takeoff_update(void)
     if (!plane.g2.follow.get_target_location_and_velocity(loc, vel)) {
         return;
     }
-    Location origin;
-    if (!ahrs.get_origin(origin)) {
+
+//    Location origin;
+//    if (!ahrs.get_origin(origin)) {
+//        return;
+//    }
+//    const Vector2f diff2d = origin.get_distance_NE(plane.next_WP_loc);
+//    pos.x = diff2d.x*100;
+//    pos.y = diff2d.y*100;
+//    pos.z = 0;
+//    vel *= 100;
+//    vel.z = 0;
+
+    if (!loc.get_vector_from_origin_NEU(pos)) {
         return;
     }
-    const Vector2f diff2d = origin.get_distance_NE(plane.next_WP_loc);
-    pos.x = diff2d.x*100;
-    pos.y = diff2d.y*100;
+    plane.next_WP_loc = loc;
+
     pos.z = 0;
     vel *= 100;
     vel.z = 0;
+    AP::logger().Write("LEN1", "TimeUS,px,py,vx,vy", "Qffff",
+                                           AP_HAL::micros64(),
+                                           double(pos.x * 0.01f),
+                                           double(pos.y * 0.01f),
+                                           double(vel.x * 0.01f),
+                                           double(vel.y * 0.01f));
 
-    pos_control->input_pos_vel_accel_xy(pos, vel, 5, 1, 1);
+    pos_control->input_pos_vel_xy(pos, vel, 500, 500, 1);
 }
