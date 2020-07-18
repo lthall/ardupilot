@@ -37,9 +37,26 @@ void update_pos_vel_accel(float& pos, float& vel, float& accel, float dt)
 // The current acceleration is adjusted with jerk limiting to achieve the desired pos and vel.
 void update_pos_vel_accel_xy(Vector2f& pos, Vector2f& vel, Vector2f& accel, float dt)
 {
+//    Vector2f postemp = pos;
     // move pos, vel to current time frame
     pos = pos + vel * dt + accel * 0.5f * sq(dt);
     vel = vel + accel * dt;
+
+//    AP::logger().Write("SH2",
+//                       "TimeUS,dt,P1X,P1Y,PX,PY,VX,VY,AX,AY",
+//                       "sooooooooo",
+//                       "F000000000",
+//                       "Qfffffffff",
+//                       AP_HAL::micros64(),
+//                       double(dt),
+//                       double(postemp.x * 0.01f),
+//                       double(postemp.y * 0.01f),
+//                       double(pos.x * 0.01f),
+//                       double(pos.y * 0.01f),
+//                       double(vel.x * 0.01f),
+//                       double(vel.y * 0.01f),
+//                       double(accel.x * 0.01f),
+//                       double(accel.y * 0.01f));
 }
 
 void update_pos_vel_accel_xy(Vector3f& pos, Vector3f& vel, Vector3f& accel, float dt)
@@ -177,7 +194,7 @@ void shape_pos_vel_accel_xy(Vector2f& pos_des, const Vector2f& vel_des, const Ve
     pos_des = pos_error + pos;
 
     AP::logger().Write("SHP",
-                       "TimeUS,DPX,DPY,PVX,PVY,PX,PY,VX,VY,AX,AY",
+                       "TimeUS,DPX,DPY,DVX,DVY,PX,PY,VX,VY,AX,AY",
                        "soooooooooo",
                        "F0000000000",
                        "Qffffffffff",
