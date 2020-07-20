@@ -126,7 +126,7 @@ void QuadPlane::ship_takeoff_update(void)
     if (!loc.get_vector_from_origin_NEU(pos)) {
         return;
     }
-    plane.next_WP_loc = loc;
+//    plane.next_WP_loc = loc;
 
     pos.z = 0;
     vel *= 100;
