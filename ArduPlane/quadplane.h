@@ -565,7 +565,6 @@ private:
     AP_Float maximum_takeoff_airspeed;
     uint32_t takeoff_start_time_ms;
     uint32_t takeoff_time_limit_ms;
-    Vector3f takeoff_ofs;
 
     float last_land_final_agl;
 
@@ -577,6 +576,7 @@ private:
             APPROACH
         } stage;
         bool reached_alt;
+        Vector3f offset;
     } ship_landing;
 
     /*
@@ -618,7 +618,12 @@ private:
       are we in a VTOL takeoff
      */
     bool in_vtol_takeoff(void) const;
-    
+
+    /*
+      update landing re-position offset
+     */
+    void update_land_positioning();
+
     // Q assist state, can be enabled, disabled or force. Default to enabled
     Q_ASSIST_STATE_ENUM q_assist_state = Q_ASSIST_STATE_ENUM::Q_ASSIST_ENABLED;
 
