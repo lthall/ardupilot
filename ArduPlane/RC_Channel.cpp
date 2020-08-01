@@ -129,13 +129,13 @@ void RC_Channel_Plane::do_aux_function(const aux_func_t ch_option, const aux_swi
             return;
         }
         switch (ch_flag) {
-        case AuxSwitchPos::HIGH:
+        case HIGH:
             plane.quadplane.pos_control->set_velmatch_state_off();
             break;
-        case AuxSwitchPos::MIDDLE:
+        case MIDDLE:
             plane.quadplane.pos_control->set_velmatch_state_hold();
             break;
-        case AuxSwitchPos::LOW:
+        case LOW:
             plane.quadplane.pos_control->set_velmatch_state_set();
             break;
         }

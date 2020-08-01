@@ -818,12 +818,12 @@ void QuadPlane::multicopter_attitude_rate_update(float yaw_rate_cds)
             // because it is intended to be used with Q_TAILSIT_INPUT=1 where the roll and yaw sticks
             // act in the tailsitter's body frame (i.e. roll is MC/earth frame yaw and
             // yaw is MC/earth frame roll)
-            attitude_control->input_euler_rate_yaw_euler_angle_pitch_bf_roll_m(plane.nav_roll_cd,
+            attitude_control->input_euler_rate_yaw_euler_angle_pitch_bf_roll(false, plane.nav_roll_cd,
                                                                                plane.nav_pitch_cd,
                                                                                yaw_rate_cds);
             return;
         } else if (tailsitter.input_type == TAILSITTER_INPUT_BF_ROLL_P) {
-            attitude_control->input_euler_rate_yaw_euler_angle_pitch_bf_roll_p(plane.nav_roll_cd,
+            attitude_control->input_euler_rate_yaw_euler_angle_pitch_bf_roll(false, plane.nav_roll_cd,
                                                                                plane.nav_pitch_cd,
                                                                                yaw_rate_cds);
             return;
@@ -2315,7 +2315,7 @@ void QuadPlane::vtol_position_controller(void)
 
         if (transition_state == TRANSITION_AIRSPEED_WAIT &&
             now - poscontrol.approach_start_ms > approach_timeout_ms &&
-            ahrs.airspeed_estimate(aspeed) &&
+            ahrs.airspeed_estimate(&aspeed) &&
             aspeed < wp_nav->get_default_speed_xy() * 0.01) {
             gcs().send_text(MAV_SEVERITY_INFO,"Approach timeout v=%.1f d=%.1f",
                             (double)groundspeed, (double)plane.auto_state.wp_distance);
@@ -2382,7 +2382,7 @@ void QuadPlane::vtol_position_controller(void)
         pos_control->set_desired_accel_xy(0.0f,0.0f);
 
         // run horizontal velocity controller
-        pos_control->update_vel_controller_xy();
+        pos_control->update_xy_controller();
 
         // nav roll and pitch are controller by position controller
         plane.nav_roll_cd = pos_control->get_roll();
