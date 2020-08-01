@@ -532,7 +532,6 @@ private:
     AP_Float maximum_takeoff_airspeed;
     uint32_t takeoff_start_time_ms;
     uint32_t takeoff_time_limit_ms;
-    Vector3f takeoff_ofs;
 
     float last_land_final_agl;
 
@@ -544,6 +543,7 @@ private:
             APPROACH
         } stage;
         bool reached_alt;
+        Vector3f offset;
     } ship_landing;
 
     /*
@@ -585,7 +585,12 @@ private:
       are we in a VTOL takeoff
      */
     bool in_vtol_takeoff(void) const;
-    
+
+    /*
+      update landing re-position offset
+     */
+    void update_land_positioning();
+
 public:
     void motor_test_output();
     MAV_RESULT mavlink_motor_test_start(mavlink_channel_t chan, uint8_t motor_seq, uint8_t throttle_type,
