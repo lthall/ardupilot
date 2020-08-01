@@ -28,6 +28,7 @@
 #include "SIM_Gripper_EPM.h"
 #include "SIM_Parachute.h"
 #include "SIM_Precland.h"
+#include "SIM_RichenPower.h"
 #include "SIM_Buzzer.h"
 #include <Filter/Filter.h>
 
@@ -47,6 +48,7 @@ public:
       set simulation speedup
      */
     void set_speedup(float speedup);
+    float get_speedup() { return target_speedup; }
 
     /*
       set instance number
@@ -84,6 +86,16 @@ public:
     // get frame rate of model in Hz
     float get_rate_hz(void) const { return rate_hz; }
 
+    // get number of motors for model
+    uint16_t get_num_motors() const {
+        return num_motors;
+    }
+
+    // get motor offset for model
+    virtual uint16_t get_motors_offset() const {
+        return 0;
+    }
+
     const Vector3f &get_gyro(void) const {
         return gyro;
     }
@@ -114,6 +126,7 @@ public:
     const Location &get_location() const { return location; }
 
     const Vector3f &get_position() const { return position; }
+    float get_range() const;
 
     void get_attitude(Quaternion &attitude) const {
         attitude.from_rotation_matrix(dcm);
@@ -125,6 +138,7 @@ public:
     void set_buzzer(Buzzer *_buzzer) { buzzer = _buzzer; }
     void set_sprayer(Sprayer *_sprayer) { sprayer = _sprayer; }
     void set_parachute(Parachute *_parachute) { parachute = _parachute; }
+    void set_richenpower(RichenPower *_richenpower) { richenpower = _richenpower; }
     void set_gripper_servo(Gripper_Servo *_gripper) { gripper = _gripper; }
     void set_gripper_epm(Gripper_EPM *_gripper_epm) { gripper_epm = _gripper_epm; }
     void set_precland(SIM_Precland *_precland);
@@ -140,8 +154,6 @@ protected:
     float frame_height;
     Matrix3f dcm;                        // rotation matrix, APM conventions, from body to earth
     Vector3f gyro;                       // rad/s
-    Vector3f gyro_prev;                  // rad/s
-    Vector3f ang_accel;                  // rad/s/s
     Vector3f velocity_ef;                // m/s, earth frame
     Vector3f wind_ef;                    // m/s, earth frame
     Vector3f velocity_air_ef;            // velocity relative to airmass, earth frame
@@ -154,10 +166,10 @@ protected:
     float airspeed_pitot;                // m/s, apparent airspeed, as seen by fwd pitot tube
     float battery_voltage = -1.0f;
     float battery_current = 0.0f;
-    float rpm1 = 0;
-    float rpm2 = 0;
+    uint8_t num_motors = 1;
+    float rpm[12];
     uint8_t rcin_chan_count = 0;
-    float rcin[8];
+    float rcin[12];
     float range = -1.0f;                 // rangefinder detection in m
 
     struct {
@@ -178,11 +190,12 @@ protected:
     const float gyro_noise;
     const float accel_noise;
     float rate_hz;
-    float achieved_rate_hz;
     float target_speedup;
     uint64_t frame_time_us;
-    float scaled_frame_time_us;
     uint64_t last_wall_time_us;
+    uint32_t last_fps_report_ms;
+    int64_t sleep_debt_us;
+    uint32_t last_frame_count;
     uint8_t instance;
     const char *autotest_dir;
     const char *frame;
@@ -192,6 +205,10 @@ protected:
 
     // allow for AHRS_ORIENTATION
     AP_Int8 *ahrs_orientation;
+    enum Rotation last_imu_rotation;
+    AP_Float* custom_roll;
+    AP_Float* custom_pitch;
+    AP_Float* custom_yaw;
 
     enum GroundBehaviour {
         GROUND_BEHAVIOR_NONE = 0,
@@ -232,7 +249,7 @@ protected:
     /* add noise based on throttle level (from 0..1) */
     void add_noise(float throttle);
 
-    /* return wall clock time in microseconds since 1970 */
+    /* return a monotonic wall clock time in microseconds */
     uint64_t get_wall_time_us(void) const;
 
     // update attitude and relative position
@@ -255,6 +272,9 @@ protected:
     void add_shove_forces(Vector3f &rot_accel, Vector3f &body_accel);
     void add_twist_forces(Vector3f &rot_accel);
 
+    // get local thermal updraft
+    float get_local_updraft(Vector3f currentPos);
+
 private:
     uint64_t last_time_us = 0;
     uint32_t frame_counter = 0;
@@ -262,7 +282,6 @@ private:
     const uint32_t min_sleep_time;
 
     struct {
-        bool enabled;
         Vector3f accel_body;
         Vector3f gyro;
         Matrix3f rotation_b2e;
@@ -279,6 +298,7 @@ private:
     Gripper_Servo *gripper;
     Gripper_EPM *gripper_epm;
     Parachute *parachute;
+    RichenPower *richenpower;
     SIM_Precland *precland;
 };
 

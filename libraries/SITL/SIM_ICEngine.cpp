@@ -64,7 +64,6 @@ float ICEngine::update(const struct sitl_input &input)
     }
     if (have_choke && state.choke && now - start_time_us > 1000*1000UL) {
         // engine is choked, only run for 1s
-        printf("Engine choke off\n");
         goto engine_off;
     }
     if (last_output <= 0 && !state.starter) {
@@ -72,7 +71,7 @@ float ICEngine::update(const struct sitl_input &input)
         goto engine_off;
     }
     if (start_time_us == 0 && state.starter) {
-        if (throttle_demand > 0.3) {
+        if (throttle_demand > 0.2) {
             printf("too much throttle to start: %.2f\n", throttle_demand);
         } else {
             // start the motor

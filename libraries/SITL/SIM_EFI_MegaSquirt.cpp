@@ -19,6 +19,7 @@
 #include "SIM_Aircraft.h"
 #include <SITL/SITL.h>
 #include <AP_HAL/utility/sparse-endian.h>
+#include <stdio.h>
 
 using namespace SITL;
 
@@ -45,7 +46,7 @@ void EFI_MegaSquirt::update()
     if (!connected) {
         return;
     }
-    float rpm = sitl->state.rpm1;
+    float rpm = sitl->state.rpm[0];
 
     table7.rpm = rpm;
     table7.fuelload = 20;
@@ -136,7 +137,8 @@ void EFI_MegaSquirt::send_table(void)
     }
 
     uint16_t len = htobe16(table_size+1);
-    uint8_t outbuf[1+table_size] {};
+    uint8_t outbuf[1+table_size];
+    outbuf[0] = 0;
     swab(table_offset+(const uint8_t *)&table7, &outbuf[1], table_size);
 
     sock.send(&len, sizeof(len));

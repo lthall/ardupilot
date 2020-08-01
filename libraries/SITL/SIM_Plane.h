@@ -105,9 +105,9 @@ protected:
     uint64_t launch_start_ms;
 
     const uint8_t throttle_servo = 2;
-    const int8_t choke_servo = -1;
-    const int8_t ignition_servo = 14;
-    const int8_t starter_servo = 15;
+    const int8_t choke_servo = 14;
+    const int8_t ignition_servo = 12;
+    const int8_t starter_servo = 13;
     const float slewrate = 100;
     ICEngine icengine{
         throttle_servo,
