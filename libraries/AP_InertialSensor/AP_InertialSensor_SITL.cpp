@@ -64,7 +64,8 @@ void AP_InertialSensor_SITL::generate_accel(uint8_t instance)
     // samples, giving around 0.01 m/s/s
     float accel_noise = 0.01f;
 
-    if (sitl->motors_on) {
+    bool motors_on = sitl->throttle > sitl->ins_noise_throttle_min;
+    if (motors_on) {
         // add extra noise when the motors are on
         accel_noise += instance==0?sitl->accel_noise:sitl->accel2_noise;
     }
@@ -132,7 +133,8 @@ void AP_InertialSensor_SITL::generate_gyro(uint8_t instance)
     // minimum gyro noise is less than 1 bit
     float gyro_noise = ToRad(0.04f);
     
-    if (sitl->motors_on) {
+    bool motors_on = sitl->throttle > sitl->ins_noise_throttle_min;
+    if (motors_on) {
         // add extra noise when the motors are on
         gyro_noise += ToRad(sitl->gyro_noise);
     }
