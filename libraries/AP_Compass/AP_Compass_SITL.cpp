@@ -31,7 +31,7 @@ AP_Compass_SITL::AP_Compass_SITL()
         // Scroll through the registered compasses, and set the offsets
         for (uint8_t i=0; i<_num_compass; i++) {
             if (_compass.get_offsets(i).is_zero()) {
-                _compass.set_offsets(i, _sitl->mag_ofs);
+                _compass.set_offsets(i, _sitl->mag_ofs[i]);
             }
         }
         
@@ -48,12 +48,12 @@ AP_Compass_SITL::AP_Compass_SITL()
 */
 void AP_Compass_SITL::_setup_eliptical_correcion(void)
 {
-    Vector3f diag = _sitl->mag_diag.get();
+    Vector3f diag = _sitl->mag_diag[0].get();
     if (diag.is_zero()) {
         diag(1,1,1);
     }
     const Vector3f &diagonals = diag;
-    const Vector3f &offdiagonals = _sitl->mag_offdiag;
+    const Vector3f &offdiagonals = _sitl->mag_offdiag[0];
     
     if (diagonals == _last_dia && offdiagonals == _last_odi) {
         return;
@@ -119,13 +119,13 @@ void AP_Compass_SITL::_timer()
     _setup_eliptical_correcion();        
     
     new_mag_data = _eliptical_corr * new_mag_data;
-    new_mag_data -= _sitl->mag_ofs.get();
+    new_mag_data -= _sitl->mag_ofs[0].get();
 
     for (uint8_t i=0; i<_num_compass; i++) {
         Vector3f f = new_mag_data;
         if (i == 0) {
             // rotate the first compass, allowing for testing of external compass rotation
-            f.rotate_inverse((enum Rotation)_sitl->mag_orient.get());
+            f.rotate_inverse((enum Rotation)_sitl->mag_orient[i].get());
             // and add in AHRS_ORIENTATION setting if not an external compass
             if (get_board_orientation() == ROTATION_CUSTOM) {
                 f = _sitl->ahrs_rotation * f;
