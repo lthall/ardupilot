@@ -33,6 +33,8 @@ public:
         return true;
     }
 
+    ssize_t get_system_outqueue_length() const;
+
     void set_blocking_writes(bool blocking) override
     {
         _nonblocking_writes = !blocking;
@@ -120,6 +122,11 @@ private:
     bool _packetise;
     uint16_t _mc_myport;
     uint32_t last_tick_us;
+
+    // if this is not -1 then data should be written here instead of
+    // _fd.  This is to support simulated serial devices, which use a
+    // pipe for read and a pipe for write
+    int _fd_write = -1;
 };
 
 #endif
