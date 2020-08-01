@@ -34,6 +34,8 @@
 
 #include "AP_EFI_NWPMU.h"
 
+#if HAL_WITH_EFI_NMPMU
+
 extern const AP_HAL::HAL& hal;
 
 #define debug_can(level_debug, fmt, args...) do { if ((level_debug) <= AP::can().get_debug_level_driver(_driver_index)) { printf(fmt, ##args); }} while (0)
@@ -240,4 +242,5 @@ AP_EFI_NWPMU *AP_EFI_NWPMU::get_singleton(uint8_t driver_index) {
     return static_cast<AP_EFI_NWPMU*>(AP::can().get_driver(driver_index));
 }
 
+#endif
 #endif // HAL_WITH_UAVCAN

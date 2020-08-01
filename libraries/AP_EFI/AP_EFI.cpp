@@ -80,7 +80,7 @@ void AP_EFI::init(void)
             backend = new AP_EFI_Serial_MS(*this);
             break;
         case EFI_COMMUNICATION_TYPE_NWPMU:
-#if HAL_WITH_UAVCAN
+#if HAL_WITH_EFI_NMPMU
             for (uint8_t i = 0; i < AP::can().get_num_drivers(); i++) {
                 backend = AP_EFI_NWPMU::get_singleton(i);
                 if (backend != nullptr) {
@@ -191,7 +191,7 @@ void AP_EFI::send_mavlink_status(mavlink_channel_t chan)
         (state.intake_manifold_temperature - 273.0f),
         (state.cylinder_status[0].cylinder_head_temperature - 273.0f),
         state.cylinder_status[0].ignition_timing_deg,
-        state.cylinder_status[0].injection_time_ms);
+        state.cylinder_status[0].injection_time_ms, 0, 0, 0);
 }
 
 namespace AP {

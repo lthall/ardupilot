@@ -20,10 +20,16 @@
  
 #pragma once
 
+#ifndef HAL_WITH_EFI_NMPMU
+#define HAL_WITH_EFI_NMPMU HAL_WITH_UAVCAN && !HAL_MINIMIZE_FEATURES
+#endif
+
 #include "AP_EFI.h"
 #include "AP_EFI_Backend.h"
 #include <AP_HAL/CAN.h>
 #include <AP_HAL/Semaphores.h>
+
+#if HAL_WITH_EFI_NMPMU
 
 class AP_EFI_NWPMU : public AP_HAL::CANProtocol, public AP_EFI_Backend {
 public:
@@ -121,3 +127,5 @@ private:
     static const uint8_t CAN_IFACE_INDEX = 0; // FIXME: why do we need this, what does it mean?
 
 };
+#endif // HAL_WITH_EFI_NMPMU
+
