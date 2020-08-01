@@ -2880,7 +2880,10 @@ bool QuadPlane::verify_vtol_takeoff(const AP_Mission::Mission_Command &cmd)
         // takeoff height.
         plane.SpdHgt_Controller->reset();
     }
-    
+
+    // don't crosstrack on next WP
+    plane.auto_state.next_wp_crosstrack = false;
+
     return true;
 }
 
