@@ -74,6 +74,10 @@ void RC_Channel_Plane::init_aux_function(const RC_Channel::aux_func_t ch_option,
         // want to startup with reverse thrust
         break;
 
+    case AUX_FUNC::VELOCITY_MATCH:
+        do_aux_function(ch_option, ch_flag);
+        break;
+
     default:
         // handle in parent class
         RC_Channel::init_aux_function(ch_option, ch_flag);
@@ -118,6 +122,24 @@ void RC_Channel_Plane::do_aux_function(const aux_func_t ch_option, const aux_swi
         do_aux_function_change_mode(Mode::Number::TAKEOFF, ch_flag);
         break;
 
+
+    case AUX_FUNC::VELOCITY_MATCH:
+        if (!plane.quadplane.available()) {
+            // not functional if no quadplane available
+            return;
+        }
+        switch (ch_flag) {
+        case AuxSwitchPos::HIGH:
+            plane.quadplane.pos_control->set_velmatch_state_off();
+            break;
+        case AuxSwitchPos::MIDDLE:
+            plane.quadplane.pos_control->set_velmatch_state_hold();
+            break;
+        case AuxSwitchPos::LOW:
+            plane.quadplane.pos_control->set_velmatch_state_set();
+            break;
+        }
+        break;
 
     default:
         RC_Channel::do_aux_function(ch_option, ch_flag);
