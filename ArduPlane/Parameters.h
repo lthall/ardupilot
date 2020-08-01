@@ -576,7 +576,12 @@ public:
 #if EFI_ENABLED
     // EFI Engine Monitor
     AP_EFI efi;
-#endif  
+#endif
+
+    AP_Follow follow;
+
+    // min initial climb in RTL
+    AP_Int16        rtl_climb_min;
 };
 
 extern const AP_Param::Info var_info[];
