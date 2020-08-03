@@ -62,7 +62,7 @@ void QuadPlane::ship_landing_RTL_update(void)
     }
     Location loc = loc0;
 
-    IGNORE_RETURN(plane.ahrs.set_home(loc));
+    ship_landing_set_home(loc);
 
     const float thr_in = get_pilot_land_throttle();
 
@@ -126,6 +126,7 @@ void QuadPlane::ship_landing_RTL_update(void)
                 fabsf(wrap_180(ground_bearing_deg - heading_deg)) < 2*margin) {
                 ship_landing.stage = ship_landing.APPROACH;
                 loc = loc0;
+                IGNORE_RETURN(plane.ahrs.set_home(loc));
                 loc.alt += qrtl_alt * 100;
                 gcs().send_text(MAV_SEVERITY_INFO, "Starting approach");
                 plane.set_mode(plane.mode_qrtl, ModeReason::RTL_COMPLETE_SWITCHING_TO_VTOL_LAND_RTL);
@@ -153,6 +154,10 @@ void QuadPlane::ship_update_xy(void)
     if (!loc.get_vector_from_origin_NEU(pos_ship)) {
         return;
     }
+
+    ship_landing_set_home(loc);
+
+    ship_landing.target_vel = vel;
 
     pos = pos_ship;
     // add in offset for takeoff position and landing repositioning
@@ -277,4 +282,47 @@ void QuadPlane::ship_landing_set_alt(void)
     ship_landing.have_commanded_alt = true;
     ship_landing.commanded_alt = plane.next_WP_loc.alt;
     ship_landing.reached_alt = false;
+}
+
+/*
+  adjust ground speed vector for target velocity
+*/
+void QuadPlane::ship_landing_adjust_velocity(Vector2f &vel)
+{
+    if (ship_landing_enabled()) {
+        vel.x -= ship_landing.target_vel.x;
+        vel.y -= ship_landing.target_vel.y;
+    }
+}
+
+/*
+  set home for ship landing
+*/
+void QuadPlane::ship_landing_set_home(const Location &loc)
+{
+    // set at max 1Hz
+    uint32_t now = AP_HAL::millis();
+    if (now - ship_landing.last_home_set_ms < 1000) {
+        return;
+    }
+    ship_landing.last_home_set_ms = now;
+    IGNORE_RETURN(plane.ahrs.set_home(loc));
+}
+
+/*
+  update for ship landing approach
+*/
+void QuadPlane::ship_update_approach(void)
+{
+    if (in_ship_landing()) {
+        Location loc;
+        Vector3f vel;
+
+        if (!plane.g2.follow.get_target_location_and_velocity_ofs_abs(loc, vel)) {
+            return;
+        }
+
+        ship_landing_set_home(loc);
+        plane.next_WP_loc = loc;
+    }
 }

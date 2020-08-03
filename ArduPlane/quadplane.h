@@ -549,6 +549,8 @@ private:
         bool have_beacon;
         bool have_commanded_alt;
         int32_t commanded_alt;
+        Vector3f target_vel;
+        uint32_t last_home_set_ms;
     } ship_landing;
 
     /*
@@ -607,6 +609,11 @@ private:
     void ship_update_xy(void);
 
     /*
+      update for ship landing approach
+     */
+    void ship_update_approach(void);
+    
+    /*
       get offset to ship takeoff target
      */
     void ship_set_takeoff_offset(void);
@@ -630,6 +637,16 @@ private:
       handler for changing target alt in ship landing RTL
     */
     void ship_landing_set_alt(void);
+
+    /*
+      adjust ground speed vector for target velocity
+     */
+    void ship_landing_adjust_velocity(Vector2f &vel);
+
+    /*
+      set home for ship landing
+     */
+    void ship_landing_set_home(const Location &loc);
 
 public:
     void motor_test_output();

@@ -2253,12 +2253,16 @@ void QuadPlane::vtol_position_controller(void)
 
     case QPOS_APPROACH:
     case QPOS_AIRBRAKE: {
+        ship_update_approach();
+
         /*
           fixed wing approach to point where we need to transition to VTOL
          */
         const Vector2f diff_wp = plane.current_loc.get_distance_NE(loc);
         const float distance = diff_wp.length();
-        const float groundspeed = ahrs.groundspeed();
+        Vector2f groundspeed_vec = ahrs.groundspeed_vector();
+        ship_landing_adjust_velocity(groundspeed_vec);
+        const float groundspeed = groundspeed_vec.length();
 
         // run fixed wing navigation
         plane.nav_controller->update_waypoint(plane.prev_WP_loc, loc);
@@ -2326,6 +2330,8 @@ void QuadPlane::vtol_position_controller(void)
     }
 
     case QPOS_POSITION1: {
+        ship_update_approach();
+
         const Vector2f diff_wp = plane.current_loc.get_distance_NE(loc);
         const float distance = diff_wp.length();
         Vector2f groundspeed = ahrs.groundspeed_vector();
@@ -2363,10 +2369,9 @@ void QuadPlane::vtol_position_controller(void)
         }
 
         Vector3f targ_vel;
-        if (in_ship_landing() &&
-            plane.g2.follow.get_target_location_and_velocity_ofs_abs(plane.next_WP_loc, targ_vel)) {
-            target_speed_xy.x += targ_vel.x;
-            target_speed_xy.y += targ_vel.y;
+        if (in_ship_landing()) {
+            target_speed_xy.x += ship_landing.target_vel.x;
+            target_speed_xy.y += ship_landing.target_vel.y;
 
             // zero offset in POS1 and POS2
             ship_landing.offset.zero();
@@ -3091,7 +3096,7 @@ int8_t QuadPlane::forward_throttle_pct(void)
     Vector3f vel_error_body = ahrs.get_rotation_body_to_ned().transposed() * ((desired_velocity_cms*0.01f) - vel_ned);
 
     // find component of velocity error in fwd body frame direction
-    float fwd_vel_error = vel_error_body * Vector3f(1,0,0);
+    float fwd_vel_error = vel_error_body.x;
 
     // scale forward velocity error by maximum airspeed
     fwd_vel_error /= MAX(plane.aparm.airspeed_max, 5);
@@ -3101,12 +3106,32 @@ int8_t QuadPlane::forward_throttle_pct(void)
     // WP nav speed.
     fwd_vel_error -= (wp_nav->get_default_speed_xy() * 0.01f) * plane.nav_pitch_cd / (float)plane.aparm.pitch_limit_max_cd;
 
-    if (should_relax() && vel_ned.length() < 1) {
+    Vector2f groundspeed(vel_ned.x, vel_ned.y);
+    if (in_ship_landing()) {
+        ship_landing_adjust_velocity(groundspeed);
+    }
+
+    if (should_relax() && groundspeed.length() < 1) {
         // we may be landed
         fwd_vel_error = 0;
         vel_forward.integrator *= 0.95f;
     }
-    
+
+    /*
+      reduce forward throttle when vtol throttle is very low, to
+      prevent situations where we can't descend due to high wind
+      giving lift
+     */
+    float vtol_throttle = motors->get_throttle();
+    if (motors->limit.throttle_lower) {
+        // treat lower throttle limit as zero
+        vtol_throttle = 0;
+    }
+    if (vtol_throttle < 0.1) {
+        vel_forward.integrator *= 0.98f;
+        fwd_vel_error *= vtol_throttle*10;
+    }
+
     // integrator as throttle percentage (-100 to 100)
     vel_forward.integrator += fwd_vel_error * deltat * vel_forward.gain * 100;
 
@@ -3359,10 +3384,16 @@ bool QuadPlane::in_transition(void) const
  */
 float QuadPlane::stopping_distance(void)
 {
+    Vector2f groundspeed = plane.ahrs.groundspeed_vector();
+
+    if (in_vtol_land_approach() && in_ship_landing()) {
+        ship_landing_adjust_velocity(groundspeed);
+    }
+
     // use v^2/(2*accel). This is only quite approximate as the drag
     // varies with pitch, but it gives something for the user to
     // control the transition distance in a reasonable way
-    return plane.ahrs.groundspeed_vector().length_squared() / (2 * transition_decel);
+    return groundspeed.length_squared() / (2 * transition_decel);
 }
 
 #define LAND_CHECK_ANGLE_ERROR_DEG  30.0f       // maximum angle error to be considered landing
