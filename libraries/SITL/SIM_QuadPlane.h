@@ -47,6 +47,8 @@ public:
 
 private:
     Frame *frame;
+    const float vtol_drag_speed = 25;
+    const float vtol_drag_mss = 2.0; // at 25 m/s
 };
 
 } // namespace SITL
