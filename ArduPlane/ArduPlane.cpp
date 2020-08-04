@@ -613,6 +613,10 @@ void Plane::update_alt()
             target_alt = MAX(target_alt, prev_WP_loc.alt + (g2.rtl_climb_min+10)*100);
         }
 
+        if (quadplane.in_vtol_land_approach()) {
+            target_alt = quadplane.poscontrol.approach_alt*100;
+        }
+
         SpdHgt_Controller->update_pitch_throttle(target_alt,
                                                  target_airspeed_cm,
                                                  flight_stage,

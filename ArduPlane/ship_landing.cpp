@@ -85,6 +85,7 @@ void QuadPlane::ship_landing_RTL_update(void)
         } else {
             loc.alt += qrtl_alt*100;
         }
+        poscontrol.approach_alt = qrtl_alt;
 
         // we consider the alt to be reached if we get below 5m above
         // the target
@@ -315,7 +316,7 @@ void QuadPlane::ship_landing_set_home(const Location &loc)
 void QuadPlane::ship_update_approach(void)
 {
     if (in_ship_landing()) {
-        Location loc;
+        Location loc {};
         Vector3f vel;
 
         if (!plane.g2.follow.get_target_location_and_velocity_ofs_abs(loc, vel)) {
@@ -324,5 +325,6 @@ void QuadPlane::ship_update_approach(void)
 
         ship_landing_set_home(loc);
         plane.next_WP_loc = loc;
+        plane.next_WP_loc.alt += qrtl_alt*100;
     }
 }
