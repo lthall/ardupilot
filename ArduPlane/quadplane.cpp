@@ -2253,6 +2253,8 @@ void QuadPlane::vtol_position_controller(void)
 
     case QPOS_APPROACH:
     case QPOS_AIRBRAKE: {
+        plane.auto_throttle_mode = true;
+
         ship_update_approach();
 
         /*
@@ -2306,6 +2308,7 @@ void QuadPlane::vtol_position_controller(void)
                             (double)groundspeed, (double)plane.auto_state.wp_distance);
             poscontrol.state = QPOS_POSITION1;
             poscontrol.pos1_initialised = false;
+            plane.auto_throttle_mode = false;
         }
 
         // cope with failure of forward thrust during approach. If we
@@ -2324,6 +2327,7 @@ void QuadPlane::vtol_position_controller(void)
             gcs().send_text(MAV_SEVERITY_INFO,"Approach timeout v=%.1f d=%.1f",
                             (double)groundspeed, (double)plane.auto_state.wp_distance);
             poscontrol.state = QPOS_POSITION2;
+            plane.auto_throttle_mode = false;
         }
 
         break;
