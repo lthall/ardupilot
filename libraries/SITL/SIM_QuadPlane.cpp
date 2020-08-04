@@ -115,6 +115,14 @@ void QuadPlane::update(const struct sitl_input &input)
 
     frame->calculate_forces(*this, input, quad_rot_accel, quad_accel_body, &rpm[1], false);
 
+    // add vtol transition drag
+    if (quad_accel_body.length() > 0) {
+        float vx = velocity_air_bf.x;
+        const float drag = vtol_drag_mss / sq(vtol_drag_speed);
+        float drag_mss = drag * sq(vx);
+        quad_accel_body.x -= drag_mss;
+    }
+
     // estimate voltage and current
     frame->current_and_voltage(battery_voltage, battery_current);
 
