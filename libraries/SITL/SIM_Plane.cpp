@@ -20,6 +20,7 @@
 #include "SIM_Plane.h"
 
 #include <stdio.h>
+#include <ctype.h>
 
 using namespace SITL;
 
@@ -32,19 +33,24 @@ Plane::Plane(const char *frame_str) :
        scaling from motor power to Newtons. Allows the plane to hold
        vertically against gravity when the motor is at hover_throttle
     */
-    thrust_scale = (mass * GRAVITY_MSS) / hover_throttle;
     frame_height = 0.1f;
     num_motors = 1;
 
     ground_behavior = GROUND_BEHAVIOR_FWD_ONLY;
-    
-    if (strstr(frame_str, "-heavy")) {
-        mass = 8;
+
+    const char *p;
+    if ((p = strstr(frame_str, "-mass")) != nullptr) {
+        p += strlen("-mass");
+        if (isdigit(*p)) {
+            mass = atof(p);
+            ::printf("Using mass %.1f\n", mass);
+        } else {
+            mass = 8;
+        }
     }
     if (strstr(frame_str, "-jet")) {
         // a 22kg "jet", level top speed is 102m/s
         mass = 22;
-        thrust_scale = (mass * GRAVITY_MSS) / hover_throttle;
     }
     if (strstr(frame_str, "-revthrust")) {
         reverse_thrust = true;
@@ -88,6 +94,7 @@ Plane::Plane(const char *frame_str) :
         mass = 2.0;
         coefficient.c_drag_p = 0.05;
     }
+    thrust_scale = (mass * GRAVITY_MSS) / hover_throttle;
 }
 
 /*
