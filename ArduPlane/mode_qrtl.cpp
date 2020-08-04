@@ -3,6 +3,8 @@
 
 bool ModeQRTL::_enter()
 {
+    plane.auto_throttle_mode = true;
+    plane.auto_navigation_mode = true;
     return plane.mode_qstabilize._enter();
 }
 
