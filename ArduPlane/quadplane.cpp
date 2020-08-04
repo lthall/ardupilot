@@ -2328,6 +2328,8 @@ void QuadPlane::vtol_position_controller(void)
                             (double)groundspeed, (double)plane.auto_state.wp_distance);
             poscontrol.state = QPOS_POSITION2;
             plane.auto_throttle_mode = false;
+            vel_forward.integrator = SRV_Channels::get_output_scaled(SRV_Channel::k_throttle);
+            vel_forward.last_ms = AP_HAL::millis();
         }
 
         break;
@@ -2346,14 +2348,7 @@ void QuadPlane::vtol_position_controller(void)
         if (!poscontrol.pos1_initialised) {
             poscontrol.pos1_initialised = true;
             poscontrol.pre_decel_gndspd = groundspeed.length();
-            
-            float throttle = SRV_Channels::get_output_scaled(SRV_Channel::k_throttle);
-            if (!plane.have_reverse_thrust()) {
-                vel_forward.integrator = constrain_int16(throttle, 0, 100);
-            } else {
-               vel_forward.integrator = constrain_int16(throttle, -100, 100);  
-            }
-
+            vel_forward.integrator = SRV_Channels::get_output_scaled(SRV_Channel::k_throttle);
             vel_forward.last_ms = AP_HAL::millis();
         }
 
@@ -2437,13 +2432,8 @@ void QuadPlane::vtol_position_controller(void)
         /*
           for final land repositioning and descent we run the position controller
          */
+        ship_update_approach();
 
-        Vector3f targ_vel;
-        if (in_ship_landing()) {
-            // allow for moving target on landing
-            plane.g2.follow.get_target_location_and_velocity_ofs_abs(plane.next_WP_loc, targ_vel);
-        }
-        
         // also run fixed wing navigation
         plane.nav_controller->update_waypoint(plane.prev_WP_loc, loc);
     }
@@ -2521,12 +2511,12 @@ void QuadPlane::vtol_position_controller(void)
         }
         if (plane.control_mode == &plane.mode_qrtl || plane.control_mode == &plane.mode_guided || vtol_loiter_auto) {
             plane.ahrs.get_position(plane.current_loc);
-            float target_altitude = plane.next_WP_loc.alt;
+            float target_altitude = plane.home.alt + poscontrol.approach_alt*100;
             if (poscontrol.slow_descent) {
                 // gradually descend as we approach target
                 plane.auto_state.wp_proportion = plane.current_loc.line_path_proportion(plane.prev_WP_loc, plane.next_WP_loc);
                 target_altitude = linear_interpolate(plane.prev_WP_loc.alt,
-                                                     plane.next_WP_loc.alt,
+                                                     target_altitude,
                                                      plane.auto_state.wp_proportion,
                                                      0, 1);
             }
@@ -2717,10 +2707,11 @@ void QuadPlane::control_qrtl(void)
 void QuadPlane::init_qrtl(void)
 {
     // use do_RTL() to setup next_WP_loc
-    plane.do_RTL(plane.home.alt + qrtl_alt*100UL);
+    plane.do_RTL(plane.home.alt);
     plane.prev_WP_loc = plane.current_loc;
     poscontrol.slow_descent = (plane.current_loc.alt > plane.next_WP_loc.alt);
     poscontrol.state = QPOS_APPROACH;
+    poscontrol.approach_alt = qrtl_alt;
     poscontrol.approach_start_ms = AP_HAL::millis();
     pos_control->set_desired_accel_xy(0.0f, 0.0f);
     pos_control->init_xy_controller();
@@ -2815,10 +2806,10 @@ bool QuadPlane::do_vtol_land(const AP_Mission::Mission_Command& cmd)
     pos_control->get_vel_xy_pid().reset_I();
     
     plane.set_next_WP(cmd.content.location);
-    // initially aim for current altitude
-    plane.next_WP_loc.alt = plane.current_loc.alt;
     poscontrol.state = QPOS_APPROACH;
     poscontrol.approach_start_ms = AP_HAL::millis();
+    // initially aim for current altitude
+    poscontrol.approach_alt = (plane.current_loc.alt - plane.home.alt) * 0.01;
     pos_control->set_desired_accel_xy(0.0f, 0.0f);
     pos_control->init_xy_controller();
 
@@ -3231,6 +3222,7 @@ void QuadPlane::guided_start(void)
     poscontrol.approach_start_ms = AP_HAL::millis();
     guided_takeoff = false;
     setup_target_position();
+    poscontrol.approach_alt = (plane.next_WP_loc.alt - plane.home.alt) * 0.01;
     poscontrol.slow_descent = (plane.current_loc.alt > plane.next_WP_loc.alt);
 }
 
@@ -3291,6 +3283,12 @@ void QuadPlane::set_alt_target_current(void)
  */
 void QuadPlane::adjust_alt_target(float altitude_cm)
 {
+    Location ekf_origin;
+    if (AP::ahrs().get_origin(ekf_origin)) {
+        // pos_control works against origin altitude, convert from
+        // home alt
+        altitude_cm += plane.home.alt - ekf_origin.alt;
+    }
     float current_alt = inertial_nav.get_altitude();
     // don't let it get beyond 50cm from current altitude
     float target_cm = constrain_float(altitude_cm, current_alt-50, current_alt+50);

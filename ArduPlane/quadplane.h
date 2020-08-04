@@ -410,6 +410,8 @@ private:
         bool slow_descent;
         uint32_t approach_start_ms;
         bool pos1_initialised;
+        // approach altitude in meters above home
+        float approach_alt;
     } poscontrol;
 
     struct {
