@@ -386,6 +386,9 @@ Vector2f stopping_point_xy(Vector2f velocity, float p, float accel_max)
 {
     // calculate current velocity
     float velocity_length = velocity.length();
+    if (is_zero(velocity_length)) {
+        return Vector2f(0,0);
+    }
     float stopping_distance = stopping_point(velocity_length, p, accel_max);
     return velocity.normalized() * stopping_distance;
 }
