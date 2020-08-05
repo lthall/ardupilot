@@ -2374,7 +2374,7 @@ void QuadPlane::vtol_position_controller(void)
         float tc = 2.0 * sqrtf(lean_angle / angle_accel);
         Vector3f vel = Vector3f(target_speed_xy.x*100, target_speed_xy.y*100, 0.0);
         pos_control->input_vel_xy( vel,
-                                      MAX(wp_nav->get_default_speed_xy(), vel.length()),
+                                      MAX(pos_control->get_max_speed_xy(), vel.length()),
                                       wp_nav->get_wp_acceleration(), tc);
         // reset position controller xy target to current position
         // because we only want velocity control (no position control)
@@ -2459,7 +2459,7 @@ void QuadPlane::vtol_position_controller(void)
                 pos = Vector3f(poscontrol.target.x, poscontrol.target.y, 0.0);
             }
             pos_control->input_pos_vel_xy(pos, vel,
-                                          wp_nav->get_default_speed_xy(),
+                                          pos_control->get_max_speed_xy(),
                                           wp_nav->get_wp_acceleration(), tc);
         }
 
@@ -3111,7 +3111,7 @@ int8_t QuadPlane::forward_throttle_pct(void)
     // add in a component from our current pitch demand. This tends to
     // move us to zero pitch. Assume that LIM_PITCH would give us the
     // WP nav speed.
-    fwd_vel_error -= (wp_nav->get_default_speed_xy() * 0.01f) * plane.nav_pitch_cd / (float)plane.aparm.pitch_limit_max_cd;
+    fwd_vel_error -= (pos_control->get_max_speed_xy() * 0.01f) * plane.nav_pitch_cd / (float)plane.aparm.pitch_limit_max_cd;
 
     Vector2f groundspeed(vel_ned.x, vel_ned.y);
     if (in_ship_landing()) {
