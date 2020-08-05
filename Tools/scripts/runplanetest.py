@@ -35,19 +35,24 @@ def wait_time(mav, simtime):
         if t2 - t1 > simtime:
             break
 
-cmd = 'sim_vehicle.py -j4 -D -f plane'
+cmd = '../../Tools/autotest/sim_vehicle.py -f quadplane-mass5 -D -L SFO_Bay -G'
 mavproxy = pexpect.spawn(cmd, logfile=sys.stdout, timeout=30)
-mavproxy.expect("Ground start complete")
 
 mav = mavutil.mavlink_connection('127.0.0.1:14550')
 
-wait_mode(mav, ['MANUAL'])
+mavproxy.send('vehicle 1\n')
+wait_mode(mav, ['FBWA'])
+mavproxy.send('speedup 10\n')
 mavproxy.send('wp list\n')
 mavproxy.expect('Requesting')
-wait_time(mav, 30)
-mavproxy.send('arm throttle\n')
-mavproxy.send('auto\n')
+mavproxy.send('speedup 10\n')
+wait_time(mav, 20)
+mavproxy.expect("using GPS")
+mavproxy.send('mode AUTO\n')
 wait_mode(mav, ['AUTO'])
+mavproxy.send('arm throttle\n')
+wait_time(mav, 60)
+mavproxy.send('rtl\n')
 mavproxy.send('module load console\n')
 mavproxy.send('module load map\n')
 mavproxy.send('map set showsimpos 1\n')
