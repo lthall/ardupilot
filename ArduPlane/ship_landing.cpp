@@ -324,6 +324,7 @@ void QuadPlane::ship_update_approach(void)
         }
 
         ship_landing_set_home(loc);
+        ship_landing.target_vel = vel;
         plane.next_WP_loc = loc;
         plane.next_WP_loc.alt += qrtl_alt*100;
     }
