@@ -441,12 +441,14 @@ void AP_TECS::_update_speed_demand(void)
     const float dt = 0.1;
 
     // Apply rate limit
-    if ((_TAS_dem - TAS_dem_previous) > (velRateMax * dt))
+    if ((_TAS_dem - TAS_dem_previous) > (velRateMax * dt) &&
+        _flight_stage != AP_Vehicle::FixedWing::FLIGHT_AIRBRAKE)
     {
         _TAS_dem_adj = TAS_dem_previous + velRateMax * dt;
         _TAS_rate_dem = velRateMax;
     }
-    else if ((_TAS_dem - TAS_dem_previous) < (velRateMin * dt))
+    else if ((_TAS_dem - TAS_dem_previous) < (velRateMin * dt) &&
+             _flight_stage != AP_Vehicle::FixedWing::FLIGHT_AIRBRAKE)
     {
         _TAS_dem_adj = TAS_dem_previous + velRateMin * dt;
         _TAS_rate_dem = velRateMin;
@@ -548,7 +550,8 @@ void AP_TECS::_detect_underspeed(void)
         _flags.underspeed = false;
     }
 
-    if (_flight_stage == AP_Vehicle::FixedWing::FLIGHT_VTOL) {
+    if (_flight_stage == AP_Vehicle::FixedWing::FLIGHT_VTOL ||
+        _flight_stage == AP_Vehicle::FixedWing::FLIGHT_AIRBRAKE) {
         _flags.underspeed = false;
     } else if (((_TAS_state < _TASmin * 0.9f) &&
             (_throttle_dem >= _THRmaxf * 0.95f) &&
@@ -823,7 +826,7 @@ void AP_TECS::_update_pitch(void)
         // speed. Speed is also taken care of independently of
         // height. This is needed as the usual relationship of speed
         // and height is broken by the VTOL motors
-        SKE_weighting = 0.0f;        
+        SKE_weighting = 0.0f;
     } else if ( _flags.underspeed || _flight_stage == AP_Vehicle::FixedWing::FLIGHT_TAKEOFF || _flight_stage == AP_Vehicle::FixedWing::FLIGHT_ABORT_LAND || _flags.is_gliding) {
         SKE_weighting = 2.0f;
     } else if (_flags.is_doing_auto_land) {
@@ -939,6 +942,18 @@ void AP_TECS::_update_pitch(void)
         _pitch_dem = _last_pitch_dem - ptchRateIncr;
     }
 
+    const float airbrake_pitch_limit = MAX(radians(2), _airbrake_initial_pitch);
+    const float airbrake_height_limit = 1;
+    if (_flight_stage == AP_Vehicle::FixedWing::FLIGHT_AIRBRAKE &&
+        _height - _hgt_dem_adj > -airbrake_height_limit &&
+        _pitch_dem > airbrake_pitch_limit) {
+        // when airbraking before a VTOL landing we don't want to
+        // pitch up much unless we lose a significant amount of height
+        // (more than 2m)
+        _integSEB_state = 0;
+        _PITCHmaxf = airbrake_pitch_limit;
+    }
+
     // re-constrain pitch demand
     _pitch_dem = constrain_float(_pitch_dem, _PITCHminf, _PITCHmaxf);
 
@@ -1007,6 +1022,13 @@ void AP_TECS::update_pitch_throttle(int32_t hgt_dem_cm,
     _update_pitch_throttle_last_usec = now;
 
     _flags.is_gliding = _flags.gliding_requested || _flags.propulsion_failed || aparm.throttle_max==0;
+
+    if (_flight_stage != flight_stage &&
+        flight_stage == AP_Vehicle::FixedWing::FLIGHT_AIRBRAKE) {
+        // remember initial pitch when entering airbrake
+        _airbrake_initial_pitch = _ahrs.pitch;
+    }
+
     _flags.is_doing_auto_land = (flight_stage == AP_Vehicle::FixedWing::FLIGHT_LAND);
     _distance_beyond_land_wp = distance_beyond_land_wp;
     _flight_stage = flight_stage;
