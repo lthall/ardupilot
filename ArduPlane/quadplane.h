@@ -402,13 +402,10 @@ private:
     };
     struct {
         enum position_control_state state;
-        float target_decel;
-        float pre_decel_gndspd;
-        Vector2f target_velocity;
-        float max_speed;
+        float start_closing_vel;
+        float start_dist;
         Vector3f target;
         bool slow_descent;
-        uint32_t approach_start_ms;
         bool pos1_initialised;
         // approach altitude in meters above home
         float approach_alt;
@@ -649,6 +646,27 @@ private:
       set home for ship landing
      */
     void ship_landing_set_home(const Location &loc);
+
+    /*
+      calculate our closing velocity vector on the landing
+      point. Takes account of the landing point having a velocity
+     */
+    Vector2f landing_closing_velocity();
+
+    /*
+      calculate our desired closing velocity vector on the landing point.
+    */
+    Vector2f landing_desired_closing_velocity();
+
+    /*
+      initialise QPOS_APPROACH
+    */
+    void poscontrol_init_approach(void);
+
+    /*
+      get target airspeed for landing, for use by TECS
+     */
+    float get_land_airspeed(void);
 
 public:
     void motor_test_output();
