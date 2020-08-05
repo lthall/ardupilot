@@ -2570,8 +2570,14 @@ void QuadPlane::setup_target_position(void)
     pos_control->set_max_speed_z(-pilot_velocity_z_max, pilot_velocity_z_max);
     pos_control->set_max_accel_z(pilot_accel_z);
 
+    float max_speed = wp_nav->get_default_speed_xy();
+    if (in_ship_landing()) {
+        // ensure we have at least 3m/s speed over the speed of the landing target
+        max_speed = MAX(max_speed, ship_landing.target_vel.length()*100+300);
+    }
+
     // setup horizontal speed and acceleration
-    pos_control->set_max_speed_xy(wp_nav->get_default_speed_xy());
+    pos_control->set_max_speed_xy(max_speed);
     pos_control->set_max_accel_xy(wp_nav->get_wp_acceleration());
 }
 
