@@ -657,6 +657,10 @@ void Plane::update_flight_stage(void)
             } else {
                 set_flight_stage(AP_Vehicle::FixedWing::FLIGHT_NORMAL);
             }
+        } else if (control_mode == &mode_qrtl &&
+                   quadplane.poscontrol.state == QuadPlane::QPOS_AIRBRAKE) {
+            // vtol motors running in airbrake mode
+            set_flight_stage(AP_Vehicle::FixedWing::FLIGHT_VTOL);
         } else if (control_mode != &mode_takeoff) {
             // If not in AUTO then assume normal operation for normal TECS operation.
             // This prevents TECS from being stuck in the wrong stage if you switch from
