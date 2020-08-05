@@ -162,6 +162,25 @@ void shape_vel_xy(Vector3f& vel_input, const Vector3f& vel, Vector3f& accel, flo
     vel_input.y = vel_input_2f.y;
     accel.x = accel_2f.x;
     accel.y = accel_2f.y;
+
+#ifndef HAL_NO_LOGGING
+    AP::logger().Write("SHP",
+                       "TimeUS,DPX,DPY,DVX,DVY,PX,PY,VX,VY,AX,AY",
+                       "soooooooooo",
+                       "F0000000000",
+                       "Qffffffffff",
+                       AP_HAL::micros64(),
+                       double(0.0f),
+                       double(0.0f),
+                       double(vel_input.x * 0.01f),
+                       double(vel_input.y * 0.01f),
+                       double(0.0f),
+                       double(0.0f),
+                       double(vel.x * 0.01f),
+                       double(vel.y * 0.01f),
+                       double(accel.x * 0.01f),
+                       double(accel.y * 0.01f));
+#endif
 }
 
 /* shape_pos_vel calculate a jerk limited path from the current position, velocity and acceleration to an input position and velocity.
