@@ -1549,6 +1549,10 @@ void QuadPlane::update_transition(void)
         poscontrol.state == QPOS_AIRBRAKE) {
         // motors on for airbraking in landing
         motors->set_desired_spool_state(AP_Motors::DesiredSpoolState::THROTTLE_UNLIMITED);
+        attitude_control->relax_attitude_controllers();
+        pos_control->relax_alt_hold_controllers(0);
+        attitude_control->rate_controller_run();
+        pos_control->update_z_controller();
         motors->output();
         return;
     }
@@ -2258,12 +2262,13 @@ void QuadPlane::vtol_position_controller(void)
     const float groundspeed = plane.ahrs.groundspeed();
     const float distance = plane.auto_state.wp_distance;
 
-    AP::logger().Write("QPOS", "TimeUS,State,Cspd,DCspd,Dist", "QBfff",
+    AP::logger().Write("QPOS", "TimeUS,State,Cspd,DCspd,Dist,TAsp", "QBffff",
                        AP_HAL::micros64(),
                        uint8_t(poscontrol.state),
                        closing_speed,
                        desired_closing_speed,
-                       distance);
+                       distance,
+                       get_land_airspeed());
     
     // horizontal position control
     switch (poscontrol.state) {
@@ -2308,29 +2313,25 @@ void QuadPlane::vtol_position_controller(void)
           before we transition. This gives a smoother transition and
           gives us a nice lot of deceleration
          */
-        const float airbrake_time = 2;
         if (!is_tailsitter() &&
             poscontrol.state == QPOS_APPROACH &&
-            distance < stop_distance + airbrake_time*groundspeed) {
+            distance < stop_distance) {
             gcs().send_text(MAV_SEVERITY_INFO,"VTOL airbrake v=%.1f d=%.1f",
                             (double)groundspeed, (double)distance);
             poscontrol.state = QPOS_AIRBRAKE;
         }
 
-        // init attitude controller to the current attitude, so it is ready
-        // for transition to VTOL control
-        attitude_control->input_euler_angle_roll_pitch_yaw(plane.nav_roll_cd,
-                                                           plane.nav_pitch_cd,
-                                                           plane.ahrs.yaw_sensor, false);
-
-
         /*
           we must switch to POSITION1 if our airspeed drops below the
           assist speed. We additionally switch tp POSITION1 if we are
-          too far above our desired velocity profile
+          too far above our desired velocity profile, or our attitude
+          has deviated too much
          */
+        const int32_t attitude_error_threshold_cd = 1000;
         if (aspeed < aspeed_threshold ||
-            closing_speed > MAX(desired_closing_speed*1.2, desired_closing_speed+2)) {
+            closing_speed > MAX(desired_closing_speed*1.2, desired_closing_speed+2) ||
+            labs(plane.ahrs.roll_sensor - plane.nav_roll_cd) > attitude_error_threshold_cd ||
+            labs(plane.ahrs.pitch_sensor - plane.nav_pitch_cd) > attitude_error_threshold_cd) {
             gcs().send_text(MAV_SEVERITY_INFO,"VTOL position1 started v=%.1f d=%.1f",
                             (double)groundspeed, (double)plane.auto_state.wp_distance);
             poscontrol.state = QPOS_POSITION1;
@@ -3549,8 +3550,13 @@ Vector2f QuadPlane::landing_desired_closing_velocity()
     if (dist < 1) {
         return Vector2f(0,0);
     }
-    // linear velocity ramp
-    return diff_wp * (poscontrol.start_closing_vel / poscontrol.start_dist);
+
+    // base target speed based on sqrt of distance
+    float target_speed = safe_sqrt(2*transition_decel*dist);
+    target_speed = MIN(target_speed, poscontrol.start_closing_vel);
+    Vector2f target_speed_xy = diff_wp.normalized() * target_speed;
+
+    return target_speed_xy;
 }
 
 /*
