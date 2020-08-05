@@ -2346,6 +2346,7 @@ void QuadPlane::vtol_position_controller(void)
             poscontrol_init_approach();
         }
 
+        pos_control->init_pos_vel_xy();
         break;
     }
 
@@ -2366,17 +2367,19 @@ void QuadPlane::vtol_position_controller(void)
             ship_landing.offset.zero();
         }
 
-        pos_control->set_desired_velocity_xy(target_speed_xy.x*100,
-                                             target_speed_xy.y*100);
-
+        // using the small angle approximation for simplicity and a conservative result when maximum acceleration is large
+        // this assumes the time taken to achieve the maximum acceleration angle is limited by the angular acceleration rather than maximum angular rate.
+        float lean_angle = wp_nav->get_wp_acceleration() / (GRAVITY_MSS * 100.0 * M_PI / 18000.0);
+        float angle_accel = MIN(attitude_control->get_accel_pitch_max(), attitude_control->get_accel_roll_max());
+        float tc = 2.0 * sqrtf(lean_angle / angle_accel);
+        Vector3f vel = Vector3f(target_speed_xy.x*100, target_speed_xy.y*100, 0.0);
+        pos_control->input_vel_xy( vel,
+                                      MAX(wp_nav->get_default_speed_xy(), vel.length()),
+                                      wp_nav->get_wp_acceleration(), tc);
         // reset position controller xy target to current position
         // because we only want velocity control (no position control)
         const Vector3f& curr_pos = inertial_nav.get_position();
         pos_control->set_xy_target(curr_pos.x, curr_pos.y);
-        pos_control->set_desired_accel_xy(0.0f,0.0f);
-
-        // run horizontal velocity controller
-        pos_control->update_xy_controller();
 
         // nav roll and pitch are controller by position controller
         plane.nav_roll_cd = pos_control->get_roll();
@@ -2404,9 +2407,6 @@ void QuadPlane::vtol_position_controller(void)
             plane.auto_state.wp_distance < 5 ||
             closing_speed < desired_closing_speed * 0.7) {
             poscontrol.state = QPOS_POSITION2;
-            loiter_nav->clear_pilot_desired_acceleration();
-            loiter_nav->init_target();
-            pos_control->init_pos_vel_xy();
             gcs().send_text(MAV_SEVERITY_INFO,"VTOL position2 started v=%.1f d=%.1f",
                             closing_speed, (double)plane.auto_state.wp_distance);
         }
@@ -2443,16 +2443,24 @@ void QuadPlane::vtol_position_controller(void)
             update_land_positioning();
             ship_update_xy();
         } else {
-            pos_control->set_desired_velocity_xy(0.0f,0.0f);
-            pos_control->set_desired_accel_xy(0.0f,0.0f);
+
+            // using the small angle approximation for simplicity and a conservative result when maximum acceleration is large
+            // this assumes the time taken to achieve the maximum acceleration angle is limited by the angular acceleration rather than maximum angular rate.
+            float lean_angle = wp_nav->get_wp_acceleration() / (GRAVITY_MSS * 100.0 * M_PI / 18000.0);
+            float angle_accel = MIN(attitude_control->get_accel_pitch_max(), attitude_control->get_accel_roll_max());
+            float tc = 2.0 * sqrtf(lean_angle / angle_accel);
+            Vector3f pos, vel;
 
             // set position control target and update
             if (should_relax()) {
-                loiter_nav->soften_for_landing();
+                pos_control->set_limit_accel_xy();
+                pos = inertial_nav.get_position();
             } else {
-                pos_control->set_xy_target(poscontrol.target.x, poscontrol.target.y);
+                pos = Vector3f(poscontrol.target.x, poscontrol.target.y, 0.0);
             }
-            pos_control->update_xy_controller();
+            pos_control->input_pos_vel_xy(pos, vel,
+                                          wp_nav->get_default_speed_xy(),
+                                          wp_nav->get_wp_acceleration(), tc);
         }
 
         // nav roll and pitch are controller by position controller
