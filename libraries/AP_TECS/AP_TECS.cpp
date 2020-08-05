@@ -432,7 +432,8 @@ void AP_TECS::_update_speed_demand(void)
         _TAS_dem_adj = TAS_dem_previous + velRateMax * dt;
         _TAS_rate_dem = velRateMax;
     }
-    else if ((_TAS_dem - TAS_dem_previous) < (velRateMin * dt))
+    else if ((_TAS_dem - TAS_dem_previous) < (velRateMin * dt) &&
+             _flight_stage != AP_Vehicle::FixedWing::FLIGHT_VTOL)
     {
         _TAS_dem_adj = TAS_dem_previous + velRateMin * dt;
         _TAS_rate_dem = velRateMin;
