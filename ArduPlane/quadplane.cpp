@@ -2374,7 +2374,6 @@ void QuadPlane::vtol_position_controller(void)
         float tc = 2.0 * sqrtf(lean_angle / angle_accel);
         Vector3f vel = Vector3f(target_speed_xy.x*100, target_speed_xy.y*100, 0.0);
         pos_control->input_vel_xy( vel,
-                                      MAX(pos_control->get_max_speed_xy(), vel.length()),
                                       wp_nav->get_wp_acceleration(), tc);
         // reset position controller xy target to current position
         // because we only want velocity control (no position control)
@@ -2459,6 +2458,7 @@ void QuadPlane::vtol_position_controller(void)
                 pos = Vector3f(poscontrol.target.x, poscontrol.target.y, 0.0);
             }
             pos_control->input_pos_vel_xy(pos, vel,
+                                          0.0,
                                           pos_control->get_max_speed_xy(),
                                           wp_nav->get_wp_acceleration(), tc);
         }
