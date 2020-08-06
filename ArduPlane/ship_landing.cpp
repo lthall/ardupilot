@@ -357,16 +357,19 @@ float QuadPlane::ship_landing_stopping_distance()
     // rotate wind to be in approach frame
     wind2d.rotate(-radians(heading_deg));
 
-    // calculate approach ground speed with pythagoras theorom
-    float groundspeed = safe_sqrt(sq(tas) - sq(wind2d.y));
+    // ship velocity rotated to the approach frame
+    Vector2f ship2d(ship_landing.target_vel.x, ship_landing.target_vel.y);
+    ship2d.rotate(-radians(heading_deg));
 
-    // add in component of wind in direction of ship
-    groundspeed += wind2d.x;
-
-    // subtract ship velocity
-    groundspeed -= ship_landing.target_vel.x;
+    // calculate closing speed
+    // use pythagoras theorem to solve for the wind triangle
+    float closing_speed = safe_sqrt(sq(tas) - sq(wind2d.y));
+    // include the wind in the direction of the ship
+    closing_speed += wind2d.x;
+    // account for the ship velocity
+    closing_speed -= ship2d.x;
 
     // calculate stopping distance
-    return sq(groundspeed) / (2 * transition_decel);
+    return sq(closing_speed) / (2 * transition_decel);
 }
 
