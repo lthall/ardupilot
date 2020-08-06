@@ -189,6 +189,7 @@ void QuadPlane::ship_update_xy(void)
     float angle_accel = MIN(attitude_control->get_accel_pitch_max(), attitude_control->get_accel_roll_max());
     float tc = 2.0 * sqrtf(lean_angle / angle_accel);
     pos_control->input_pos_vel_xy(pos, vel,
+                                  0.0,
                                   MAX(wp_nav->get_default_speed_xy(), 200+ship_landing.target_vel.length()*100),
                                   wp_nav->get_wp_acceleration(), tc);
 
