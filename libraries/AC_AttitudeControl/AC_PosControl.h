@@ -253,7 +253,7 @@ public:
     ///     The time constant also defines the time taken to achieve the maximum acceleration.
     ///     The time constant must be positive.
     ///     The function alters the input velocity to be the velocity that the system could reach zero acceleration in the minimum time.
-    void input_vel_xy(Vector3f& vel, float vel_max, float accel_max, float tc);
+    void input_vel_xy(Vector3f& vel, float accel_max, float tc);
 
     /// input_pos_vel_xy calculate a jerk limited path from the current position, velocity and acceleration to an input position and velocity.
     ///     The function takes the current position, velocity, and acceleration and calculates the required jerk limited adjustment to the acceleration for the next time dt.
@@ -265,7 +265,7 @@ public:
     ///     The time constant also defines the time taken to achieve the maximum acceleration.
     ///     The time constant must be positive.
     ///     The function alters the input position to be the closest position that the system could reach zero acceleration in the minimum time.
-    void input_pos_vel_xy(Vector3f& pos, const Vector3f& vel, float vel_max, float accel_max, float tc);
+    void input_pos_vel_xy(Vector3f& pos, const Vector3f& vel, float vel_max, float vel_correction_max, float accel_max, float tc);
 
     /// update_xy_controller - run the horizontal position controller - should be called at 100hz or higher
     ///     when use_desired_velocity is true the desired velocity (i.e. feed forward) is incorporated at the pos_to_rate step

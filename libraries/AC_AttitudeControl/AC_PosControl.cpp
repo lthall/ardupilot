@@ -903,7 +903,7 @@ void AC_PosControl::init_pos_vel_xy()
 ///     The time constant also defines the time taken to achieve the maximum acceleration.
 ///     The time constant must be positive.
 ///     The function alters the input velocity to be the velocity that the system could reach zero acceleration in the minimum time.
-void AC_PosControl::input_vel_xy(Vector3f& vel, float vel_max, float accel_max, float tc)
+void AC_PosControl::input_vel_xy(Vector3f& vel, float accel_max, float tc)
 {
     // compute dt
     const uint64_t now_us = AP_HAL::micros64();
@@ -925,7 +925,7 @@ void AC_PosControl::input_vel_xy(Vector3f& vel, float vel_max, float accel_max, 
     } else {
         update_pos_vel_accel_xy(_pos_target, _vel_desired, _accel_desired, dt);
     }
-    shape_vel_xy(vel, _vel_desired, _accel_desired, vel_max, accel_max, tc, dt);
+    shape_vel_xy(vel, _vel_desired, _accel_desired, accel_max, tc, dt);
 
     // run horizontal position controller
     run_xy_controller(dt);
@@ -944,7 +944,7 @@ void AC_PosControl::input_vel_xy(Vector3f& vel, float vel_max, float accel_max, 
 ///     The time constant also defines the time taken to achieve the maximum acceleration.
 ///     The time constant must be positive.
 ///     The function alters the input position to be the closest position that the system could reach zero acceleration in the minimum time.
-void AC_PosControl::input_pos_vel_xy(Vector3f& pos, const Vector3f& vel, float vel_max, float accel_max, float tc)
+void AC_PosControl::input_pos_vel_xy(Vector3f& pos, const Vector3f& vel, float vel_max, float vel_correction_max, float accel_max, float tc)
 {
     // compute dt
     const uint64_t now_us = AP_HAL::micros64();
@@ -966,7 +966,7 @@ void AC_PosControl::input_pos_vel_xy(Vector3f& pos, const Vector3f& vel, float v
     } else {
         update_pos_vel_accel_xy(_pos_target, _vel_desired, _accel_desired, dt);
     }
-    shape_pos_vel_xy(pos, vel, _pos_target, _vel_desired, _accel_desired, vel_max, accel_max, tc, dt);
+    shape_pos_vel_xy(pos, vel, _pos_target, _vel_desired, _accel_desired, vel_max, vel_correction_max, accel_max, tc, dt);
 
     // run horizontal position controller
     run_xy_controller(dt);
