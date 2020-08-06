@@ -251,8 +251,8 @@ private:
     void setup_defaults(void);
 
     // calculate a stopping distance for fixed-wing to vtol transitions
-    float stopping_distance(void);
-    
+    float stopping_distance();
+
     AP_Int16 transition_time_ms;
 
     // transition deceleration, m/s/s
@@ -657,6 +657,11 @@ private:
       calculate our desired closing velocity vector on the landing point.
     */
     Vector2f landing_desired_closing_velocity();
+
+    // calculate a stopping distance for fixed-wing to vtol
+    // transitions assuming we are at TECS_LAND_ARSPD and aligned with
+    // landing target velocity
+    float ship_landing_stopping_distance();
 
     /*
       initialise QPOS_APPROACH

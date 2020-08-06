@@ -3395,7 +3395,7 @@ bool QuadPlane::in_transition(void) const
 /*
   calculate current stopping distance for a quadplane in fixed wing flight
  */
-float QuadPlane::stopping_distance(void)
+float QuadPlane::stopping_distance()
 {
     Vector2f groundspeed = plane.ahrs.groundspeed_vector();
 
@@ -3578,7 +3578,8 @@ Vector2f QuadPlane::landing_desired_closing_velocity()
 */
 float QuadPlane::get_land_airspeed(void)
 {
-    if (poscontrol.state == QPOS_APPROACH) {
+    if (poscontrol.state == QPOS_APPROACH ||
+        plane.control_mode == &plane.mode_rtl) {
         float land_airspeed = plane.SpdHgt_Controller->get_land_airspeed();
         if (!is_positive(land_airspeed)) {
             land_airspeed = plane.aparm.airspeed_cruise_cm * 0.01;
