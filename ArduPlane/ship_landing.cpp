@@ -70,12 +70,16 @@ void QuadPlane::ship_landing_RTL_update(void)
         ship_landing.stage == ship_landing.DESCEND) {
         // hold loiter behind and to one side
         const float radius = plane.aparm.loiter_radius;
-        const float holdoff_dist = radius*1.5;
+        float holdoff_dist = radius*1.5;
+        float stop_distance = ship_landing_stopping_distance();
+
+        // increase holdoff distance by up to 50% to ensure we can stop
+        holdoff_dist = MAX(holdoff_dist, MIN(holdoff_dist*1.5, stop_distance));
 
         float heading_deg;
         plane.g2.follow.get_target_heading_deg(heading_deg);
 
-        Vector2f ofs(-fabsf(holdoff_dist), holdoff_dist);
+        Vector2f ofs(-fabsf(holdoff_dist), radius);
         ofs.rotate(radians(heading_deg));
         loc.offset(ofs.x, ofs.y);
         if (ship_landing.have_commanded_alt) {
@@ -329,3 +333,39 @@ void QuadPlane::ship_update_approach(void)
         plane.next_WP_loc.alt += qrtl_alt*100;
     }
 }
+
+/*
+  calculate stopping distance assuming we are flying at
+  TECS_LAND_ARSPD and are approaching the landing target from
+  behind. Take account of the wind estimate to get approach
+  groundspeed
+ */
+float QuadPlane::ship_landing_stopping_distance()
+{
+    // get the target true airspeed for approach
+    const float tas = get_land_airspeed() * plane.ahrs.get_EAS2TAS();
+
+    // get the heading of the ship
+    float heading_deg;
+    plane.g2.follow.get_target_heading_deg(heading_deg);
+
+    // add in wind in direction of flight
+    const Vector3f wind = plane.ahrs.wind_estimate();
+    Vector2f wind2d(wind.x, wind.y);
+
+    // rotate wind to be in approach frame
+    wind2d.rotate(-radians(heading_deg));
+
+    // calculate approach ground speed with pythagoras theorom
+    float groundspeed = safe_sqrt(sq(tas) - sq(wind2d.y));
+
+    // add in component of wind in direction of ship
+    groundspeed += wind2d.x;
+
+    // subtract ship velocity
+    groundspeed -= ship_landing.target_vel.x;
+
+    // calculate stopping distance
+    return sq(groundspeed) / (2 * transition_decel);
+}
+
