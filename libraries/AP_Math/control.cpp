@@ -66,8 +66,9 @@ void update_pos_vel_accel_xy(Vector3f& pos, Vector3f& vel, Vector3f& accel, floa
  The time constant also defines the time taken to achieve the maximum acceleration.
  The time constant must be positive.
  The function alters the input velocity to be the velocity that the system could reach zero acceleration in the minimum time.
+ The accel_max limit can be removed by setting it to zero.
 */
-void shape_vel(float& vel_target, float vel, float& accel, float vel_max, float accel_max, float tc, float dt)
+void shape_vel(float& vel_input, float vel, float& accel, float accel_max, float tc, float dt)
 {
     // sanity check tc
     if (is_positive(tc)) {
@@ -75,11 +76,8 @@ void shape_vel(float& vel_target, float vel, float& accel, float vel_max, float 
         float KPa = 1.0 / tc;
         float jerk_max = accel_max * KPa;
 
-        // limit velocity to vel_max
-        vel_target = constrain_float(vel_target, -vel_max, vel_max);
-
         // velocity error to be corrected
-        float vel_error = vel_target - vel;
+        float vel_error = vel_input - vel;
 
         // acceleration to correct velocity
         float accel_target = vel_error * KPa;
@@ -90,11 +88,13 @@ void shape_vel(float& vel_target, float vel, float& accel, float vel_max, float 
         accel = accel + accel_delta;
 
         // limit acceleration to accel_max
-        accel = constrain_float(accel, -accel_max, accel_max);
+        if (is_positive(accel_max)) {
+            accel = constrain_float(accel, -accel_max, accel_max);
+        }
 
         // Calculate maximum pos_input and vel_input based on limited system
         vel_error = accel / KPa;
-        vel_target = vel_error + vel;
+        vel_input = vel_error + vel;
     }
 }
 
@@ -108,19 +108,17 @@ void shape_vel(float& vel_target, float vel, float& accel, float vel_max, float 
  The time constant also defines the time taken to achieve the maximum acceleration.
  The time constant must be positive.
  The function alters the input velocity to be the velocity that the system could reach zero acceleration in the minimum time.
+ The accel_max limit can be removed by setting it to zero.
 */
-void shape_vel_xy(Vector2f& vel_target, const Vector2f& vel, Vector2f& accel, float vel_max, float accel_max, float tc, float dt)
+void shape_vel_xy(Vector2f& vel_input, const Vector2f& vel, Vector2f& accel, float accel_max, float tc, float dt)
 {
     if (is_positive(tc)) {
         // Calculate time constants and limits to ensure stable operation
         float KPa = 1.0 / tc;
         float jerk_max = accel_max * KPa;
 
-        // limit velocity to vel_max
-        limit_vector_length(vel_target.x, vel_target.y, vel_max);
-
         // velocity error to be corrected
-        Vector2f vel_error = vel_target - vel;
+        Vector2f vel_error = vel_input - vel;
 
         // acceleration to correct velocity
         Vector2f accel_target = vel_error * KPa;
@@ -131,11 +129,13 @@ void shape_vel_xy(Vector2f& vel_target, const Vector2f& vel, Vector2f& accel, fl
         accel = accel + accel_delta;
 
         // limit acceleration to accel_max
-        limit_vector_length(accel.x, accel.y, accel_max);
+        if (is_positive(accel_max)) {
+            limit_vector_length(accel.x, accel.y, accel_max);
+        }
 
         // Calculate maximum pos_input and vel_input based on limited system
         vel_error = accel / KPa;
-        vel_target = vel_error + vel;
+        vel_input = vel_error + vel;
     }
 }
 
@@ -150,14 +150,15 @@ void shape_vel_xy(Vector2f& vel_target, const Vector2f& vel, Vector2f& accel, fl
  The time constant must be positive.
  The function alters the input velocity to be the velocity that the system could reach zero acceleration in the minimum time.
  This function operates on the x and y axis of Vector3f inputs.
+ The accel_max limit can be removed by setting it to zero.
 */
-void shape_vel_xy(Vector3f& vel_input, const Vector3f& vel, Vector3f& accel, float vel_max, float accel_max, float tc, float dt)
+void shape_vel_xy(Vector3f& vel_input, const Vector3f& vel, Vector3f& accel, float accel_max, float tc, float dt)
 {
     Vector2f vel_input_2f = Vector2f(vel_input.x, vel_input.y);
     Vector2f vel_2f = Vector2f(vel.x, vel.y);
     Vector2f accel_2f = Vector2f(accel.x, accel.y);
 
-    shape_vel_xy(vel_input_2f, vel_2f, accel_2f, vel_max, accel_max, tc, dt);
+    shape_vel_xy(vel_input_2f, vel_2f, accel_2f, accel_max, tc, dt);
     vel_input.x = vel_input_2f.x;
     vel_input.y = vel_input_2f.y;
     accel.x = accel_2f.x;
@@ -193,8 +194,9 @@ void shape_vel_xy(Vector3f& vel_input, const Vector3f& vel, Vector3f& accel, flo
  The time constant also defines the time taken to achieve the maximum acceleration.
  The time constant must be positive.
  The function alters the input position to be the closest position that the system could reach zero acceleration in the minimum time.
+ The vel_max, vel_correction_max, and accel_max limits can be removed by setting the desired limit to zero.
 */
-void shape_pos_vel(float& pos_input, float vel_input, float pos, float vel, float& accel, float vel_max, float accel_max, float tc, float dt)
+void shape_pos_vel(float& pos_input, float vel_input, float pos, float vel, float& accel, float vel_max, float vel_correction_max, float accel_max, float tc, float dt)
 {
     if (is_positive(tc)) {
         // Calculate time constants and limits to ensure stable operation
@@ -207,10 +209,20 @@ void shape_pos_vel(float& pos_input, float vel_input, float pos, float vel, floa
         // velocity to correct position
         float vel_target = sqrt_controller(pos_error, KPv, accel_tc_max, dt);
 
+        // limit velocity correction to vel_correction_max
+        if (is_positive(vel_correction_max)) {
+            vel_target = constrain_float(vel_target, -vel_correction_max, vel_correction_max);
+        }
+
         // velocity correction with input velocity
         vel_target = vel_target + vel_input;
 
-        shape_vel(vel_target, vel, accel, vel_max, accel_max, tc, dt);
+        // limit velocity to vel_max
+        if (is_positive(vel_max)) {
+            vel_target = constrain_float(vel_target, -vel_max, vel_max);
+        }
+
+        shape_vel(vel_target, vel, accel, accel_max, tc, dt);
 
         vel_target = vel_target - vel_input;
         pos_error = stopping_point(vel_target, KPv, accel_tc_max);
@@ -229,8 +241,9 @@ void shape_pos_vel(float& pos_input, float vel_input, float pos, float vel, floa
  The time constant must be positive.
  The function alters the input position to be the closest position that the system could reach zero acceleration in the minimum time.
  This function operates on the x and y axis of both Vector2f or Vector3f inputs.
+ The vel_max, vel_correction_max, and accel_max limits can be removed by setting the desired limit to zero.
 */
-void shape_pos_vel_xy(Vector2f& pos_input, const Vector2f& vel_input, const Vector2f& pos, const Vector2f& vel, Vector2f& accel, float vel_max, float accel_max, float tc, float dt)
+void shape_pos_vel_xy(Vector2f& pos_input, const Vector2f& vel_input, const Vector2f& pos, const Vector2f& vel, Vector2f& accel, float vel_max, float vel_correction_max, float accel_max, float tc, float dt)
 {
     if (is_positive(tc)) {
         // Calculate time constants and limits to ensure stable operation
@@ -243,10 +256,20 @@ void shape_pos_vel_xy(Vector2f& pos_input, const Vector2f& vel_input, const Vect
         // velocity to correct position
         Vector2f vel_target = sqrt_controller_xy(pos_error, KPv, accel_tc_max);
 
+        // limit velocity correction to vel_correction_max
+        if (is_positive(vel_correction_max)) {
+            limit_vector_length(vel_target.x, vel_target.y, vel_correction_max);
+        }
+
         // velocity correction with input velocity
         vel_target = vel_target + vel_input;
 
-        shape_vel_xy(vel_target, vel, accel, vel_max, accel_max, tc, dt);
+        // limit velocity to vel_max
+        if (is_positive(vel_max)) {
+            limit_vector_length(vel_target.x, vel_target.y, vel_max);
+        }
+
+        shape_vel_xy(vel_target, vel, accel, accel_max, tc, dt);
 
         vel_target = vel_target - vel_input;
         pos_error = stopping_point_xy(vel_target, KPv, accel_tc_max);
@@ -285,8 +308,9 @@ void shape_pos_vel_xy(Vector2f& pos_input, const Vector2f& vel_input, const Vect
  The function alters the input position to be the closest position that the system could reach zero acceleration in the minimum time.
  This function operates on the x and y axis of both Vector2f or Vector3f inputs.
  This function operates on the x and y axis of Vector3f inputs.
+ The vel_max, vel_correction_max, and accel_max limits can be removed by setting the desired limit to zero.
 */
-void shape_pos_vel_xy(Vector3f& pos_input, const Vector3f& vel_input, const Vector3f& pos, const Vector3f& vel, Vector3f& accel, float vel_max, float accel_max, float tc, float dt)
+void shape_pos_vel_xy(Vector3f& pos_input, const Vector3f& vel_input, const Vector3f& pos, const Vector3f& vel, Vector3f& accel, float vel_max, float vel_correction_max, float accel_max, float tc, float dt)
 {
     Vector2f pos_input_2f = Vector2f(pos_input.x, pos_input.y);
     Vector2f vel_input_2f = Vector2f(vel_input.x, vel_input.y);
@@ -294,7 +318,7 @@ void shape_pos_vel_xy(Vector3f& pos_input, const Vector3f& vel_input, const Vect
     Vector2f vel_2f = Vector2f(vel.x, vel.y);
     Vector2f accel_2f = Vector2f(accel.x, accel.y);
 
-    shape_pos_vel_xy(pos_input_2f, vel_input_2f, pos_2f, vel_2f, accel_2f, vel_max, accel_max, tc, dt);
+    shape_pos_vel_xy(pos_input_2f, vel_input_2f, pos_2f, vel_2f, accel_2f, vel_max, vel_correction_max, accel_max, tc, dt);
     pos_input.x = pos_input_2f.x;
     pos_input.y = pos_input_2f.y;
     accel.x = accel_2f.x;
