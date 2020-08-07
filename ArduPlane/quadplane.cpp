@@ -2192,8 +2192,7 @@ bool QuadPlane::in_vtol_mode(void) const
         return false;
     }
     if (in_vtol_land_approach() &&
-        (poscontrol.state == QPOS_APPROACH ||
-         poscontrol.state == QPOS_AIRBRAKE)) {
+        poscontrol.state == QPOS_APPROACH) {
         return false;
     }
     return (plane.control_mode == &plane.mode_qstabilize ||
@@ -2283,9 +2282,6 @@ void QuadPlane::vtol_position_controller(void)
         // speed for crossover to POSITION1 controller
         const float aspeed_threshold = MAX(plane.aparm.airspeed_min, assist_speed);
 
-        // check stall speed for switch to P1
-        plane.auto_throttle_mode = true;
-
         ship_update_approach();
 
         // run fixed wing navigation
@@ -2316,8 +2312,9 @@ void QuadPlane::vtol_position_controller(void)
         if (!is_tailsitter() &&
             poscontrol.state == QPOS_APPROACH &&
             distance < stop_distance) {
-            gcs().send_text(MAV_SEVERITY_INFO,"VTOL airbrake v=%.1f d=%.1f",
-                            (double)groundspeed, (double)distance);
+            gcs().send_text(MAV_SEVERITY_INFO,"VTOL airbrake v=%.1f d=%.1f h=%.1f",
+                            (double)groundspeed, (double)distance,
+                            plane.relative_ground_altitude(plane.g.rangefinder_landing));
             poscontrol.state = QPOS_AIRBRAKE;
         }
 
@@ -2332,14 +2329,15 @@ void QuadPlane::vtol_position_controller(void)
             closing_speed > MAX(desired_closing_speed*1.2, desired_closing_speed+2) ||
             labs(plane.ahrs.roll_sensor - plane.nav_roll_cd) > attitude_error_threshold_cd ||
             labs(plane.ahrs.pitch_sensor - plane.nav_pitch_cd) > attitude_error_threshold_cd) {
-            gcs().send_text(MAV_SEVERITY_INFO,"VTOL position1 started v=%.1f d=%.1f",
-                            (double)groundspeed, (double)plane.auto_state.wp_distance);
+            gcs().send_text(MAV_SEVERITY_INFO,"VTOL position1 v=%.1f d=%.1f h=%.1f",
+                            (double)groundspeed,
+                            (double)plane.auto_state.wp_distance,
+                            plane.relative_ground_altitude(plane.g.rangefinder_landing));
             poscontrol.state = QPOS_POSITION1;
 
             // switch to vfwd for throttle control
             vel_forward.integrator = SRV_Channels::get_output_scaled(SRV_Channel::k_throttle);
             vel_forward.last_ms = AP_HAL::millis();
-            plane.auto_throttle_mode = false;
         }
 
         if (poscontrol.state == QPOS_APPROACH) {
@@ -2406,8 +2404,9 @@ void QuadPlane::vtol_position_controller(void)
             plane.auto_state.wp_distance < 5 ||
             closing_speed < desired_closing_speed * 0.7) {
             poscontrol.state = QPOS_POSITION2;
-            gcs().send_text(MAV_SEVERITY_INFO,"VTOL position2 started v=%.1f d=%.1f",
-                            closing_speed, (double)plane.auto_state.wp_distance);
+            gcs().send_text(MAV_SEVERITY_INFO,"VTOL position2 v=%.1f d=%.1f h=%.1f",
+                            closing_speed, (double)plane.auto_state.wp_distance,
+                            plane.relative_ground_altitude(plane.g.rangefinder_landing));
         }
         break;
     }
@@ -2715,7 +2714,6 @@ void QuadPlane::poscontrol_init_approach(void)
     poscontrol.start_dist = plane.current_loc.get_distance(plane.next_WP_loc);
     pos_control->set_desired_accel_xy(0.0f, 0.0f);
     pos_control->init_xy_controller();
-
 }
 
 /*

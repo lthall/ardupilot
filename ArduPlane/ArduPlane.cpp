@@ -178,7 +178,7 @@ void Plane::ahrs_update()
  */
 void Plane::update_speed_height(void)
 {
-    if (auto_throttle_mode) {
+    if (speed_height_controller_active()) {
 	    // Call TECS 50Hz update. Note that we call this regardless of
 	    // throttle suppressed, as this needs to be running for
 	    // takeoff detection
@@ -590,7 +590,7 @@ void Plane::update_alt()
 
     update_flight_stage();
 
-    if (auto_throttle_mode && !throttle_suppressed) {        
+    if (speed_height_controller_active() && !throttle_suppressed) {
 
         float distance_beyond_land_wp = 0;
         if (flight_stage == AP_Vehicle::FixedWing::FLIGHT_LAND && current_loc.past_interval_finish_line(prev_WP_loc, next_WP_loc)) {
@@ -635,7 +635,7 @@ void Plane::update_alt()
 void Plane::update_flight_stage(void)
 {
     // Update the speed & height controller states
-    if (auto_throttle_mode && !throttle_suppressed) {        
+    if (auto_throttle_mode && !throttle_suppressed) {
         if (control_mode == &mode_auto) {
             if (quadplane.in_vtol_auto()) {
                 set_flight_stage(AP_Vehicle::FixedWing::FLIGHT_VTOL);
@@ -721,6 +721,20 @@ float Plane::tecs_hgt_afe(void)
         hgt_afe = relative_altitude;
     }
     return hgt_afe;
+}
+
+// return true if we should run the speed_height controller
+bool Plane::speed_height_controller_active(void)
+{
+    if (!auto_throttle_mode) {
+        return false;
+    }
+    if (quadplane.in_vtol_land_approach() &&
+        quadplane.poscontrol.state > QuadPlane::QPOS_AIRBRAKE) {
+        // for QPOS landings we stop running TECS after airbrake stage
+        return false;
+    }
+    return true;
 }
 
 #if OSD_ENABLED == ENABLED
