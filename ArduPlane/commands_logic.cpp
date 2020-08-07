@@ -8,7 +8,10 @@ bool Plane::start_command(const AP_Mission::Mission_Command& cmd)
     // default to non-VTOL loiter
     auto_state.vtol_loiter = false;
 
-        // log when new commands start
+    // reset poscontroller
+    plane.quadplane.poscontrol.state = QuadPlane::QPOS_APPROACH;
+    
+    // log when new commands start
     if (should_log(MASK_LOG_CMD)) {
         logger.Write_Mission_Cmd(mission, cmd);
     }

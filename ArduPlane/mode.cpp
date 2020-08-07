@@ -56,6 +56,9 @@ bool Mode::enter()
     plane.auto_state.vtol_mode = false;
     plane.auto_state.vtol_loiter = false;
 
+    // reset poscontroller
+    plane.quadplane.poscontrol.state = QuadPlane::QPOS_APPROACH;
+
     bool enter_result = _enter();
 
     if (enter_result) {
