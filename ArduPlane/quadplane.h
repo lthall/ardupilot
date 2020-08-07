@@ -49,6 +49,7 @@ public:
     bool init_mode(void);
     bool setup(void);
 
+    void vtol_position_xy(Vector3f &pos, const Vector3f &vel, float accel_xy_limit_cmss);
     void vtol_position_controller(void);
     void setup_target_position(void);
     void takeoff_controller(void);
@@ -409,6 +410,12 @@ private:
         bool pos1_initialised;
         // approach altitude in meters above home
         float approach_alt;
+
+        // pilot controlled offset of landing point
+        Vector3f offset;
+
+        // true when pilot sticks are active for re-positioning
+        bool pilot_correction_active;
     } poscontrol;
 
     struct {
@@ -543,8 +550,6 @@ private:
             APPROACH
         } stage;
         bool reached_alt;
-        Vector3f offset;
-        bool pilot_correction_active;
         bool have_beacon;
         bool have_commanded_alt;
         int32_t commanded_alt;
@@ -605,7 +610,7 @@ private:
     /*
       update xy controller for ship takeoff/landing
      */
-    void ship_update_xy(void);
+    void ship_update_xy(Vector3f &pos, Vector3f &vel);
 
     /*
       update for ship landing approach

@@ -35,7 +35,7 @@ void QuadPlane::ship_landing_RTL_init(void)
     ship_landing.stage = ship_landing.HOLDOFF;
     ship_landing.reached_alt = false;
     ship_landing_RTL_update();
-    ship_landing.offset.zero();
+    poscontrol.offset.zero();
     ship_landing.have_commanded_alt = false;
     gcs().send_text(MAV_SEVERITY_INFO, "Started ship holdoff");
 }
@@ -143,36 +143,29 @@ void QuadPlane::ship_landing_RTL_update(void)
 }
 
 /*
-  update xy controller for moving takeoffs and landings
+  update xy controller for moving takeoffs and landings, returning desired position and velocity
  */
-void QuadPlane::ship_update_xy(void)
+void QuadPlane::ship_update_xy(Vector3f &pos, Vector3f &vel)
 {
     Location loc;
-    Vector3f vel;
-    Vector3f pos_ship;
-    Vector3f pos;
 
     if (!plane.g2.follow.get_target_location_and_velocity_ofs_abs(loc, vel)) {
         return;
     }
 
-    if (!loc.get_vector_from_origin_NEU(pos_ship)) {
+    if (!loc.get_vector_from_origin_NEU(pos)) {
         return;
     }
 
     ship_landing_set_home(loc);
-
     ship_landing.target_vel = vel;
 
-    pos = pos_ship;
-    // add in offset for takeoff position and landing repositioning
-    if (in_ship_landing() || in_ship_takeoff()) {
-        pos += ship_landing.offset * 100;
-    }
-
+    // only doing xy
     pos.z = 0;
-    vel *= 100;
     vel.z = 0;
+
+    // return in cm/s
+    vel *= 100;
 
     AP::logger().Write("SHXY", "TimeUS,px,py,vx,vy,ox,oy", "Qffffff",
                        AP_HAL::micros64(),
@@ -180,23 +173,8 @@ void QuadPlane::ship_update_xy(void)
                        pos.y * 0.01f,
                        vel.x * 0.01f,
                        vel.y * 0.01f,
-                       ship_landing.offset.x,
-                       ship_landing.offset.y);
-
-    // using the small angle approximation for simplicity and a conservative result when maximum acceleration is large
-    // this assumes the time taken to achieve the maximum acceleration angle is limited by the angular acceleration rather than maximum angular rate.
-    float lean_angle = wp_nav->get_wp_acceleration() / (GRAVITY_MSS * 100.0 * M_PI / 18000.0);
-    float angle_accel = MIN(attitude_control->get_accel_pitch_max(), attitude_control->get_accel_roll_max());
-    float tc = 2.0 * sqrtf(lean_angle / angle_accel);
-    pos_control->input_pos_vel_xy(pos, vel,
-                                  0.0,
-                                  MAX(wp_nav->get_default_speed_xy(), 200+ship_landing.target_vel.length()*100),
-                                  wp_nav->get_wp_acceleration(), tc);
-
-    // reset landing offset to the current stopping point when pilot correction is active.
-    if (ship_landing.pilot_correction_active) {
-        ship_landing.offset = (pos - pos_ship) * 0.01;
-    }
+                       poscontrol.offset.x,
+                       poscontrol.offset.y);
 }
 
 /*
@@ -208,11 +186,11 @@ void QuadPlane::ship_set_takeoff_offset(void)
     Vector3f vel;
 
     if (!plane.g2.follow.get_target_location_and_velocity_ofs_abs(loc, vel)) {
-        ship_landing.offset.zero();
+        poscontrol.offset.zero();
         return;
     }
 
-    ship_landing.offset = loc.get_distance_NED(plane.current_loc);
+    poscontrol.offset = loc.get_distance_NED(plane.current_loc);
 }
 
 /*
