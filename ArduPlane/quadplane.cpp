@@ -2367,12 +2367,13 @@ void QuadPlane::vtol_position_controller(void)
 
         // using the small angle approximation for simplicity and a conservative result when maximum acceleration is large
         // this assumes the time taken to achieve the maximum acceleration angle is limited by the angular acceleration rather than maximum angular rate.
-        float lean_angle = wp_nav->get_wp_acceleration() / (GRAVITY_MSS * 100.0 * M_PI / 18000.0);
+        const float accel_xy_limit_cmss = MAX(wp_nav->get_wp_acceleration(), transition_decel*100);
+        float lean_angle = accel_xy_limit_cmss / (GRAVITY_MSS * 100.0 * M_PI / 18000.0);
         float angle_accel = MIN(attitude_control->get_accel_pitch_max(), attitude_control->get_accel_roll_max());
         float tc = 2.0 * sqrtf(lean_angle / angle_accel);
         Vector3f vel = Vector3f(target_speed_xy.x*100, target_speed_xy.y*100, 0.0);
-        pos_control->input_vel_xy( vel,
-                                      wp_nav->get_wp_acceleration(), tc);
+        pos_control->input_vel_xy(vel,
+                                  accel_xy_limit_cmss, tc);
         // reset position controller xy target to current position
         // because we only want velocity control (no position control)
         const Vector3f& curr_pos = inertial_nav.get_position();
