@@ -1161,6 +1161,11 @@ bool QuadPlane::should_relax(void)
         return false;
     }
 
+    if (in_vtol_land_approach() && poscontrol.state < QPOS_LAND_DESCEND) {
+        // we may be flying at low speed in wind
+        return false;
+    }
+
     return (tnow - landing_detect.lower_limit_start_ms) > 1000;
 }
 
@@ -2482,7 +2487,6 @@ void QuadPlane::vtol_position_controller(void)
             // and zero velocity
             pos_control->set_limit_accel_xy();
             pos = inertial_nav.get_position();
-            vel.zero();
         }
 
         vtol_position_xy(pos, vel, accel_xy_limit_cmss);
@@ -3121,6 +3125,8 @@ int8_t QuadPlane::forward_throttle_pct(void)
     
     // work out the desired speed in forward direction
     const Vector3f &desired_velocity_cms = pos_control->get_desired_velocity();
+    const Vector2f desired_velocity_xy(desired_velocity_cms.x*0.01, desired_velocity_cms.y*0.01);
+
     Vector3f vel_ned;
     if (!plane.ahrs.get_velocity_NED(vel_ned)) {
         // we don't know our velocity? EKF must be pretty sick
@@ -3128,18 +3134,25 @@ int8_t QuadPlane::forward_throttle_pct(void)
         vel_forward.integrator = 0;
         return 0;
     }
-    Vector3f vel_error_body = ahrs.get_rotation_body_to_ned().transposed() * ((desired_velocity_cms*0.01f) - vel_ned);
+    Vector2f vel_ned_xy(vel_ned.x, vel_ned.y);
 
-    // find component of velocity error in fwd body frame direction
-    float fwd_vel_error = vel_error_body.x;
+    // get velocity error, and rotate to get fwd component
+    Vector2f vel_error_xy = desired_velocity_xy - vel_ned_xy;
+    vel_error_xy.rotate(-plane.ahrs.yaw);
+
+    // find component of velocity error in fwd direction
+    float vel_error = vel_error_xy.x;
+
+    // add in vertical velocity error. If we want to descend we need to reduce throttle
+    vel_error += desired_velocity_cms.z*0.01 + vel_ned.z;
 
     // scale forward velocity error by maximum airspeed
-    fwd_vel_error /= MAX(plane.aparm.airspeed_max, 5);
+    vel_error /= MAX(plane.aparm.airspeed_max, 5);
 
     // add in a component from our current pitch demand. This tends to
     // move us to zero pitch. Assume that LIM_PITCH would give us the
     // WP nav speed.
-    fwd_vel_error -= (pos_control->get_max_speed_xy() * 0.01f) * plane.nav_pitch_cd / (float)plane.aparm.pitch_limit_max_cd;
+    vel_error -= (pos_control->get_max_speed_xy() * 0.01f) * plane.nav_pitch_cd / (float)plane.aparm.pitch_limit_max_cd;
 
     Vector2f groundspeed(vel_ned.x, vel_ned.y);
     if (in_ship_landing()) {
@@ -3148,7 +3161,7 @@ int8_t QuadPlane::forward_throttle_pct(void)
 
     if (should_relax() && groundspeed.length() < 1) {
         // we may be landed
-        fwd_vel_error = 0;
+        vel_error = 0;
         vel_forward.integrator *= 0.95f;
     }
 
@@ -3164,11 +3177,11 @@ int8_t QuadPlane::forward_throttle_pct(void)
     }
     if (vtol_throttle < 0.1) {
         vel_forward.integrator *= 0.98f;
-        fwd_vel_error *= vtol_throttle*10;
+        vel_error *= vtol_throttle*10;
     }
 
     // integrator as throttle percentage (-100 to 100)
-    vel_forward.integrator += fwd_vel_error * deltat * vel_forward.gain * 100;
+    vel_forward.integrator += vel_error * deltat * vel_forward.gain * 100;
 
     // inhibit reverse throttle and allow petrol engines with min > 0
     int8_t fwd_throttle_min = plane.have_reverse_thrust() ? 0 : plane.aparm.throttle_min;
