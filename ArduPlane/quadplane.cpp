@@ -2614,10 +2614,6 @@ void QuadPlane::setup_target_position(void)
     pos_control->set_max_accel_z(pilot_accel_z);
 
     float max_speed = wp_nav->get_default_speed_xy();
-    if (in_ship_landing()) {
-        // ensure we have at least 3m/s speed over the speed of the landing target
-        max_speed = MAX(max_speed, ship_landing.target_vel.length()*100+300);
-    }
 
     // setup horizontal speed and acceleration
     pos_control->set_max_speed_xy(max_speed);
@@ -3124,29 +3120,18 @@ int8_t QuadPlane::forward_throttle_pct(void)
     }
     vel_forward.last_ms = AP_HAL::millis();
     
-    // work out the desired speed in forward direction
-    const Vector3f &desired_velocity_cms = pos_control->get_desired_velocity();
-    const Vector2f desired_velocity_xy(desired_velocity_cms.x*0.01, desired_velocity_cms.y*0.01);
-
-    Vector3f vel_ned;
-    if (!plane.ahrs.get_velocity_NED(vel_ned)) {
-        // we don't know our velocity? EKF must be pretty sick
-        vel_forward.last_pct = 0;
-        vel_forward.integrator = 0;
-        return 0;
-    }
-    Vector2f vel_ned_xy(vel_ned.x, vel_ned.y);
+    const Vector3f &vel_error_xyz = pos_control->get_vel_error();
+    Vector2f vel_error_xy(vel_error_xyz.x, vel_error_xyz.y);
 
     // get velocity error, and rotate to get fwd component
-    Vector2f vel_error_xy = desired_velocity_xy - vel_ned_xy;
     vel_error_xy.rotate(-plane.ahrs.yaw);
 
     // find component of velocity error in fwd direction
-    float vel_error = vel_error_xy.x;
+    float vel_error = vel_error_xy.x*0.01;
 
     // add in vertical velocity error. If we want to descend we need to reduce throttle
-    float vel_error_z = desired_velocity_cms.z*0.01 + vel_ned.z;
-    vel_error += vel_error_z;
+    float vel_error_z = vel_error_xyz.z*0.01;
+    vel_error += MIN(0,vel_error_z);
 
     // scale forward velocity error by maximum airspeed
     vel_error /= MAX(plane.aparm.airspeed_max, 5);
@@ -3155,6 +3140,15 @@ int8_t QuadPlane::forward_throttle_pct(void)
     // move us to zero pitch. Assume that LIM_PITCH would give us the
     // WP nav speed.
     vel_error -= (pos_control->get_max_speed_xy() * 0.01f) * plane.nav_pitch_cd / (float)plane.aparm.pitch_limit_max_cd;
+
+    // work out the desired speed in forward direction
+    Vector3f vel_ned;
+    if (!plane.ahrs.get_velocity_NED(vel_ned)) {
+        // we don't know our velocity? EKF must be pretty sick
+        vel_forward.last_pct = 0;
+        vel_forward.integrator = 0;
+        return 0;
+    }
 
     Vector2f groundspeed(vel_ned.x, vel_ned.y);
     if (in_ship_landing()) {
