@@ -2231,11 +2231,29 @@ void QuadPlane::update_land_positioning(void)
     Vector2f pos_change(-pitch_in, roll_in);
     pos_change *= dt * speed_max;
     pos_change.rotate(plane.ahrs.yaw);
-    ship_landing.offset.x += pos_change.x;
-    ship_landing.offset.y += pos_change.y;
+    poscontrol.offset.x += pos_change.x;
+    poscontrol.offset.y += pos_change.y;
 
-    ship_landing.pilot_correction_active = (fabsf(roll_in) > 0 || fabsf(pitch_in) > 0);
+    poscontrol.pilot_correction_active = (fabsf(roll_in) > 0 || fabsf(pitch_in) > 0);
 }
+
+/*
+  run XY controller for VTOL takeoff and landing
+ */
+void QuadPlane::vtol_position_xy(Vector3f &pos, const Vector3f &vel, float accel_xy_limit_cmss)
+{
+    // using the small angle approximation for simplicity and a conservative result when maximum acceleration is large
+    // this assumes the time taken to achieve the maximum acceleration angle is limited by the angular acceleration rather than maximum angular rate.
+    float lean_angle = accel_xy_limit_cmss / (GRAVITY_MSS * 100.0 * M_PI / 18000.0);
+    float angle_accel = MIN(attitude_control->get_accel_pitch_max(), attitude_control->get_accel_roll_max());
+    float tc = 2.0 * sqrtf(lean_angle / angle_accel);
+
+    pos_control->input_pos_vel_xy(pos, vel,
+                                  0.0,
+                                  wp_nav->get_default_speed_xy(),
+                                  accel_xy_limit_cmss, tc);
+}
+
 
 /*
   main landing controller. Used for landing and RTL.
@@ -2360,10 +2378,10 @@ void QuadPlane::vtol_position_controller(void)
         if (in_ship_landing()) {
             target_speed_xy.x += ship_landing.target_vel.x;
             target_speed_xy.y += ship_landing.target_vel.y;
-
-            // zero offset in POS1 and POS2
-            ship_landing.offset.zero();
         }
+
+        // zero offset in POS1 and POS2
+        poscontrol.offset.zero();
 
         // using the small angle approximation for simplicity and a conservative result when maximum acceleration is large
         // this assumes the time taken to achieve the maximum acceleration angle is limited by the angular acceleration rather than maximum angular rate.
@@ -2414,7 +2432,7 @@ void QuadPlane::vtol_position_controller(void)
 
     case QPOS_POSITION2:
         // zero offset in POS1 and POS2
-        ship_landing.offset.zero();
+        poscontrol.offset.zero();
         FALLTHROUGH;
 
     case QPOS_LAND_DESCEND: {
@@ -2436,33 +2454,45 @@ void QuadPlane::vtol_position_controller(void)
             poscontrol.target.x = diff2d.x * 100;
             poscontrol.target.y = diff2d.y * 100;
         }
-        
-        // set position controller desired velocity and acceleration to zero
-        if (in_ship_landing()) {
-            update_land_positioning();
-            ship_update_xy();
-        } else {
 
-            // using the small angle approximation for simplicity and a conservative result when maximum acceleration is large
-            // this assumes the time taken to achieve the maximum acceleration angle is limited by the angular acceleration rather than maximum angular rate.
-            float lean_angle = wp_nav->get_wp_acceleration() / (GRAVITY_MSS * 100.0 * M_PI / 18000.0);
-            float angle_accel = MIN(attitude_control->get_accel_pitch_max(), attitude_control->get_accel_roll_max());
-            float tc = 2.0 * sqrtf(lean_angle / angle_accel);
-            Vector3f pos, vel;
+        update_land_positioning();
 
-            // set position control target and update
-            if (should_relax()) {
-                pos_control->set_limit_accel_xy();
-                pos = inertial_nav.get_position();
-            } else {
-                pos = Vector3f(poscontrol.target.x, poscontrol.target.y, 0.0);
-            }
-            pos_control->input_pos_vel_xy(pos, vel,
-                                          0.0,
-                                          pos_control->get_max_speed_xy(),
-                                          wp_nav->get_wp_acceleration(), tc);
+        // we use the transition acceleration up to POSITION2
+        float accel_xy_limit_cmss = wp_nav->get_wp_acceleration();
+        if (poscontrol.state <= QPOS_POSITION2) {
+            accel_xy_limit_cmss = MAX(accel_xy_limit_cmss, transition_decel*100);
         }
 
+        Vector3f &pos = poscontrol.target;
+        Vector3f vel;
+
+        if (in_ship_landing()) {
+            ship_update_xy(pos, vel);
+        }
+
+        // remember pre-offset landing position
+        Vector3f land_pos = pos;
+
+        // add in pilot requested offset
+        pos += poscontrol.offset * 100;
+
+        if (should_relax()) {
+            // if we think we have touched down then we want to relax
+            // the position controller by setting our current position
+            // and zero velocity
+            pos_control->set_limit_accel_xy();
+            pos = inertial_nav.get_position();
+            vel.zero();
+        }
+
+        vtol_position_xy(pos, vel, accel_xy_limit_cmss);
+
+        // reset landing offset to the current stopping point when
+        // pilot correction is active.
+        if (poscontrol.pilot_correction_active) {
+            poscontrol.offset = (pos - land_pos) * 0.01;
+        }
+        
         // nav roll and pitch are controller by position controller
         plane.nav_roll_cd = pos_control->get_roll();
         plane.nav_pitch_cd = pos_control->get_pitch();
@@ -2599,19 +2629,18 @@ void QuadPlane::takeoff_controller(void)
     */
     check_attitude_relax();
 
+    setup_target_position();
+    Vector3f &pos = poscontrol.target;
+    Vector3f vel;
+
     if (in_ship_takeoff()) {
-        ship_update_xy();
-    } else {
-        setup_target_position();
-        // set position controller desired velocity and acceleration to zero
-        pos_control->set_desired_velocity_xy(0.0f,0.0f);
-        pos_control->set_desired_accel_xy(0.0f,0.0f);
-
-        // set position control target and update
-        pos_control->set_xy_target(poscontrol.target.x, poscontrol.target.y);
-
-        pos_control->update_xy_controller();
+        ship_update_xy(pos, vel);
     }
+
+    // add in takeoff offset (used for ship takeoffs)
+    pos += poscontrol.offset * 100;
+
+    vtol_position_xy(pos, vel, wp_nav->get_wp_acceleration());
 
     // nav roll and pitch are controller by position controller
     plane.nav_roll_cd = pos_control->get_roll();
@@ -2884,7 +2913,7 @@ bool QuadPlane::verify_vtol_takeoff(const AP_Mission::Mission_Command &cmd)
     set_alt_target_current();
 
     plane.complete_auto_takeoff();
-    ship_landing.offset.zero();
+    poscontrol.offset.zero();
 
     if (plane.control_mode == &plane.mode_auto) {
         // we reset TECS so that the target height filter is not
