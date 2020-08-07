@@ -1028,6 +1028,9 @@ private:
     void update_soaring();
 #endif
 
+    // return true if we should run the speed_height controller
+    bool speed_height_controller_active(void);
+
     bool reversed_throttle;
     bool have_reverse_throttle_rc_option;
     bool allow_reverse_thrust(void) const;
