@@ -2426,7 +2426,8 @@ void QuadPlane::vtol_position_controller(void)
         // desired speed profile
         if (plane.auto_state.wp_proportion >= 1 ||
             plane.auto_state.wp_distance < 5 ||
-            closing_speed < desired_closing_speed * 0.7) {
+            (closing_speed < desired_closing_speed * 0.7 &&
+             closing_speed < wp_nav->get_default_speed_xy() * 0.01)) {
             poscontrol.state = QPOS_POSITION2;
             gcs().send_text(MAV_SEVERITY_INFO,"VTOL position2 v=%.1f d=%.1f h=%.1f",
                             closing_speed, (double)plane.auto_state.wp_distance,
@@ -3144,7 +3145,8 @@ int8_t QuadPlane::forward_throttle_pct(void)
     float vel_error = vel_error_xy.x;
 
     // add in vertical velocity error. If we want to descend we need to reduce throttle
-    vel_error += desired_velocity_cms.z*0.01 + vel_ned.z;
+    float vel_error_z = desired_velocity_cms.z*0.01 + vel_ned.z;
+    vel_error += vel_error_z;
 
     // scale forward velocity error by maximum airspeed
     vel_error /= MAX(plane.aparm.airspeed_max, 5);
@@ -3171,11 +3173,11 @@ int8_t QuadPlane::forward_throttle_pct(void)
       giving lift
      */
     float vtol_throttle = motors->get_throttle();
-    if (motors->limit.throttle_lower) {
+    if (motors->limit.throttle_lower && vel_error_z < 0) {
         // treat lower throttle limit as zero
         vtol_throttle = 0;
     }
-    if (vtol_throttle < 0.1) {
+    if (vtol_throttle < 0.1 && vel_error_z < 0) {
         vel_forward.integrator *= 0.98f;
         vel_error *= vtol_throttle*10;
     }
