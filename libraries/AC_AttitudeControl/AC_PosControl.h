@@ -314,6 +314,7 @@ public:
 
     /// accessors for reporting
     const Vector3f& get_vel_target() const { return _vel_target; }
+    const Vector3f& get_vel_error() const { return _vel_error; }
     const Vector3f& get_accel_target() const { return _accel_target; }
 
     // lean_angles_to_accel - convert roll, pitch lean angles to lat/lon frame accelerations in cm/s/s
