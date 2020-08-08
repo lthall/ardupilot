@@ -125,7 +125,7 @@ void QuadPlane::ship_landing_RTL_update(void)
             const float distance = plane.current_loc.get_distance(loc0);
             if (fabsf(wrap_180(target_bearing_deg - ground_bearing_deg)) < margin &&
                 distance < 2.5*holdoff_dist &&
-                distance > 0.25*holdoff_dist &&
+                distance > 0.7*holdoff_dist &&
                 fabsf(wrap_180(ground_bearing_deg - heading_deg)) < 2*margin) {
                 ship_landing.stage = ship_landing.APPROACH;
                 loc = loc0;
