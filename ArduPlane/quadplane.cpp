@@ -1559,6 +1559,7 @@ void QuadPlane::update_transition(void)
         pos_control->relax_alt_hold_controllers(0);
         attitude_control->rate_controller_run();
         pos_control->update_z_controller();
+        attitude_control->set_throttle_out(0, true, 0);
         motors->output();
         return;
     }
@@ -2334,14 +2335,21 @@ void QuadPlane::vtol_position_controller(void)
           before we transition. This gives a smoother transition and
           gives us a nice lot of deceleration
          */
-        if (!is_tailsitter() &&
-            poscontrol.state == QPOS_APPROACH &&
-            distance < stop_distance) {
-            gcs().send_text(MAV_SEVERITY_INFO,"VTOL airbrake v=%.1f d=%.1f h=%.1f",
-                            (double)groundspeed, (double)distance,
-                            plane.relative_ground_altitude(plane.g.rangefinder_landing));
-            poscontrol.state = QPOS_AIRBRAKE;
-            poscontrol.airbrake_start_ms = AP_HAL::millis();
+        if (poscontrol.state == QPOS_APPROACH && distance < stop_distance) {
+            if (is_tailsitter()) {
+                // tailsitters don't use airbrake stage for landing
+                gcs().send_text(MAV_SEVERITY_INFO,"VTOL position1 v=%.1f d=%.1f h=%.1f",
+                                (double)groundspeed,
+                                (double)plane.auto_state.wp_distance,
+                                plane.relative_ground_altitude(plane.g.rangefinder_landing));
+                poscontrol.state = QPOS_POSITION1;
+            } else {
+                gcs().send_text(MAV_SEVERITY_INFO,"VTOL airbrake v=%.1f d=%.1f h=%.1f",
+                                (double)groundspeed, (double)distance,
+                                plane.relative_ground_altitude(plane.g.rangefinder_landing));
+                poscontrol.state = QPOS_AIRBRAKE;
+                poscontrol.airbrake_start_ms = AP_HAL::millis();
+            }
         }
 
         /*
