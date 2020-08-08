@@ -325,6 +325,9 @@ private:
 
     float _land_pitch_min = -90;
 
+    // pitch when starting airbraking mode
+    float _airbrake_initial_pitch;
+
     // need to reset on next loop
     bool _need_reset;
 
