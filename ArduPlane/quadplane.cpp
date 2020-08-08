@@ -2407,7 +2407,8 @@ void QuadPlane::vtol_position_controller(void)
 
         // using the small angle approximation for simplicity and a conservative result when maximum acceleration is large
         // this assumes the time taken to achieve the maximum acceleration angle is limited by the angular acceleration rather than maximum angular rate.
-        const float accel_xy_limit_cmss = MAX(wp_nav->get_wp_acceleration(), transition_decel*100);
+        // Allow a minimum of 125% transition_decel to provide 25% overshoot.
+        const float accel_xy_limit_cmss = MAX(wp_nav->get_wp_acceleration(), transition_decel*125);
         float lean_angle = accel_xy_limit_cmss / (GRAVITY_MSS * 100.0 * M_PI / 18000.0);
         float angle_accel = MIN(attitude_control->get_accel_pitch_max(), attitude_control->get_accel_roll_max());
         float tc = 2.0 * sqrtf(lean_angle / angle_accel);
@@ -2482,8 +2483,9 @@ void QuadPlane::vtol_position_controller(void)
 
         // we use the transition acceleration up to POSITION2
         float accel_xy_limit_cmss = wp_nav->get_wp_acceleration();
-        if (poscontrol.state <= QPOS_POSITION2) {
-            accel_xy_limit_cmss = MAX(accel_xy_limit_cmss, transition_decel*100);
+        if (poscontrol.state <= QPOS_LAND_DESCEND) {
+            // Allow a minimum of 125% transition_decel to provide 25% overshoot.
+            accel_xy_limit_cmss = MAX(accel_xy_limit_cmss, transition_decel*125);
         }
 
         Vector3f &pos = poscontrol.target;
