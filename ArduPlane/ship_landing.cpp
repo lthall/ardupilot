@@ -281,7 +281,7 @@ void QuadPlane::ship_landing_adjust_velocity(Vector2f &vel)
 */
 void QuadPlane::ship_landing_update_home(void)
 {
-    if (!ship_landing_enabled()) {
+    if (!ship_landing_enabled() || !hal.util->get_soft_armed()) {
         return;
     }
     // set at max 1Hz
