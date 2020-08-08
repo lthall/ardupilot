@@ -710,7 +710,9 @@ void GCS_MAVLINK_Plane::packetReceived(const mavlink_status_t &status,
                                        const mavlink_message_t &msg)
 {
     // pass message to follow library
-    plane.g2.follow.handle_msg(msg);
+    if (plane.g2.follow.handle_msg(msg)) {
+        plane.quadplane.ship_landing_update_home();
+    }
     plane.avoidance_adsb.handle_msg(msg);
     GCS_MAVLINK::packetReceived(status, msg);
 }
