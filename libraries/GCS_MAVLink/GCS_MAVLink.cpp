@@ -128,7 +128,7 @@ void comm_send_buffer(mavlink_channel_t chan, const uint8_t *buf, uint8_t len)
         return;
     }
     const size_t written = mavlink_comm_port[chan]->write(buf, len);
-#if CONFIG_HAL_BOARD == HAL_BOARD_SITL
+#if CONFIG_HAL_BOARD == HAL_BOARD_SITL && !defined(__CYGWIN__) && !defined(__CYGWIN64__)
     if (written < len) {
         AP_HAL::panic("Short write on UART: %lu < %u", written, len);
     }
