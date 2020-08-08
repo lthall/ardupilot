@@ -639,6 +639,9 @@ void Plane::update_flight_stage(void)
         if (control_mode == &mode_auto) {
             if (quadplane.in_vtol_auto()) {
                 set_flight_stage(AP_Vehicle::FixedWing::FLIGHT_VTOL);
+            } else if (quadplane.in_vtol_land_approach() &&
+                       quadplane.poscontrol.state == QuadPlane::QPOS_AIRBRAKE) {
+                set_flight_stage(AP_Vehicle::FixedWing::FLIGHT_AIRBRAKE);
             } else if (auto_state.takeoff_complete == false) {
                 set_flight_stage(AP_Vehicle::FixedWing::FLIGHT_TAKEOFF);
             } else if (mission.get_current_nav_cmd().id == MAV_CMD_NAV_LAND) {
@@ -659,8 +662,8 @@ void Plane::update_flight_stage(void)
             }
         } else if (control_mode == &mode_qrtl &&
                    quadplane.poscontrol.state == QuadPlane::QPOS_AIRBRAKE) {
-            // vtol motors running in airbrake mode
-            set_flight_stage(AP_Vehicle::FixedWing::FLIGHT_VTOL);
+            // special airbrake mode for TECS
+            set_flight_stage(AP_Vehicle::FixedWing::FLIGHT_AIRBRAKE);
         } else if (control_mode != &mode_takeoff) {
             // If not in AUTO then assume normal operation for normal TECS operation.
             // This prevents TECS from being stuck in the wrong stage if you switch from
