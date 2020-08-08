@@ -2341,6 +2341,7 @@ void QuadPlane::vtol_position_controller(void)
                             (double)groundspeed, (double)distance,
                             plane.relative_ground_altitude(plane.g.rangefinder_landing));
             poscontrol.state = QPOS_AIRBRAKE;
+            poscontrol.airbrake_start_ms = AP_HAL::millis();
         }
 
         /*
@@ -2350,10 +2351,16 @@ void QuadPlane::vtol_position_controller(void)
           has deviated too much
          */
         const int32_t attitude_error_threshold_cd = 1000;
-        if (aspeed < aspeed_threshold ||
-            closing_speed > MAX(desired_closing_speed*1.2, desired_closing_speed+2) ||
-            labs(plane.ahrs.roll_sensor - plane.nav_roll_cd) > attitude_error_threshold_cd ||
-            labs(plane.ahrs.pitch_sensor - plane.nav_pitch_cd) > attitude_error_threshold_cd) {
+
+        // use at least 1s of airbrake time to ensure motors have a chance to
+        // properly spin up
+        const uint32_t min_airbrake_ms = 1000;
+        if (poscontrol.state == QPOS_AIRBRAKE &&
+            AP_HAL::millis() - poscontrol.airbrake_start_ms > min_airbrake_ms &&
+            (aspeed < aspeed_threshold ||
+             closing_speed > MAX(desired_closing_speed*1.2, desired_closing_speed+2) ||
+             labs(plane.ahrs.roll_sensor - plane.nav_roll_cd) > attitude_error_threshold_cd ||
+             labs(plane.ahrs.pitch_sensor - plane.nav_pitch_cd) > attitude_error_threshold_cd)) {
             gcs().send_text(MAV_SEVERITY_INFO,"VTOL position1 v=%.1f d=%.1f h=%.1f",
                             (double)groundspeed,
                             (double)plane.auto_state.wp_distance,
@@ -2544,7 +2551,10 @@ void QuadPlane::vtol_position_controller(void)
                 break;
             }
         }
-        if (plane.control_mode == &plane.mode_qrtl || plane.control_mode == &plane.mode_guided || vtol_loiter_auto) {
+        if (in_vtol_land_approach() ||
+            plane.control_mode == &plane.mode_qrtl ||
+            plane.control_mode == &plane.mode_guided ||
+            vtol_loiter_auto) {
             plane.ahrs.get_position(plane.current_loc);
             float target_altitude = plane.home.alt + poscontrol.approach_alt*100;
             if (poscontrol.slow_descent) {

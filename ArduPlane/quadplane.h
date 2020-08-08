@@ -418,6 +418,9 @@ private:
 
         // true when pilot sticks are active for re-positioning
         bool pilot_correction_active;
+
+        // time we entered airbrake state
+        uint32_t airbrake_start_ms;
     } poscontrol;
 
     struct {
