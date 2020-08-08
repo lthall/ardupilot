@@ -326,16 +326,16 @@ bool AP_Follow::get_target_heading_deg(float &heading) const
 }
 
 // handle mavlink DISTANCE_SENSOR messages
-void AP_Follow::handle_msg(const mavlink_message_t &msg)
+bool AP_Follow::handle_msg(const mavlink_message_t &msg)
 {
     // exit immediately if not enabled
     if (!_enabled) {
-        return;
+        return false;
     }
 
     // skip our own messages
     if (msg.sysid == mavlink_system.sysid) {
-        return;
+        return false;
     }
 
     // skip message if not from our target
@@ -346,7 +346,7 @@ void AP_Follow::handle_msg(const mavlink_message_t &msg)
                 _sysid.set(0);
             }
         }
-        return;
+        return false;
     }
 
     // decode global-position-int message
@@ -363,7 +363,7 @@ void AP_Follow::handle_msg(const mavlink_message_t &msg)
 
         // ignore message if lat and lon are (exactly) zero
         if ((packet.lat == 0 && packet.lon == 0)) {
-            return;
+            return false;
         }
 
         _target_location.lat = packet.lat;
@@ -417,7 +417,9 @@ void AP_Follow::handle_msg(const mavlink_message_t &msg)
                            loc_estimate.alt,
                            _target_heading
             );
+        return true;
     }
+    return false;
 }
 
 // get velocity estimate in m/s in NED frame using dt since last update

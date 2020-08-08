@@ -82,7 +82,8 @@ public:
     bool get_target_heading_deg(float &heading) const;
 
     // parse mavlink messages which may hold target's position, velocity and attitude
-    void handle_msg(const mavlink_message_t &msg);
+    // returns true if follow location is updated
+    bool handle_msg(const mavlink_message_t &msg);
 
     //
     // GCS reporting functions
