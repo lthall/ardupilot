@@ -648,9 +648,9 @@ private:
     void ship_landing_adjust_velocity(Vector2f &vel);
 
     /*
-      set home for ship landing
+      update home for ship landing
      */
-    void ship_landing_set_home(const Location &loc);
+    void ship_landing_update_home(void);
 
     /*
       calculate our closing velocity vector on the landing

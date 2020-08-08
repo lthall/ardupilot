@@ -62,8 +62,6 @@ void QuadPlane::ship_landing_RTL_update(void)
     }
     Location loc = loc0;
 
-    ship_landing_set_home(loc);
-
     const float thr_in = get_pilot_land_throttle();
 
     if (ship_landing.stage == ship_landing.HOLDOFF ||
@@ -157,7 +155,6 @@ void QuadPlane::ship_update_xy(Vector3f &pos, Vector3f &vel)
         return;
     }
 
-    ship_landing_set_home(loc);
     ship_landing.target_vel = vel;
 
     // only doing xy
@@ -282,15 +279,22 @@ void QuadPlane::ship_landing_adjust_velocity(Vector2f &vel)
 /*
   set home for ship landing
 */
-void QuadPlane::ship_landing_set_home(const Location &loc)
+void QuadPlane::ship_landing_update_home(void)
 {
+    if (!ship_landing_enabled()) {
+        return;
+    }
     // set at max 1Hz
     uint32_t now = AP_HAL::millis();
     if (now - ship_landing.last_home_set_ms < 1000) {
         return;
     }
-    ship_landing.last_home_set_ms = now;
-    IGNORE_RETURN(plane.ahrs.set_home(loc));
+    Location loc;
+    Vector3f vel;
+    if (plane.g2.follow.get_target_location_and_velocity_ofs_abs(loc, vel)) {
+        ship_landing.last_home_set_ms = now;
+        IGNORE_RETURN(plane.ahrs.set_home(loc));
+    }
 }
 
 /*
@@ -306,7 +310,6 @@ void QuadPlane::ship_update_approach(void)
             return;
         }
 
-        ship_landing_set_home(loc);
         ship_landing.target_vel = vel;
         plane.next_WP_loc = loc;
         plane.next_WP_loc.alt += qrtl_alt*100;
