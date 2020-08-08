@@ -91,6 +91,8 @@ public:
     bool verify_vtol_land(void);
     bool in_vtol_auto(void) const;
     bool in_vtol_mode(void) const;
+    bool use_vtol_attitude_controllers(void) const;
+    bool use_fw_attitude_controllers(void) const;
     void update_throttle_hover();
 
     // vtol help for is_flying()
@@ -532,6 +534,7 @@ private:
         OPTION_IDLE_GOV_MANUAL=(1<<6),
         OPTION_SHIP_LANDING=(1<<9),
         OPTION_THR_LANDING_CONTROL=(1<<10),
+        OPTION_FW_SLAVE_RATE=(1<<11),
     };
 
     AP_Float takeoff_failure_scalar;
