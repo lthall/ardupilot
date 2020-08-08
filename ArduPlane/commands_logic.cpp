@@ -35,8 +35,13 @@ bool Plane::start_command(const AP_Mission::Mission_Command& cmd)
 
         AP_Mission::Mission_Command next_nav_cmd;
         const uint16_t next_index = mission.get_current_nav_index() + 1;
-        auto_state.wp_is_land_approach = mission.get_next_nav_cmd(next_index, next_nav_cmd) && (next_nav_cmd.id == MAV_CMD_NAV_LAND) &&
-            !quadplane.is_vtol_land(next_nav_cmd.id);
+        if (mission.get_next_nav_cmd(next_index, next_nav_cmd)) {
+            auto_state.wp_is_land_approach = (next_nav_cmd.id == MAV_CMD_NAV_LAND) && !quadplane.is_vtol_land(next_nav_cmd.id);
+            auto_state.wp_is_vtol_land_approach = quadplane.is_vtol_land(next_nav_cmd.id);
+        } else {
+            auto_state.wp_is_land_approach = false;
+            auto_state.wp_is_vtol_land_approach = false;
+        }
     }
 
     switch(cmd.id) {
@@ -638,9 +643,11 @@ bool Plane::verify_nav_wp(const AP_Mission::Mission_Command& cmd)
         // allow user to override acceptance radius
         acceptance_distance_m = cmd_acceptance_distance;
     } else if (cmd_passby == 0) {
-        acceptance_distance_m = nav_controller->turn_distance(g.waypoint_radius, auto_state.next_turn_angle);
-    } else {
-
+        if (auto_state.wp_is_vtol_land_approach && quadplane.available()) {
+            acceptance_distance_m = quadplane.stopping_distance();
+        } else {
+            acceptance_distance_m = nav_controller->turn_distance(g.waypoint_radius, auto_state.next_turn_angle);
+        }
     }
     
     if (auto_state.wp_distance <= acceptance_distance_m) {
