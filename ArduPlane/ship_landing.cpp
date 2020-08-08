@@ -72,7 +72,7 @@ void QuadPlane::ship_landing_RTL_update(void)
         float stop_distance = ship_landing_stopping_distance();
 
         // increase holdoff distance by up to 50% to ensure we can stop
-        holdoff_dist = MAX(holdoff_dist, MIN(holdoff_dist*1.5, stop_distance));
+        holdoff_dist = MAX(holdoff_dist, MIN(holdoff_dist*2.5, stop_distance));
 
         float heading_deg;
         plane.g2.follow.get_target_heading_deg(heading_deg);
