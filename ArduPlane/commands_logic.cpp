@@ -644,7 +644,8 @@ bool Plane::verify_nav_wp(const AP_Mission::Mission_Command& cmd)
         acceptance_distance_m = cmd_acceptance_distance;
     } else if (cmd_passby == 0) {
         if (auto_state.wp_is_vtol_land_approach && quadplane.available()) {
-            acceptance_distance_m = quadplane.stopping_distance();
+            const float dist = prev_WP_loc.get_distance(flex_next_WP_loc);
+            acceptance_distance_m = MIN(quadplane.stopping_distance(), 0.8*dist);
         } else {
             acceptance_distance_m = nav_controller->turn_distance(g.waypoint_radius, auto_state.next_turn_angle);
         }
