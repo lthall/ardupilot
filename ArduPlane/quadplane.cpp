@@ -2745,8 +2745,7 @@ void QuadPlane::poscontrol_init_approach(void)
     poscontrol.state = QPOS_APPROACH;
     poscontrol.start_closing_vel = landing_closing_velocity().length();
     poscontrol.start_dist = plane.current_loc.get_distance(plane.next_WP_loc);
-    pos_control->set_desired_accel_xy(0.0f, 0.0f);
-    pos_control->init_xy_controller();
+    pos_control->init_pos_vel_xy();
 }
 
 /*
