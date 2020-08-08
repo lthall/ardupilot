@@ -831,7 +831,7 @@ void QuadPlane::multicopter_attitude_rate_update(float yaw_rate_cds)
     }
 
     // normal control modes for VTOL and FW flight
-    if (in_vtol_mode() || is_tailsitter()) {
+    if (use_vtol_attitude_controllers()) {
         // use euler angle attitude control
         attitude_control->input_euler_angle_roll_pitch_euler_rate_yaw(plane.nav_roll_cd,
                                                                       plane.nav_pitch_cd,
@@ -1553,6 +1553,7 @@ void QuadPlane::update_transition(void)
     if (in_vtol_land_approach() &&
         poscontrol.state == QPOS_AIRBRAKE) {
         // motors on for airbraking in landing
+        assisted_flight = false;
         motors->set_desired_spool_state(AP_Motors::DesiredSpoolState::THROTTLE_UNLIMITED);
         attitude_control->relax_attitude_controllers();
         pos_control->relax_alt_hold_controllers(0);
@@ -2193,7 +2194,8 @@ bool QuadPlane::in_vtol_mode(void) const
         return false;
     }
     if (plane.control_mode == &plane.mode_qrtl &&
-        poscontrol.state == QPOS_APPROACH) {
+        (poscontrol.state == QPOS_APPROACH ||
+         poscontrol.state == QPOS_AIRBRAKE)) {
         return false;
     }
     if (in_vtol_land_approach() &&
@@ -3636,4 +3638,22 @@ float QuadPlane::get_land_airspeed(void)
     return vel.length();
 }
 
+/*
+  should we use the VTOL attitude controllers for VTOL control, or
+  slave to the fixed wing rate controllers
+ */
+bool QuadPlane::use_vtol_attitude_controllers(void) const
+{
+    return in_vtol_mode() || is_tailsitter();
+}
 
+/*
+  should we use the fixed wing attitude controllers
+ */
+bool QuadPlane::use_fw_attitude_controllers(void) const
+{
+    if ((options & OPTION_FW_SLAVE_RATE) == 0) {
+        return true;
+    }
+    return !motors->armed() || !in_vtol_mode() || is_tailsitter();
+}
