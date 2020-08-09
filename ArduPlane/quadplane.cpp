@@ -2102,6 +2102,7 @@ bool QuadPlane::init_mode(void)
         break;
     case Mode::Number::GUIDED:
         guided_takeoff = false;
+        guided_track_ship = false;
         break;
 #if QAUTOTUNE_ENABLED
     case Mode::Number::QAUTOTUNE:
@@ -2496,7 +2497,8 @@ void QuadPlane::vtol_position_controller(void)
         Vector3f &pos = poscontrol.target;
         Vector3f vel;
 
-        if (in_ship_landing()) {
+        if (in_ship_landing() ||
+            (plane.control_mode == &plane.mode_guided && guided_track_ship)) {
             ship_update_xy(pos, vel);
         }
 
@@ -2626,7 +2628,8 @@ void QuadPlane::setup_target_position(void)
     poscontrol.target.z = plane.next_WP_loc.alt - origin.alt;
 
     const uint32_t now = AP_HAL::millis();
-    if (!in_ship_landing()) {
+    if (!in_ship_landing() &&
+        !(plane.control_mode == &plane.mode_guided && guided_track_ship)) {
         if (!loc.same_latlon_as(last_auto_target) ||
             plane.next_WP_loc.alt != last_auto_target.alt ||
             now - last_loiter_ms > 500) {
@@ -3298,6 +3301,7 @@ void QuadPlane::guided_start(void)
     setup_target_position();
     poscontrol_init_approach();
     guided_takeoff = false;
+    guided_track_ship = false;
     poscontrol.approach_alt = (plane.next_WP_loc.alt - plane.home.alt) * 0.01;
     poscontrol.slow_descent = (plane.current_loc.alt > plane.next_WP_loc.alt);
 }
@@ -3311,8 +3315,16 @@ void QuadPlane::guided_update(void)
         throttle_wait = false;
         motors->set_desired_spool_state(AP_Motors::DesiredSpoolState::THROTTLE_UNLIMITED);
         takeoff_controller();
+        guided_track_ship = in_ship_takeoff();
     } else {
-        guided_takeoff = false;
+        if (guided_takeoff) {
+            poscontrol.state = QPOS_POSITION2;
+            plane.next_WP_loc = plane.current_loc;
+            poscontrol.offset.zero();
+            pos_control->init_pos_vel_xy();
+            guided_takeoff = false;
+            gcs().send_text(MAV_SEVERITY_INFO, "VTOL takeoff complete");
+        }
         // run VTOL position controller
         vtol_position_controller();
     }
@@ -3393,6 +3405,7 @@ bool QuadPlane::do_user_takeoff(float takeoff_altitude)
     motors->set_desired_spool_state(AP_Motors::DesiredSpoolState::THROTTLE_UNLIMITED);
     guided_start();
     guided_takeoff = true;
+    guided_track_ship = false;
     return true;
 }
 
@@ -3588,7 +3601,8 @@ bool QuadPlane::in_vtol_land_sequence(void) const
  */
 bool QuadPlane::in_vtol_takeoff(void) const
 {
-    if (in_vtol_auto() && is_vtol_takeoff(plane.mission.get_current_nav_cmd().id)) {
+    if ((in_vtol_auto() && is_vtol_takeoff(plane.mission.get_current_nav_cmd().id)) ||
+        (plane.control_mode == &plane.mode_guided && guided_takeoff)) {
         return true;
     }
     return false;

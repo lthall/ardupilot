@@ -382,7 +382,10 @@ private:
     bool in_angle_assist:1;
 
     // are we in a guided takeoff?
-    bool guided_takeoff:1;
+    bool guided_takeoff;
+
+    // are we tracking ship after guided takeoff?
+    bool guided_track_ship;
     
     struct {
         // time when motors reached lower limit
