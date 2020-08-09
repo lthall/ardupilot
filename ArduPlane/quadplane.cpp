@@ -2663,6 +2663,8 @@ void QuadPlane::takeoff_controller(void)
 
     if (in_ship_takeoff()) {
         ship_update_xy(pos, vel);
+    } else {
+        poscontrol.offset.zero();
     }
 
     // add in takeoff offset (used for ship takeoffs)
