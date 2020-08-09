@@ -2637,8 +2637,8 @@ void QuadPlane::setup_target_position(void)
     last_loiter_ms = now;
     
     // setup vertical speed and acceleration
-    pos_control->set_max_speed_z(-pilot_velocity_z_max, pilot_velocity_z_max);
-    pos_control->set_max_accel_z(pilot_accel_z);
+    pos_control->set_max_speed_z(-wp_nav->get_default_speed_down(), wp_nav->get_default_speed_up());
+    pos_control->set_max_accel_z(wp_nav->get_accel_z());
 
     float max_speed = wp_nav->get_default_speed_xy();
 
