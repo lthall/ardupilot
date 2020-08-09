@@ -164,14 +164,19 @@ void QuadPlane::ship_update_xy(Vector3f &pos, Vector3f &vel)
     // return in cm/s
     vel *= 100;
 
-    AP::logger().Write("SHXY", "TimeUS,px,py,vx,vy,ox,oy", "Qffffff",
-                       AP_HAL::micros64(),
-                       pos.x * 0.01f,
-                       pos.y * 0.01f,
-                       vel.x * 0.01f,
-                       vel.y * 0.01f,
-                       poscontrol.offset.x,
-                       poscontrol.offset.y);
+    static uint32_t last_shxy_ms;
+    uint32_t now_ms = AP_HAL::millis();
+    if ((options & OPTION_FAST_LOG) || now_ms - last_shxy_ms > 40) {
+        AP::logger().Write("SHXY", "TimeUS,px,py,vx,vy,ox,oy", "Qffffff",
+                           AP_HAL::micros64(),
+                           pos.x * 0.01f,
+                           pos.y * 0.01f,
+                           vel.x * 0.01f,
+                           vel.y * 0.01f,
+                           poscontrol.offset.x,
+                           poscontrol.offset.y);
+        last_shxy_ms = now_ms;
+    }
 }
 
 /*

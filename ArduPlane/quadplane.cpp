@@ -2287,13 +2287,18 @@ void QuadPlane::vtol_position_controller(void)
     const float groundspeed = plane.ahrs.groundspeed();
     const float distance = plane.auto_state.wp_distance;
 
-    AP::logger().Write("QPOS", "TimeUS,State,Cspd,DCspd,Dist,TAsp", "QBffff",
-                       AP_HAL::micros64(),
-                       uint8_t(poscontrol.state),
-                       closing_speed,
-                       desired_closing_speed,
-                       distance,
-                       get_land_airspeed());
+    static uint32_t last_qpos_ms;
+    uint32_t now_ms = AP_HAL::millis();
+    if ((options & OPTION_FAST_LOG) || now_ms - last_qpos_ms > 40) {
+        AP::logger().Write("QPOS", "TimeUS,State,Cspd,DCspd,Dist,TAsp", "QBffff",
+                           AP_HAL::micros64(),
+                           uint8_t(poscontrol.state),
+                           closing_speed,
+                           desired_closing_speed,
+                           distance,
+                           get_land_airspeed());
+        last_qpos_ms = now_ms;
+    }
     
     // horizontal position control
     switch (poscontrol.state) {
