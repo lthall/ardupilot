@@ -1554,10 +1554,10 @@ void QuadPlane::update_transition(void)
         poscontrol.state == QPOS_AIRBRAKE) {
         // motors on for airbraking in landing
         assisted_flight = false;
-        motors->set_desired_spool_state(AP_Motors::DesiredSpoolState::THROTTLE_UNLIMITED);
         attitude_control->relax_attitude_controllers();
         pos_control->relax_alt_hold_controllers(0);
         attitude_control->rate_controller_run();
+        motors->set_desired_spool_state(AP_Motors::DesiredSpoolState::THROTTLE_UNLIMITED);
         pos_control->update_z_controller();
         attitude_control->set_throttle_out(0, true, 0);
         motors->output();
@@ -1587,16 +1587,17 @@ void QuadPlane::update_transition(void)
         assisted_flight = true;
         if (!is_tailsitter()) {
             // update tansition state for vehicles using airspeed wait
-            if (transition_state != TRANSITION_AIRSPEED_WAIT) {
+            if (transition_state != TRANSITION_AIRSPEED_WAIT || transition_start_ms == 0) {
                 gcs().send_text(MAV_SEVERITY_INFO, "Transition started airspeed %.1f", (double)aspeed);
                 transition_state = TRANSITION_AIRSPEED_WAIT;
 
-                // init Z controller
-                pos_control->relax_alt_hold_controllers(0);
-            }
-
-            if (transition_start_ms == 0) {
-                pos_control->relax_alt_hold_controllers(0);
+                // init Z controller if we were not running VTOL already
+                if (motors->get_desired_spool_state() < AP_Motors::DesiredSpoolState::THROTTLE_UNLIMITED) {
+                    pos_control->relax_alt_hold_controllers(0);
+                } else if (now - last_pidz_active_ms > 50) {
+                    // we were running motors, but not with alt-hold
+                    pos_control->set_alt_target_to_current_alt();
+                }
                 transition_start_ms = now;
             }
         }
@@ -2546,7 +2547,7 @@ void QuadPlane::vtol_position_controller(void)
     case QPOS_AIRBRAKE:
         ship_landing_check_abort();
         // we just want stability from the VTOL controller in these
-        // phases of landing, so relax the Z controller, unless we air
+        // phases of landing, so relax the Z controller, unless we are
         // providing assistance
         if (transition_state == TRANSITION_DONE) {
             pos_control->relax_alt_hold_controllers(0);
