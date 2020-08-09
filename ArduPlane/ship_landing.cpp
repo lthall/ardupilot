@@ -254,10 +254,29 @@ void QuadPlane::ship_report_beacon(void)
     bool ok = plane.g2.follow.have_target();
     if (ok && !ship_landing.have_beacon) {
         gcs().send_text(MAV_SEVERITY_INFO, "Beacon OK");
+        ship_report_offset();
     } else if (!ok && ship_landing.have_beacon) {
         gcs().send_text(MAV_SEVERITY_INFO, "Beacon lost");
     }
     ship_landing.have_beacon = ok;
+}
+
+/*
+  report offset from target
+*/
+void QuadPlane::ship_report_offset(void)
+{
+    Location loc;
+    Vector3f vel, pos;
+    float heading_deg;
+    if (ship_landing_enabled() &&
+        plane.g2.follow.get_target_location_and_velocity_ofs_abs(loc, vel) &&
+        plane.g2.follow.get_target_heading_deg(heading_deg)) {
+        pos = loc.get_distance_NED(plane.current_loc);
+        Vector2f ofs_body(pos.x, pos.y);
+        ofs_body.rotate(-radians(heading_deg));
+        gcs().send_text(MAV_SEVERITY_INFO, "Beacon X:%.1f Y:%.1f Z:%.1f", ofs_body.x, ofs_body.y, pos.z);
+    }
 }
 
 /*

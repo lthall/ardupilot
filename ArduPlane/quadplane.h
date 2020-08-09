@@ -719,6 +719,11 @@ public:
      */
     void ship_report_beacon(void);
 
+    /*
+      report beacon offset
+     */
+    void ship_report_offset(void);
+    
 private:
     void motor_test_stop();
 };
