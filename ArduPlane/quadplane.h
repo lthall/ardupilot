@@ -538,6 +538,7 @@ private:
         OPTION_SHIP_LANDING=(1<<9),
         OPTION_THR_LANDING_CONTROL=(1<<10),
         OPTION_FW_SLAVE_RATE=(1<<11),
+        OPTION_FAST_LOG=(1<<12),
     };
 
     AP_Float takeoff_failure_scalar;
