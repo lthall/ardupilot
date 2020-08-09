@@ -2341,7 +2341,7 @@ void QuadPlane::vtol_position_controller(void)
           gives us a nice lot of deceleration
          */
         if (poscontrol.state == QPOS_APPROACH && distance < stop_distance) {
-            if (is_tailsitter()) {
+            if (is_tailsitter() || motors->get_desired_spool_state() == AP_Motors::DesiredSpoolState::THROTTLE_UNLIMITED) {
                 // tailsitters don't use airbrake stage for landing
                 gcs().send_text(MAV_SEVERITY_INFO,"VTOL position1 v=%.1f d=%.1f h=%.1f",
                                 (double)groundspeed,
