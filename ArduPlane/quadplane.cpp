@@ -1084,6 +1084,9 @@ void QuadPlane::init_loiter(void)
     loiter_nav->clear_pilot_desired_acceleration();
     loiter_nav->init_target();
 
+    pos_control->set_max_speed_xy(wp_nav->get_default_speed_xy());
+    pos_control->init_velmatch_velocity();
+
     // initialize vertical speed and acceleration
     pos_control->set_max_speed_z(-pilot_velocity_z_max, pilot_velocity_z_max);
     pos_control->set_max_accel_z(pilot_accel_z);
