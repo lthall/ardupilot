@@ -72,12 +72,12 @@ void QuadPlane::ship_landing_RTL_update(void)
         float stop_distance = ship_landing_stopping_distance();
 
         // increase holdoff distance by up to 50% to ensure we can stop
-        holdoff_dist = MAX(holdoff_dist, MIN(holdoff_dist*2.5, stop_distance));
+        holdoff_dist = fabsf(MAX(holdoff_dist, MIN(holdoff_dist*2.5, stop_distance)));
 
         float heading_deg;
         plane.g2.follow.get_target_heading_deg(heading_deg);
 
-        Vector2f ofs(-fabsf(holdoff_dist), radius);
+        Vector2f ofs(-holdoff_dist, radius);
         ofs.rotate(radians(heading_deg));
         loc.offset(ofs.x, ofs.y);
         if (ship_landing.have_commanded_alt) {
@@ -223,7 +223,7 @@ bool QuadPlane::in_ship_takeoff(void) const
     if (!plane.g2.follow.get_target_location_and_velocity_ofs_abs(loc, vel)) {
         return false;
     }
-    if (loc.get_distance(plane.current_loc) > plane.aparm.loiter_radius) {
+    if (loc.get_distance(plane.current_loc) > fabsf(plane.aparm.loiter_radius)) {
         return false;
     }
     return true;
