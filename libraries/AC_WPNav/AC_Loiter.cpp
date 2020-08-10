@@ -146,7 +146,7 @@ void AC_Loiter::init_target()
     _pos_control.set_desired_accel_xy(_desired_accel.x, _desired_accel.y);
 
     // initialise position controller
-    _pos_control.init_velmatch_velocity();
+    _pos_control.init_velmatch_velocity(_speed_cms);
     _use_velmatch = false;
     _pos_control.init_xy_controller();
 }
@@ -232,7 +232,7 @@ void AC_Loiter::update()
     _pos_control.set_max_speed_xy(_speed_cms);
     _pos_control.set_max_accel_xy(_accel_cmss);
 
-    _pos_control.update_velmatch_velocity(dt);
+    _pos_control.update_velmatch_velocity(dt, _speed_cms);
     calc_desired_velocity(dt);
     _pos_control.update_xy_controller();
 }
