@@ -347,10 +347,10 @@ public:
     void write_velmatch_log();
 
     // initialise velmatch velocity
-    void init_velmatch_velocity();
+    void init_velmatch_velocity(float speed_max);
 
     // update velmatch velocity
-    void update_velmatch_velocity(float dt);
+    void update_velmatch_velocity(float dt, float speed_max);
 
     static const struct AP_Param::GroupInfo var_info[];
 

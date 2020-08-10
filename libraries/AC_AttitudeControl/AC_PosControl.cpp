@@ -1395,7 +1395,7 @@ bool AC_PosControl::pre_arm_checks(const char *param_prefix,
 
 #if WITH_VELMATCH_SUPPORT
 /// Initialises the velmatch velocity based on its state.
-void AC_PosControl::init_velmatch_velocity()
+void AC_PosControl::init_velmatch_velocity(float speed_max)
 {
     auto &follow = AP::follow();
     switch (_velmatchState) {
@@ -1421,8 +1421,8 @@ void AC_PosControl::init_velmatch_velocity()
             _vel_velmatch = _inav.get_velocity();
             // limit velocity match to configured max speed
             const float speed = _vel_velmatch.length();
-            if (speed > _speed_cms) {
-                _vel_velmatch *= (_speed_cms / speed);
+            if (speed > speed_max) {
+                _vel_velmatch *= (speed_max / speed);
             }
             set_velmatch_state_hold();
         }
@@ -1462,7 +1462,7 @@ bool AC_PosControl::set_velmatch_state(enum VelMatchState velmatchState)
 }
 
 /// Proportional controller with piecewise sqrt sections to constrain second derivative
-void AC_PosControl::update_velmatch_velocity(float dt)
+void AC_PosControl::update_velmatch_velocity(float dt, float speed_max)
 {
     auto &follow = AP::follow();
 
@@ -1474,6 +1474,10 @@ void AC_PosControl::update_velmatch_velocity(float dt)
         target = vel_of_target * 100.0f;
     } else {
         target = _inav.get_velocity();
+        const float speed = target.length();
+        if (speed > speed_max) {
+            target *= (speed_max / speed);
+        }
     }
     switch (_velmatchState) {
     case OFF:
@@ -1523,7 +1527,7 @@ void AC_PosControl::write_velmatch_log()
 
 #else // WITH_VELMATCH_SUPPORT
 
-void AC_PosControl::init_velmatch_velocity() {}
-void AC_PosControl::update_velmatch_velocity(float dt) {}
+void AC_PosControl::init_velmatch_velocity(float speed_max) {}
+void AC_PosControl::update_velmatch_velocity(float dt, float speed_max) {}
 
 #endif // WITH_VELMATCH_SUPPORT
