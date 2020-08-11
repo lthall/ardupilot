@@ -644,7 +644,8 @@ void Plane::update_load_factor(void)
     aerodynamic_load_factor = 1.0f / safe_sqrt(cosf(radians(demanded_roll)));
 
     if (quadplane.in_transition() &&
-        (quadplane.options & QuadPlane::OPTION_LEVEL_TRANSITION)) {
+        (quadplane.options & QuadPlane::OPTION_LEVEL_TRANSITION) &&
+        (!stick_mixing_enabled() || channel_roll->get_control_in()==0)) {
         // the user wants transitions to be kept level to within LEVEL_ROLL_LIMIT
         roll_limit_cd = MIN(roll_limit_cd, g.level_roll_limit*100);
         nav_roll_cd = constrain_int32(nav_roll_cd, -roll_limit_cd, roll_limit_cd);
