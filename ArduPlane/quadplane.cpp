@@ -470,6 +470,15 @@ const AP_Param::GroupInfo QuadPlane::var_info2[] = {
     // @User: Standard
     AP_GROUPINFO("ASSIST_ALT", 16, QuadPlane, assist_alt, 0),
 
+    // @Param: SHIP_ANGLE
+    // @DisplayName: Quadplane ship landing angle
+    // @Description: This is the approach angle for beacon (ship) landings. Setting this rotates the holdoff position for ship landings. A value of 0 means to approach from behind the ship. A value of 90 means to approach from the left side of the ship
+    // @Units: deg
+    // @Range: -180 180
+    // @Increment: 1
+    // @User: Standard
+    AP_GROUPINFO("SHIP_ANGLE", 21, QuadPlane, ship_landing.land_angle, 0),
+    
     AP_GROUPEND
 };
 

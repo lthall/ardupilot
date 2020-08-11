@@ -565,6 +565,7 @@ private:
         int32_t commanded_alt;
         Vector3f target_vel;
         uint32_t last_home_set_ms;
+        AP_Int16 land_angle;
     } ship_landing;
 
     /*

@@ -68,18 +68,21 @@ void QuadPlane::ship_landing_RTL_update(void)
         ship_landing.stage == ship_landing.DESCEND) {
         // hold loiter behind and to one side
         const float radius = plane.aparm.loiter_radius;
-        float holdoff_dist = radius*1.5;
+        float holdoff_dist = fabsf(radius*1.5);
         float stop_distance = ship_landing_stopping_distance();
 
         // increase holdoff distance by up to 50% to ensure we can stop
-        holdoff_dist = fabsf(MAX(holdoff_dist, MIN(holdoff_dist*2.5, stop_distance)));
+        holdoff_dist = MAX(holdoff_dist, MIN(holdoff_dist*2.5, stop_distance));
 
         float heading_deg;
         plane.g2.follow.get_target_heading_deg(heading_deg);
 
+        heading_deg += ship_landing.land_angle;
+
         Vector2f ofs(-holdoff_dist, radius);
         ofs.rotate(radians(heading_deg));
         loc.offset(ofs.x, ofs.y);
+
         if (ship_landing.have_commanded_alt) {
             loc.alt = ship_landing.commanded_alt;
         } else if (ship_landing.stage == ship_landing.HOLDOFF) {
@@ -236,7 +239,7 @@ void QuadPlane::ship_landing_check_abort(void)
 {
     float height_above_ground = plane.relative_ground_altitude(plane.g.rangefinder_landing);
     if (((options & OPTION_THR_LANDING_CONTROL) != 0) &&
-        in_ship_landing() && height_above_ground > qrtl_alt &&
+        in_ship_landing() && (height_above_ground > qrtl_alt || poscontrol.state <= QPOS_AIRBRAKE) &&
         plane.channel_throttle->get_control_in() > 0.9*plane.channel_throttle->get_range()) {
         gcs().send_text(MAV_SEVERITY_INFO, "aborted landing");
 
@@ -355,12 +358,15 @@ float QuadPlane::ship_landing_stopping_distance()
     float heading_deg;
     plane.g2.follow.get_target_heading_deg(heading_deg);
 
+    // add ship landing angle
+    heading_deg += ship_landing.land_angle;
+
     // add in wind in direction of flight
     const Vector3f wind = plane.ahrs.wind_estimate();
     Vector2f wind2d(wind.x, wind.y);
 
     // rotate wind to be in approach frame
-    wind2d.rotate(-radians(heading_deg));
+    wind2d.rotate(radians(heading_deg));
 
     // ship velocity rotated to the approach frame
     Vector2f ship2d(ship_landing.target_vel.x, ship_landing.target_vel.y);
@@ -369,8 +375,10 @@ float QuadPlane::ship_landing_stopping_distance()
     // calculate closing speed
     // use pythagoras theorem to solve for the wind triangle
     float closing_speed = safe_sqrt(sq(tas) - sq(wind2d.y));
+
     // include the wind in the direction of the ship
     closing_speed += wind2d.x;
+
     // account for the ship velocity
     closing_speed -= ship2d.x;
 
