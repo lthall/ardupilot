@@ -239,7 +239,7 @@ void QuadPlane::ship_landing_check_abort(void)
 {
     float height_above_ground = plane.relative_ground_altitude(plane.g.rangefinder_landing);
     if (((options & OPTION_THR_LANDING_CONTROL) != 0) &&
-        in_ship_landing() && (height_above_ground > qrtl_alt || poscontrol.state <= QPOS_AIRBRAKE) &&
+        in_ship_landing() && (height_above_ground > qrtl_alt || poscontrol.state <= QPOS_LAND_DESCEND) &&
         plane.channel_throttle->get_control_in() > 0.9*plane.channel_throttle->get_range()) {
         gcs().send_text(MAV_SEVERITY_INFO, "aborted landing");
 
