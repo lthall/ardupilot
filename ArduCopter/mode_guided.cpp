@@ -384,7 +384,7 @@ void Mode::auto_takeoff_run()
     // if not armed set throttle to zero and exit immediately
     if (!motors->armed() || !copter.ap.auto_armed) {
         make_safe_spool_down();
-        wp_nav->shift_wp_origin_to_current_pos();
+        wp_nav->shift_takeoff_origin_to_current_pos(0);
         return;
     }
 
@@ -399,7 +399,7 @@ void Mode::auto_takeoff_run()
     if (motors->get_spool_state() == AP_Motors::SpoolState::THROTTLE_UNLIMITED) {
         set_land_complete(false);
     } else {
-        wp_nav->shift_wp_origin_to_current_pos();
+        wp_nav->shift_takeoff_origin_to_current_pos(0);
     }
 
     // set motors to full range
