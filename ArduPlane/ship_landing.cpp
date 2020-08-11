@@ -62,6 +62,8 @@ void QuadPlane::ship_landing_RTL_update(void)
     }
     Location loc = loc0;
 
+    ship_landing.target_vel = vel;
+
     const float thr_in = get_pilot_land_throttle();
 
     if (ship_landing.stage == ship_landing.HOLDOFF ||
@@ -358,19 +360,16 @@ float QuadPlane::ship_landing_stopping_distance()
     float heading_deg;
     plane.g2.follow.get_target_heading_deg(heading_deg);
 
-    // add ship landing angle
-    heading_deg += ship_landing.land_angle;
-
     // add in wind in direction of flight
     const Vector3f wind = plane.ahrs.wind_estimate();
     Vector2f wind2d(wind.x, wind.y);
 
     // rotate wind to be in approach frame
-    wind2d.rotate(radians(heading_deg));
+    wind2d.rotate(-radians(heading_deg + ship_landing.land_angle));
 
     // ship velocity rotated to the approach frame
     Vector2f ship2d(ship_landing.target_vel.x, ship_landing.target_vel.y);
-    ship2d.rotate(-radians(heading_deg));
+    ship2d.rotate(-radians(heading_deg + ship_landing.land_angle));
 
     // calculate closing speed
     // use pythagoras theorem to solve for the wind triangle
