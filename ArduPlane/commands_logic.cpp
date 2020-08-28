@@ -8,7 +8,10 @@ bool Plane::start_command(const AP_Mission::Mission_Command& cmd)
     // default to non-VTOL loiter
     auto_state.vtol_loiter = false;
 
-        // log when new commands start
+    // reset poscontroller
+    plane.quadplane.poscontrol.state = QuadPlane::QPOS_APPROACH;
+    
+    // log when new commands start
     if (should_log(MASK_LOG_CMD)) {
         logger.Write_Mission_Cmd(mission, cmd);
     }
@@ -29,8 +32,13 @@ bool Plane::start_command(const AP_Mission::Mission_Command& cmd)
 
         AP_Mission::Mission_Command next_nav_cmd;
         const uint16_t next_index = mission.get_current_nav_index() + 1;
-        auto_state.wp_is_land_approach = mission.get_next_nav_cmd(next_index, next_nav_cmd) && (next_nav_cmd.id == MAV_CMD_NAV_LAND) &&
-            !quadplane.is_vtol_land(next_nav_cmd.id);
+        if (mission.get_next_nav_cmd(next_index, next_nav_cmd)) {
+            auto_state.wp_is_land_approach = (next_nav_cmd.id == MAV_CMD_NAV_LAND) && !quadplane.is_vtol_land(next_nav_cmd.id);
+            auto_state.wp_is_vtol_land_approach = quadplane.is_vtol_land(next_nav_cmd.id);
+        } else {
+            auto_state.wp_is_land_approach = false;
+            auto_state.wp_is_vtol_land_approach = false;
+        }
     }
 
     switch(cmd.id) {
@@ -302,12 +310,12 @@ bool Plane::verify_command(const AP_Mission::Mission_Command& cmd)        // Ret
 //  Nav (Must) commands
 /********************************************************************************/
 
-void Plane::do_RTL(int32_t rtl_altitude)
+void Plane::do_RTL(int32_t rtl_altitude_cm)
 {
     auto_state.next_wp_crosstrack = false;
     auto_state.crosstrack = false;
     prev_WP_loc = current_loc;
-    next_WP_loc = rally.calc_best_rally_or_home_location(current_loc, rtl_altitude);
+    next_WP_loc = rally.calc_best_rally_or_home_location(current_loc, rtl_altitude_cm);
     setup_terrain_target_alt(next_WP_loc);
     set_target_altitude_location(next_WP_loc);
 
@@ -620,9 +628,12 @@ bool Plane::verify_nav_wp(const AP_Mission::Mission_Command& cmd)
         // allow user to override acceptance radius
         acceptance_distance_m = cmd_acceptance_distance;
     } else if (cmd_passby == 0) {
-        acceptance_distance_m = nav_controller->turn_distance(g.waypoint_radius, auto_state.next_turn_angle);
-    } else {
-
+        if (auto_state.wp_is_vtol_land_approach && quadplane.available()) {
+            const float dist = prev_WP_loc.get_distance(flex_next_WP_loc);
+            acceptance_distance_m = MIN(quadplane.stopping_distance(), 0.8*dist);
+        } else {
+            acceptance_distance_m = nav_controller->turn_distance(g.waypoint_radius, auto_state.next_turn_angle);
+        }
     }
     
     if (auto_state.wp_distance <= acceptance_distance_m) {

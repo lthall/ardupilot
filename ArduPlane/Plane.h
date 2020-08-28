@@ -486,6 +486,9 @@ private:
         // are we headed to the land approach waypoint? Works for any nav type
         bool wp_is_land_approach;
 
+        // are we headed to a VTOL land approach waypoint?
+        bool wp_is_vtol_land_approach;
+        
         // should we fly inverted?
         bool inverted_flight;
 
@@ -1091,6 +1094,9 @@ private:
     bool have_reverse_thrust(void) const;
     int16_t get_throttle_input(bool no_deadzone=false) const;
 
+    // return true if we should run the speed_height controller
+    bool speed_height_controller_active(void);
+    
     enum Failsafe_Action {
         Failsafe_Action_None      = 0,
         Failsafe_Action_RTL       = 1,

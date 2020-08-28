@@ -56,6 +56,7 @@ public:
     bool init_mode(void);
     bool setup(void);
 
+    void vtol_position_xy(Vector3f &pos, const Vector3f &vel, float accel_xy_limit_cmss);
     void vtol_position_controller(void);
     void setup_target_position(void);
     void takeoff_controller(void);
@@ -98,6 +99,8 @@ public:
     bool in_vtol_auto(void) const;
     bool in_vtol_mode(void) const;
     bool in_vtol_posvel_mode(void) const;
+    bool use_vtol_attitude_controllers(void) const;
+    bool use_fw_attitude_controllers(void) const;
     void update_throttle_hover();
     bool show_vtol_view() const;
 
@@ -296,8 +299,8 @@ private:
     void setup_defaults(void);
 
     // calculate a stopping distance for fixed-wing to vtol transitions
-    float stopping_distance(void);
-    
+    float stopping_distance();
+
     AP_Int16 transition_time_ms;
 
     // transition deceleration, m/s/s
@@ -435,8 +438,8 @@ private:
     bool in_angle_assist:1;
 
     // are we in a guided takeoff?
-    bool guided_takeoff:1;
-    
+    bool guided_takeoff;
+
     struct {
         // time when motors reached lower limit
         uint32_t lower_limit_start_ms;
@@ -451,6 +454,8 @@ private:
     uint32_t last_loiter_ms;
 
     enum position_control_state {
+        QPOS_APPROACH,
+        QPOS_AIRBRAKE,
         QPOS_POSITION1,
         QPOS_POSITION2,
         QPOS_LAND_DESCEND,
@@ -459,11 +464,22 @@ private:
     };
     struct {
         enum position_control_state state;
-        float speed_scale;
-        Vector2f target_velocity;
-        float max_speed;
+        float start_closing_vel;
+        float start_dist;
         Vector3f target;
-        bool slow_descent:1;
+        bool slow_descent;
+        bool pos1_initialised;
+        // approach altitude in meters above home
+        float approach_alt;
+
+        // pilot controlled offset of landing point
+        Vector3f offset;
+
+        // true when pilot sticks are active for re-positioning
+        bool pilot_correction_active;
+
+        // time we entered airbrake state
+        uint32_t airbrake_start_ms;
     } poscontrol;
 
     struct {
@@ -611,6 +627,8 @@ private:
         OPTION_DISABLE_SYNTHETIC_AIRSPEED_ASSIST=(1<<12),
         OPTION_DISABLE_GROUND_EFFECT_COMP=(1<<13),
         OPTION_INGORE_FW_ANGLE_LIMITS_IN_Q_MODES=(1<<14),
+        OPTION_THR_LANDING_CONTROL=(1<<15),
+        OPTION_FW_SLAVE_RATE=(1<<16),
     };
 
     AP_Float takeoff_failure_scalar;
@@ -663,11 +681,53 @@ private:
     // Q assist state, can be enabled, disabled or force. Default to enabled
     Q_ASSIST_STATE_ENUM q_assist_state = Q_ASSIST_STATE_ENUM::Q_ASSIST_ENABLED;
 
+    /*
+      are we in a VTOL takeoff
+     */
+    bool in_vtol_takeoff(void) const;
+
+    /*
+      update landing re-position offset
+     */
+    void update_land_positioning();
+
+    /*
+      get pilot throttle in for landing code. Return value on scale of 0 to 1
+     */
+    float get_pilot_land_throttle(void) const;
+
+    /*
+      calculate our closing velocity vector on the landing
+      point. Takes account of the landing point having a velocity
+     */
+    Vector2f landing_closing_velocity();
+
+    /*
+      calculate our desired closing velocity vector on the landing point.
+    */
+    Vector2f landing_desired_closing_velocity();
+
+    /*
+      initialise QPOS_APPROACH
+    */
+    void poscontrol_init_approach(void);
+
+    /*
+      get target airspeed for landing, for use by TECS
+     */
+    float get_land_airspeed(void);
+
 public:
     void motor_test_output();
     MAV_RESULT mavlink_motor_test_start(mavlink_channel_t chan, uint8_t motor_seq, uint8_t throttle_type,
                                         uint16_t throttle_value, float timeout_sec,
                                         uint8_t motor_count);
+
+    /*
+      should we switch to QRTL on RTL completion
+     */
+    bool rtl_qrtl_enabled(void) const;
+
 private:
     void motor_test_stop();
 

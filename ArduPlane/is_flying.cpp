@@ -85,6 +85,7 @@ void Plane::update_is_flying_5Hz(void)
                 break;
 
             case AP_Vehicle::FixedWing::FLIGHT_NORMAL:
+            case AP_Vehicle::FixedWing::FLIGHT_AIRBRAKE:
                 if (in_preLaunch_flight_stage()) {
                     // while on the ground, an uncalibrated airspeed sensor can drift to 7m/s so
                     // ensure we aren't showing a false positive.
@@ -263,6 +264,7 @@ void Plane::crash_detection_update(void)
                 break;
 
             case AP_Vehicle::FixedWing::FLIGHT_NORMAL:
+            case AP_Vehicle::FixedWing::FLIGHT_AIRBRAKE:
                 if (!in_preLaunch_flight_stage() && been_auto_flying) {
                     crashed = true;
                     crash_state.debounce_time_total_ms = CRASH_DETECTION_DELAY_MS;

@@ -173,8 +173,8 @@ void Plane::ahrs_update()
  */
 void Plane::update_speed_height(void)
 {
-    if (control_mode->does_auto_throttle()) {
-	    // Call TECS 50Hz update. Note that we call this regardless of
+    if (speed_height_controller_active()) {
+        // Call TECS 50Hz update. Note that we call this regardless of
 	    // throttle suppressed, as this needs to be running for
 	    // takeoff detection
         SpdHgt_Controller->update_50hz();
@@ -494,7 +494,7 @@ void Plane::update_alt()
 
     update_flight_stage();
 
-    if (control_mode->does_auto_throttle() && !throttle_suppressed) {
+    if (speed_height_controller_active() && !throttle_suppressed) {
 
         float distance_beyond_land_wp = 0;
         if (flight_stage == AP_Vehicle::FixedWing::FLIGHT_LAND && current_loc.past_interval_finish_line(prev_WP_loc, next_WP_loc)) {
@@ -508,6 +508,10 @@ void Plane::update_alt()
             // 10m in the demanded height to push TECS to climb
             // quickly
             target_alt = MAX(target_alt, prev_WP_loc.alt - home.alt) + (g2.rtl_climb_min+10)*100;
+        }
+
+        if (quadplane.in_vtol_land_approach()) {
+            target_alt = quadplane.poscontrol.approach_alt*100;
         }
 
         SpdHgt_Controller->update_pitch_throttle(target_alt,
@@ -531,6 +535,9 @@ void Plane::update_flight_stage(void)
         if (control_mode == &mode_auto) {
             if (quadplane.in_vtol_auto()) {
                 set_flight_stage(AP_Vehicle::FixedWing::FLIGHT_VTOL);
+            } else if (quadplane.in_vtol_land_approach() &&
+                       quadplane.poscontrol.state == QuadPlane::QPOS_AIRBRAKE) {
+                set_flight_stage(AP_Vehicle::FixedWing::FLIGHT_AIRBRAKE);
             } else if (auto_state.takeoff_complete == false) {
                 set_flight_stage(AP_Vehicle::FixedWing::FLIGHT_TAKEOFF);
             } else if (mission.get_current_nav_cmd().id == MAV_CMD_NAV_LAND) {
@@ -549,6 +556,10 @@ void Plane::update_flight_stage(void)
             } else {
                 set_flight_stage(AP_Vehicle::FixedWing::FLIGHT_NORMAL);
             }
+        } else if (control_mode == &mode_qrtl &&
+                   quadplane.poscontrol.state == QuadPlane::QPOS_AIRBRAKE) {
+            // special airbrake mode for TECS
+            set_flight_stage(AP_Vehicle::FixedWing::FLIGHT_AIRBRAKE);
         } else if (control_mode != &mode_takeoff) {
             // If not in AUTO then assume normal operation for normal TECS operation.
             // This prevents TECS from being stuck in the wrong stage if you switch from
@@ -622,6 +633,20 @@ bool Plane::get_wp_distance_m(float &distance) const
         distance = quadplane.using_wp_nav() ? quadplane.wp_nav->get_wp_distance_to_destination() : 0;
     } else {
         distance = auto_state.wp_distance;
+    }
+    return true;
+}
+
+// return true if we should run the speed_height controller
+bool Plane::speed_height_controller_active(void)
+{
+    if (!auto_throttle_mode) {
+        return false;
+    }
+    if (quadplane.in_vtol_land_approach() &&
+        quadplane.poscontrol.state > QuadPlane::QPOS_AIRBRAKE) {
+        // for QPOS landings we stop running TECS after airbrake stage
+        return false;
     }
     return true;
 }

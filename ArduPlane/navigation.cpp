@@ -208,6 +208,8 @@ void Plane::calc_airspeed_errors()
                 target_airspeed_cm = aparm.airspeed_cruise_cm;
             }
         }
+    } else if (quadplane.in_vtol_land_approach()) {
+        target_airspeed_cm = quadplane.get_land_airspeed() * 100;
     } else {
         // Normal airspeed target for all other cases
         target_airspeed_cm = aparm.airspeed_cruise_cm;
@@ -216,8 +218,8 @@ void Plane::calc_airspeed_errors()
     // Set target to current airspeed + ground speed undershoot,
     // but only when this is faster than the target airspeed commanded
     // above.
-    if (control_mode->does_auto_throttle() &&
-    	aparm.min_gndspeed_cm > 0 &&
+    if (speed_height_controller_active() &&
+        aparm.min_gndspeed_cm > 0 &&
     	control_mode != &mode_circle) {
         int32_t min_gnd_target_airspeed = airspeed_measured*100 + groundspeed_undershoot;
         if (min_gnd_target_airspeed > target_airspeed_cm) {
@@ -304,7 +306,9 @@ void Plane::update_loiter(uint16_t radius)
 
     if (loiter.start_time_ms == 0) {
         if (reached_loiter_target() ||
-            auto_state.wp_proportion > 1) {
+            auto_state.wp_proportion > 1 ||
+            (quadplane.guided_mode_enabled() &&
+             auto_state.wp_distance < quadplane.stopping_distance())) {
             // we've reached the target, start the timer
             loiter.start_time_ms = millis();
             if (control_mode->is_guided_mode()) {
