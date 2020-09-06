@@ -61,6 +61,7 @@ void ModeFollow::run()
         // calculate desired velocity vector in cm/s in NEU
         const float kp = MIN(g2.follow.get_pos_p().kP(), pos_control->get_pos_xy_p().kP().get());
         desired_velocity_neu_cms = sqrt_controller_xy( dist_vec_offs * 100.0f, kp, pos_control->get_max_accel_xy() * 0.5f);
+        desired_velocity_neu_cms.z = -sqrt_controller( dist_vec_offs.z * 100.0f, pos_control->get_pos_z_p().kP().get(), pos_control->get_max_accel_z() * 0.5f, pos_control->get_dt());
         desired_velocity_neu_cms.x += vel_of_target.x * 100.0f;
         desired_velocity_neu_cms.y += vel_of_target.y * 100.0f;
         desired_velocity_neu_cms.z -= vel_of_target.z * 100.0f;
@@ -94,12 +95,24 @@ void ModeFollow::run()
         desired_velocity_neu_cms.x = desired_velocity_xy_cms.x;
         desired_velocity_neu_cms.y = desired_velocity_xy_cms.y;
 
-        // limit vertical desired_velocity_neu_cms to slow as we approach target (we use 1/2 of maximum deceleration for gentle slow down)
-        const float des_vel_z_max = copter.avoid.get_max_speed(pos_control->get_pos_z_p().kP().get(), pos_control->get_max_accel_z() * 0.5f, fabsf(dist_vec_offs_neu.z), copter.G_Dt);
-        desired_velocity_neu_cms.z = constrain_float(desired_velocity_neu_cms.z, -des_vel_z_max, des_vel_z_max);
-
         // get avoidance adjusted climb rate
         desired_velocity_neu_cms.z = get_avoidance_adjusted_climbrate(desired_velocity_neu_cms.z);
+
+        AP::logger().Write("FOL3", "TimeUS,TPN,TPE,TPD,TVN,TVE,TVD,VN,VE,VD",
+                "smmmnnnnnn",
+                "F000000000",
+                "Qfffffffff",
+                AP_HAL::micros64(),
+                (double)dist_vec_offs.x * 100.0f,
+                (double)dist_vec_offs.y * 100.0f,
+                (double)dist_vec_offs.z * 100.0f,
+                (double)vel_of_target.x * 100.0f,
+                (double)vel_of_target.y * 100.0f,
+                (double)vel_of_target.z * 100.0f,
+                (double)desired_velocity_neu_cms.x,
+                (double)desired_velocity_neu_cms.y,
+                (double)desired_velocity_neu_cms.z
+                                               );
 
         // calculate vehicle heading
         switch (g2.follow.get_yaw_behave()) {

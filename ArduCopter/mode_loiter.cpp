@@ -138,6 +138,7 @@ void ModeLoiter::run()
         target_climb_rate = get_avoidance_adjusted_climbrate(target_climb_rate);
 
         // run loiter controller
+        loiter_nav->use_velmatch();
         loiter_nav->update();
 
         // call attitude controller
@@ -172,6 +173,7 @@ void ModeLoiter::run()
 #endif
 
         // run loiter controller
+        loiter_nav->use_velmatch();
         loiter_nav->update();
 
         // call attitude controller

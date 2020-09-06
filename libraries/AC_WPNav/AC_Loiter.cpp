@@ -108,12 +108,14 @@ void AC_Loiter::init_target(const Vector3f& position)
     if (_use_velmatch) {
         vel_velmatch = _pos_control.get_vel_velmatch();
     }
-    _pos_control.set_desired_velocity_xy(vel_velmatch.x,vel_velmatch.y);
+    _pos_control.set_desired_velocity_xy(vel_velmatch.x, vel_velmatch.y);
     _pos_control.set_desired_accel_xy(0.0f,0.0f);
 
     _use_velmatch = false;
 
     // initialise position controller if not already active
+    _pos_control.init_velmatch_velocity(_speed_cms);
+    _use_velmatch = false;
     if (!_pos_control.is_active_xy()) {
         _pos_control.init_xy_controller();
     }
