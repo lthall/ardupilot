@@ -65,8 +65,20 @@ public:
     // get target's estimated location and velocity (in NED), with offsets added, and absolute alt
     bool get_target_location_and_velocity_ofs_abs(Location &loc, Vector3f &vel_ned) const;
     
+    // update the current position and velocity based on the last known location and velocity
+    bool update_target_pos_and_vel();
+
+    // get position of target plus offsets (in meters), and target's velocity all in NED frame
+    void get_target_vel_ned(Vector3f &vel_ned);
+
+    // get position of target plus offsets (in meters), and target's velocity all in NED frame
+    void get_target_pos_and_vel_ned(Vector3f &pos_with_ofs, Vector3f &vel_ned);
+
     // get distance vector to target (in meters), target plus offsets, and target's velocity all in NED frame
-    bool get_target_dist_and_vel_ned(Vector3f &dist_ned, Vector3f &dist_with_ofs, Vector3f &vel_ned);
+    void get_target_dist_and_vel_ned(Vector3f &dist_with_ofs, Vector3f &vel_ned);
+
+    // get distance vector to target (in meters), target plus offsets, and target's velocity all in NED frame
+    void get_target_dist_ned(Vector3f &dist_with_ofs);
 
     // get position controller.  this controller is not used within this library but it is convenient to hold it here
     const AC_P& get_pos_p() const { return _p_pos; }
@@ -142,7 +154,8 @@ private:
     Vector3f _path_location_ned;    // current position of kinematically consistent path in NED frame in m
     Vector3f _path_velocity_ned;    // current velocity of kinematically consistent path in NED frame in m/s
     Vector3f _path_accel_ned;       // current acceleration of kinematically consistent path in NED frame in m/s/s
-    uint32_t _last_path_update_ms;  // system time of last path update
+    Vector3f _dist_offs_ned;        // distance to predicted position of target
+    uint32_t _last_path_update_us;  // system time of last path update
     uint32_t _last_heading_update_ms;   // system time of last heading update
     float _target_heading;          // heading in degrees
     bool _automatic_sysid;          // did we lock onto a sysid automatically?

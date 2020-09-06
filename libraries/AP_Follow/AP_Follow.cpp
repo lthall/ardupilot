@@ -128,7 +128,7 @@ const AP_Param::GroupInfo AP_Follow::var_info[] = {
     // @Units: s
     // @Range: 0.1 10
     // @User: Standard
-    AP_GROUPINFO("_PATH_TC", 11, AP_Follow, _path_tc, 5.0f),
+    AP_GROUPINFO("_PATH_TC", 11, AP_Follow, _path_tc, 1.0f),
 
     AP_GROUPEND
 };
@@ -201,34 +201,36 @@ bool AP_Follow::get_target_location_and_velocity(Location &loc, Vector3f &vel_ne
     return true;
 }
 
-// get distance vector to target (in meters) and target's velocity all in NED frame
-bool AP_Follow::get_target_dist_and_vel_ned(Vector3f &dist_ned, Vector3f &dist_with_offs, Vector3f &vel_ned)
+// update the current position and velocity based on the last known location and velocity
+bool AP_Follow::update_target_pos_and_vel()
 {
+    const float dt = (AP_HAL::millis() - _last_location_update_ms) * 0.001f;
+    if (dt*1000 > AP_FOLLOW_TIMEOUT_MS) {
+        clear_dist_and_bearing_to_target();
+        return false;
+    }
+
     // get our location
     Location current_loc;
-    if (!AP::ahrs().get_position(current_loc)) {
+    Vector3f current_location_ned;
+    if (!AP::ahrs().get_position(current_loc) || !current_loc.get_vector_from_origin_NED(current_location_ned)) {
         clear_dist_and_bearing_to_target();
          return false;
     }
 
     // get target location and velocity
-    Location target_loc;
-    Vector3f veh_vel;
-    if (!get_target_location_and_velocity(target_loc, veh_vel)) {
+    Vector3f pos_ned;
+    Vector3f vel_ned = _target_velocity_ned;
+    Vector3f acc_ned = _target_accel_ned;
+    if (!_target_location.get_vector_from_origin_NED(pos_ned)) {
         clear_dist_and_bearing_to_target();
         return false;
     }
 
-    // change to altitude above home if relative altitude is being used
-    if (target_loc.relative_alt == 1) {
-        current_loc.alt -= AP::ahrs().get_home().alt;
-    }
-
-    // calculate difference
-    const Vector3f dist_vec = current_loc.get_distance_NED(target_loc);
-
-    // fail if too far
-    if (is_positive(_dist_max.get()) && (dist_vec.length() > _dist_max)) {
+    // calculate difference and check for minimum distance
+    const Vector3f dist_vec = current_loc.get_distance_NED(_target_location);
+    if (is_positive(_dist_max.get()) && (Vector2f(dist_vec.x, dist_vec.y).length() > _dist_max)) {
+        // Too far from target
         clear_dist_and_bearing_to_target();
         return false;
     }
@@ -243,73 +245,84 @@ bool AP_Follow::get_target_dist_and_vel_ned(Vector3f &dist_ned, Vector3f &dist_w
         return false;
     }
 
-    // calculate results
-    dist_ned = dist_vec;
-    dist_with_offs = dist_vec + offsets;
-    vel_ned = veh_vel;
+    pos_ned += offsets;
 
-    Vector3f current_location_ned;
-    Vector3f target_location_ned;
-    Vector3f target_velocity_ned;
-    if (_target_location.get_vector_from_origin_NEU(target_location_ned) && current_loc.get_vector_from_origin_NEU(current_location_ned)) {
-        // calculate time since last actual position update
-        const float dt = (AP_HAL::millis() - _last_location_update_ms) * 0.001f;
-        target_location_ned *= 0.01f;
-        current_location_ned *= 0.01f;
-        target_location_ned += _target_velocity_ned * dt + _target_accel_ned * 0.5f * sq(dt) + offsets;
-        target_velocity_ned += _target_velocity_ned + _target_accel_ned * dt;
+    // calculate time since last actual position update
+    update_pos_vel_accel_xy(pos_ned, vel_ned, acc_ned, dt);
+    update_pos_vel_accel_z(pos_ned, vel_ned, acc_ned, dt);
 
-        // calculate time since last path update
-        if ((_last_path_update_ms == 0) || (AP_HAL::millis() - _last_path_update_ms > MIN(_path_tc * 1000.0f, AP_FOLLOW_TIMEOUT_MS))) {
-            _path_location_ned = target_location_ned;
-            _path_velocity_ned = target_velocity_ned;
-            _path_accel_ned.zero();
-            _last_path_update_ms = AP_HAL::millis();
-        } else {
-            const float path_dt = (AP_HAL::millis() - _last_path_update_ms) * 0.001f;
-            _last_path_update_ms = AP_HAL::millis();
+    // calculate time since last path update
+    const float path_dt = (AP_HAL::micros() - _last_path_update_us) * 0.000001f;
+    _last_path_update_us = AP_HAL::micros();
 
-            _path_location_ned += _path_velocity_ned * path_dt + _path_accel_ned * 0.5f * sq(path_dt);
-            _path_velocity_ned += _path_accel_ned * path_dt;
+    update_pos_vel_accel_xy(_path_location_ned, _path_velocity_ned, _path_accel_ned, path_dt);
+    update_pos_vel_accel_z(_path_location_ned, _path_velocity_ned, _path_accel_ned, path_dt);
 
-            float pv = 1.0f/_path_tc;
-            float pa = 4.0f * pv;
-            Vector3f error_location_ned = target_location_ned - _path_location_ned;
-            Vector3f error_velocity_ned = error_location_ned * pv + target_velocity_ned - _path_velocity_ned;
-            _path_accel_ned = error_velocity_ned * pa;
-        }
-
-        // calculate results
-        dist_with_offs = _path_location_ned - current_location_ned;
-        dist_with_offs.z = 0.0f;
-        vel_ned = _path_velocity_ned;
-
-        AP::logger().Write("FOL2", "TimeUS,PN,PE,PD,VN,VE,VD,TN,TE,TD,N,E,D", "Qffffffffffff",
-                                               AP_HAL::micros64(),
-                                               (double)_path_location_ned.x,
-                                               (double)_path_location_ned.y,
-                                               (double)_path_location_ned.z,
-                                               (double)_path_velocity_ned.x,
-                                               (double)_path_velocity_ned.y,
-                                               (double)_path_velocity_ned.z,
-                                               (double)target_location_ned.x,
-                                               (double)target_location_ned.y,
-                                               (double)target_location_ned.z,
-                                               (double)target_velocity_ned.x,
-                                               (double)target_velocity_ned.y,
-                                               (double)target_velocity_ned.z
-                                               );
+    if ((_last_path_update_us == 0) || (path_dt > MIN(_path_tc, AP_FOLLOW_TIMEOUT_MS * 0.001f))) {
+        _path_location_ned = pos_ned;
+        _path_velocity_ned = vel_ned;
+        _path_accel_ned.zero();
+    } else {
+        shape_pos_vel_xy(pos_ned, vel_ned, _path_location_ned, _path_velocity_ned, _path_accel_ned, 0.0f, 0.0f, 0.0f, _path_tc, path_dt);
+        shape_pos_vel_z(pos_ned, vel_ned, _path_location_ned, _path_velocity_ned, _path_accel_ned, 0.0f, 0.0f, 0.0f, _path_tc, path_dt);
     }
 
+    AP::logger().Write("FOL2", "TimeUS,TPN,TPE,TPD,TVN,TVE,TVD,PN,PE,PD,VN,VE,VD",
+            "smmmnnnmmmnnn",
+            "F000000000000",
+            "Qffffffffffff",
+            AP_HAL::micros64(),
+            (double)pos_ned.x,
+            (double)pos_ned.y,
+            (double)pos_ned.z,
+            (double)vel_ned.x,
+            (double)vel_ned.y,
+            (double)vel_ned.z,
+            (double)_path_location_ned.x,
+            (double)_path_location_ned.y,
+            (double)_path_location_ned.z,
+            (double)_path_velocity_ned.x,
+            (double)_path_velocity_ned.y,
+            (double)_path_velocity_ned.z
+                                           );
+
+
     // record distance and heading for reporting purposes
-    if (is_zero(dist_with_offs.x) && is_zero(dist_with_offs.y)) {
+    _dist_offs_ned = _path_location_ned - current_location_ned;
+    if (is_zero(_dist_offs_ned.x) && is_zero(_dist_offs_ned.y)) {
         clear_dist_and_bearing_to_target();
     } else {
-        _dist_to_target = safe_sqrt(sq(dist_with_offs.x) + sq(dist_with_offs.y));
-        _bearing_to_target = degrees(atan2f(dist_with_offs.y, dist_with_offs.x));
+        _dist_to_target = safe_sqrt(sq(_dist_offs_ned.x) + sq(_dist_offs_ned.y));
+        _bearing_to_target = degrees(atan2f(_dist_offs_ned.y, _dist_offs_ned.x));
     }
 
     return true;
+}
+
+// get distance vector to target (in meters) and target's velocity all in NED frame
+void AP_Follow::get_target_vel_ned(Vector3f &vel_ned)
+{
+    vel_ned = _path_velocity_ned;
+}
+
+// get distance vector to target (in meters) and target's velocity all in NED frame
+void AP_Follow::get_target_pos_and_vel_ned(Vector3f &pos_with_ofs, Vector3f &vel_ned)
+{
+    pos_with_ofs = _path_location_ned;
+    vel_ned = _path_velocity_ned;
+}
+
+// get distance vector to target (in meters) and target's velocity all in NED frame
+void AP_Follow::get_target_dist_and_vel_ned(Vector3f &dist_with_offs, Vector3f &vel_ned)
+{
+    dist_with_offs = _dist_offs_ned;
+    vel_ned = _path_velocity_ned;
+}
+
+// get distance vector to target (in meters) and target's velocity all in NED frame
+void AP_Follow::get_target_dist_ned(Vector3f &dist_with_offs)
+{
+    dist_with_offs = _dist_offs_ned;
 }
 
 // get target's heading in degrees (0 = north, 90 = east)
@@ -429,7 +442,7 @@ bool AP_Follow::get_velocity_ned(Vector3f &vel_ned, float dt) const
     return true;
 }
 
-// initialise offsets to provided distance vector to other vehicle (in meters in NED frame) if required
+// initialise offsets to provided distance vector to other vehicle (in meters in NED frame) if offset is not set.
 void AP_Follow::init_offsets_if_required(const Vector3f &dist_vec_ned)
 {
     // return immediately if offsets have already been set
