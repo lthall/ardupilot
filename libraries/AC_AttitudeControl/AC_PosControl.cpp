@@ -875,8 +875,9 @@ void AC_PosControl::init_pos_vel_xy()
     _vel_desired.x = curr_vel.x;
     _vel_desired.y = curr_vel.y;
 
-    _accel_desired.x = 0.0f;
-    _accel_desired.y = 0.0f;
+    const Vector3f& curr_accel = _ahrs.get_accel_ef_blended() * 100.0f;
+    _accel_desired.x = curr_accel.x;
+    _accel_desired.y = curr_accel.y;
 
     // initialise I terms from lean angles
     _vel_target.x = 0.0f;
@@ -1410,11 +1411,9 @@ void AC_PosControl::init_velmatch_velocity(float speed_max)
         FALLTHROUGH;
     case ZERO:
         // Set velmatch velocity to current velocity and change to HOLD
-        Vector3f target;
-        Vector3f dist_vec;  // vector to lead vehicle
-        Vector3f dist_vec_offs;  // vector to lead vehicle + offset
         Vector3f vel_of_target;  // velocity of lead vehicle
-        if (follow.get_target_dist_and_vel_ned(dist_vec, dist_vec_offs, vel_of_target)) {
+        if (follow.update_target_pos_and_vel()) {
+            follow.get_target_vel_ned(vel_of_target);
             _vel_velmatch = vel_of_target * 100.0f;
             set_velmatch_state_set();
         } else {
@@ -1433,6 +1432,9 @@ void AC_PosControl::init_velmatch_velocity(float speed_max)
 /// Initialises the velmatch velocity based on its state.
 bool AC_PosControl::set_velmatch_state(enum VelMatchState velmatchState)
 {
+    auto &follow = AP::follow();
+    Vector3f dist_vec_offs;  // vector to lead vehicle + offset
+
     if (_velmatchState == velmatchState) {
         return true;
     }
@@ -1445,11 +1447,19 @@ bool AC_PosControl::set_velmatch_state(enum VelMatchState velmatchState)
     case HOLD:
         gcs().send_text(MAV_SEVERITY_INFO, "VelMatch: Hold");
         _velmatchState = velmatchState;
+        if (follow.update_target_pos_and_vel()) {
+            follow.get_target_dist_ned(dist_vec_offs);
+            gcs().send_text(MAV_SEVERITY_INFO, "Beacon X:%.1f Y:%.1f Z:%.1f", dist_vec_offs.x, dist_vec_offs.y, dist_vec_offs.z);
+        }
         break;
 
     case SET:
         gcs().send_text(MAV_SEVERITY_INFO, "VelMatch: Set");
         _velmatchState = velmatchState;
+        if (follow.update_target_pos_and_vel()) {
+            follow.get_target_dist_ned(dist_vec_offs);
+            gcs().send_text(MAV_SEVERITY_INFO, "Beacon X:%.1f Y:%.1f Z:%.1f", dist_vec_offs.x, dist_vec_offs.y, dist_vec_offs.z);
+        }
         break;
 
     case ZERO:
@@ -1466,28 +1476,26 @@ void AC_PosControl::update_velmatch_velocity(float dt, float speed_max)
 {
     auto &follow = AP::follow();
 
-    Vector3f target;
-    Vector3f dist_vec;  // vector to lead vehicle
-    Vector3f dist_vec_offs;  // vector to lead vehicle + offset
-    Vector3f vel_of_target;  // velocity of lead vehicle
-    if (follow.get_target_dist_and_vel_ned(dist_vec, dist_vec_offs, vel_of_target)) {
-        target = vel_of_target * 100.0f;
+    Vector3f vel_target;
+    if (follow.update_target_pos_and_vel()) {
+        follow.get_target_vel_ned(vel_target);
+        vel_target *= 100.0f;
     } else {
-        target = _inav.get_velocity();
-        const float speed = target.length();
+        vel_target = _inav.get_velocity();
+        const float speed = vel_target.length();
         if (speed > speed_max) {
-            target *= (speed_max / speed);
+            vel_target *= (speed_max / speed);
         }
     }
     switch (_velmatchState) {
     case OFF:
         // Slew velmatch velocity to zero
-        target.zero();
+        vel_target.zero();
         break;
 
     case HOLD:
         // Keep current velmatch velocity
-        target = _vel_velmatch;
+        vel_target = _vel_velmatch;
         break;
 
     case SET:
@@ -1496,16 +1504,16 @@ void AC_PosControl::update_velmatch_velocity(float dt, float speed_max)
 
     case ZERO:
         // Set velmatch velocity to zero
-        target.zero();
+        vel_target.zero();
         break;
     }
 
-    Vector3f delta = target - _vel_velmatch;
+    Vector3f delta = vel_target - _vel_velmatch;
     float delta_length = delta.length();
     if (is_positive(delta_length)) {
         _vel_velmatch += delta.normalized() * MIN(delta_length, dt * _accel_cms / 3.0f);
     } else {
-        _vel_velmatch = target;
+        _vel_velmatch = vel_target;
     }
 }
 
