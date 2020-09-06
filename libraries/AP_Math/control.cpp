@@ -32,6 +32,11 @@ void update_pos_vel_accel(float& pos, float& vel, float& accel, float dt)
     vel = vel + accel * dt;
 }
 
+void update_pos_vel_accel_z(Vector3f& pos, Vector3f& vel, Vector3f& accel, float dt)
+{
+    update_pos_vel_accel(pos.z, vel.z, accel.z, dt);
+}
+
 // update_pos_vel_accel_xy - dual axis projection of position and velocity, pos and vel, forwards in time based on a time step of dt and acceleration of accel.
 void update_pos_vel_accel_xy(Vector2f& pos, Vector2f& vel, Vector2f& accel, float dt)
 {
@@ -84,7 +89,9 @@ void shape_vel(float& vel_input, float vel, float& accel, float accel_max, float
 
         // jerk limit acceleration change
         float accel_delta = accel_target - accel;
-        accel_delta = constrain_float(accel_delta, -jerk_max * dt, jerk_max * dt);
+        if (is_positive(accel_max)) {
+            accel_delta = constrain_float(accel_delta, -jerk_max * dt, jerk_max * dt);
+        }
         accel = accel + accel_delta;
 
         // limit acceleration to accel_max
@@ -96,6 +103,11 @@ void shape_vel(float& vel_input, float vel, float& accel, float accel_max, float
         vel_error = accel / KPa;
         vel_input = vel_error + vel;
     }
+}
+
+void shape_vel_z(Vector3f& vel_input, const Vector3f& vel, Vector3f& accel, float accel_max, float tc, float dt)
+{
+    shape_vel(vel_input.z, vel.z, accel.z, accel_max, tc, dt);
 }
 
 /* shape_vel_xy calculate a jerk limited path from the current position, velocity and acceleration to an input velocity.
@@ -125,7 +137,9 @@ void shape_vel_xy(Vector2f& vel_input, const Vector2f& vel, Vector2f& accel, flo
 
         // jerk limit acceleration change
         Vector2f accel_delta = accel_target - accel;
-        limit_vector_length(accel_delta.x, accel_delta.y, jerk_max * dt);
+        if (is_positive(accel_max)) {
+            limit_vector_length(accel_delta.x, accel_delta.y, jerk_max * dt);
+        }
         accel = accel + accel_delta;
 
         // limit acceleration to accel_max
@@ -211,6 +225,11 @@ void shape_pos_vel(float& pos_input, float vel_input, float pos, float vel, floa
     }
 }
 
+void shape_pos_vel_z(Vector3f& pos_input, const Vector3f& vel_input, const Vector3f& pos, const Vector3f& vel, Vector3f& accel, float vel_max, float vel_correction_max, float accel_max, float tc, float dt)
+{
+    shape_pos_vel(pos_input.z, vel_input.z, pos.z, vel.z, accel.z, vel_max, vel_correction_max, accel_max, tc, dt);
+}
+
 /* shape_pos_vel_xy calculate a jerk limited path from the current position, velocity and acceleration to an input position and velocity.
  The function takes the current position, velocity, and acceleration and calculates the required jerk limited adjustment to the acceleration for the next time dt.
  The kinimatic path is constrained by :
@@ -285,6 +304,26 @@ void shape_pos_vel_xy(Vector3f& pos_input, const Vector3f& vel_input, const Vect
     pos_input.y = pos_input_2f.y;
     accel.x = accel_2f.x;
     accel.y = accel_2f.y;
+
+#ifndef HAL_NO_LOGGING
+    AP::logger().Write("SHP",
+                       "TimeUS,DT,DPX,DPY,DVX,DVY,PX,PY,VX,VY,AX,AY",
+                       "ssmmmmnnnnoo",
+                       "F00000000000",
+                       "Qfffffffffff",
+                       AP_HAL::micros64(),
+                       double(dt),
+                       double(pos_input.x),
+                       double(pos_input.y),
+                       double(vel_input.x),
+                       double(vel_input.y),
+                       double(pos.x),
+                       double(pos.y),
+                       double(vel.x),
+                       double(vel.y),
+                       double(accel.x),
+                       double(accel.y));
+#endif
 }
 
 // Proportional controller with piecewise sqrt sections to constrain second derivative

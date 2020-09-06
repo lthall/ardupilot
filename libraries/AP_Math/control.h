@@ -11,6 +11,7 @@
 
 // update_pos_vel_accel - single axis projection.
 void update_pos_vel_accel(float& pos, float& vel, float& accel, float dt);
+void update_pos_vel_accel_z(Vector3f& pos, Vector3f& vel, Vector3f& accel, float dt);
 
 // update_pos_vel_accel_xy - dual axis projection operating on the x, y axis of Vector2f or Vector3f inputs.
 void update_pos_vel_accel_xy(Vector2f& pos, Vector2f& vel, Vector2f& accel, float dt);
@@ -28,6 +29,7 @@ void update_pos_vel_accel_xy(Vector3f& pos, Vector3f& vel, Vector3f& accel, floa
  The function alters the input velocity to be the velocity that the system could reach zero acceleration in the minimum time.
 */
 void shape_vel(float& vel_input, float vel, float& accel, float accel_max, float tc, float dt);
+void shape_vel_z(Vector3f& vel_input, const Vector3f& vel, Vector3f& accel, float accel_max, float tc, float dt);
 
 /* shape_vel_xy calculate a jerk limited path from the current position, velocity and acceleration to an input velocity.
  The function takes the current position, velocity, and acceleration and calculates the required jerk limited adjustment to the acceleration for the next time dt.
@@ -56,6 +58,7 @@ void shape_vel_xy(Vector3f& vel_input, const Vector3f& vel, Vector3f& accel, flo
  The function alters the input position to be the closest position that the system could reach zero acceleration in the minimum time.
 */
 void shape_pos_vel(float& pos_input, float vel_input, float pos, float vel, float& accel, float vel_max, float vel_correction_max, float accel_max, float tc, float dt);
+void shape_pos_vel_z(Vector3f& pos_input, const Vector3f& vel_input, const Vector3f& pos, const Vector3f& vel, Vector3f& accel, float vel_max, float vel_correction_max, float accel_max, float tc, float dt);
 
 /* shape_pos_vel_xy calculate a jerk limited path from the current position, velocity and acceleration to an input position and velocity.
  The function takes the current position, velocity, and acceleration and calculates the required jerk limited adjustment to the acceleration for the next time dt.
