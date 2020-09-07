@@ -291,10 +291,19 @@ bool AC_WPNav::set_wp_origin_and_destination(const Vector3f& origin, const Vecto
     return true;
 }
 
-/// shift_wp_origin_to_current_pos - shifts the origin and destination so the origin starts at the current position
+void AC_WPNav::shift_wp_origin_and_destination_xy(Vector3f pos_diff)
+{
+    // shift origin and destination
+    _origin.x += pos_diff.x;
+    _origin.y += pos_diff.y;
+    _destination.x += pos_diff.x;
+    _destination.y += pos_diff.y;
+}
+
+/// shift_takeoff_origin_to_current_pos - shifts the origin and destination so the origin starts at the current position with the additional requested height
 ///     used to reset the position just before takeoff
 ///     relies on set_wp_destination or set_wp_origin_and_destination having been called first
-void AC_WPNav::shift_wp_origin_to_current_pos()
+void AC_WPNav::shift_takeoff_origin_to_current_pos(float height)
 {
     // return immediately if vehicle is not at the origin
     if (_track_desired > 0.0f) {
@@ -303,18 +312,38 @@ void AC_WPNav::shift_wp_origin_to_current_pos()
 
     // get current and target locations
     const Vector3f &curr_pos = _inav.get_position();
-    const Vector3f pos_target = _pos_control.get_pos_target();
-
-    // calculate difference between current position and target
-    Vector3f pos_diff = curr_pos - pos_target;
-
-    // shift origin and destination
-    _origin += pos_diff;
-    _destination += pos_diff;
+    _origin = curr_pos;
+    _origin.z += height;
+    _destination.x = curr_pos.x;
+    _destination.y = curr_pos.y;
+    _pos_delta_unit = Vector3f(0.0,0.0,1.0);
 
     // move pos controller target and disable feed forward
     _pos_control.set_pos_target(curr_pos);
     _pos_control.freeze_ff_z();
+}
+
+/// shifts the origin and destination horizontally to the achievable stopping point based on the current velocity
+///     used to reset the track when horizontal navigation is enabled for takeoff
+///     relies on set_wp_destination or set_wp_origin_and_destination having been called first
+void AC_WPNav::shift_takeoff_origin_and_destination_to_stopping_point_xy()
+{
+    // relax position control in xy axis
+    // removing velocity error also impacts stopping point calculation
+    _pos_control.relax_velocity_controller_xy();
+
+    // get current and target locations
+    Vector3f stopping_point;
+    get_wp_stopping_point_xy(stopping_point);
+
+    // shift origin and destination horizontally
+    _origin.x = stopping_point.x;
+    _origin.y = stopping_point.y;
+    _destination.x = stopping_point.x;
+    _destination.y = stopping_point.y;
+
+    // move pos controller target horizontally
+    _pos_control.set_xy_target(stopping_point.x, stopping_point.y);
 }
 
 /// get_wp_stopping_point_xy - returns vector to stopping point based on a horizontal position and velocity
@@ -451,6 +480,9 @@ bool AC_WPNav::advance_wp_target_along_track(float dt)
     final_target.z += terr_offset;
     _pos_control.set_pos_target(final_target);
 
+    // regular waypoints also require the copter to be within the waypoint radius
+    Vector3f dist_to_dest = curr_pos - (_origin + _pos_delta_unit * _track_length + Vector3f(0,0,terr_offset));
+
     // check if we've reached the waypoint
     if( !_flags.reached_destination ) {
         if( _track_desired >= _track_length ) {
@@ -458,8 +490,6 @@ bool AC_WPNav::advance_wp_target_along_track(float dt)
             if (_flags.fast_waypoint) {
                 _flags.reached_destination = true;
             }else{
-                // regular waypoints also require the copter to be within the waypoint radius
-                Vector3f dist_to_dest = (curr_pos - Vector3f(0,0,terr_offset)) - _destination;
                 if( dist_to_dest.length() <= _wp_radius_cm ) {
                     _flags.reached_destination = true;
                 }
