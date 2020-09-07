@@ -884,7 +884,7 @@ void AC_PosControl::init_pos_vel_xy()
     _vel_target.y = 0.0f;
     _pid_vel_xy.reset_filter();
     lean_angles_to_accel(_accel_target.x, _accel_target.y);
-    _pid_vel_xy.set_integrator(_accel_target);
+    _pid_vel_xy.set_integrator(_accel_target - _accel_desired);
 
     // flag reset required in rate to accel step
     _flags.reset_desired_vel_to_pos = true;
