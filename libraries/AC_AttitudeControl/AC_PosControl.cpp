@@ -2,6 +2,7 @@
 #include "AC_PosControl.h"
 #include <AP_Math/AP_Math.h>
 #include <AP_Logger/AP_Logger.h>
+#include <AP_Follow/AP_Follow.h>
 
 extern const AP_HAL::HAL& hal;
 
@@ -22,6 +23,7 @@ extern const AP_HAL::HAL& hal;
  # define POSCONTROL_VEL_XY_IMAX                1000.0f // horizontal velocity controller IMAX gain default
  # define POSCONTROL_VEL_XY_FILT_HZ             5.0f    // horizontal velocity controller input filter
  # define POSCONTROL_VEL_XY_FILT_D_HZ           5.0f    // horizontal velocity controller input filter for D
+ # define WITH_VELMATCH_SUPPORT 1
 #elif APM_BUILD_TYPE(APM_BUILD_ArduSub)
  // default gains for Sub
  # define POSCONTROL_POS_Z_P                    3.0f    // vertical position controller P gain default
@@ -39,6 +41,7 @@ extern const AP_HAL::HAL& hal;
  # define POSCONTROL_VEL_XY_IMAX                1000.0f // horizontal velocity controller IMAX gain default
  # define POSCONTROL_VEL_XY_FILT_HZ             5.0f    // horizontal velocity controller input filter
  # define POSCONTROL_VEL_XY_FILT_D_HZ           5.0f    // horizontal velocity controller input filter for D
+ # define WITH_VELMATCH_SUPPORT 0
 #else
  // default gains for Copter / TradHeli
  # define POSCONTROL_POS_Z_P                    1.0f    // vertical position controller P gain default
@@ -56,6 +59,7 @@ extern const AP_HAL::HAL& hal;
  # define POSCONTROL_VEL_XY_IMAX                1000.0f // horizontal velocity controller IMAX gain default
  # define POSCONTROL_VEL_XY_FILT_HZ             5.0f    // horizontal velocity controller input filter
  # define POSCONTROL_VEL_XY_FILT_D_HZ           5.0f    // horizontal velocity controller input filter for D
+ # define WITH_VELMATCH_SUPPORT 1
 #endif
 
 // vibration compensation gains
@@ -1026,6 +1030,10 @@ void AC_PosControl::write_log()
                        double(accel_target.y * 0.01f),
                        double(accel_x * 0.01f),
                        double(accel_y * 0.01f));
+
+#if WITH_VELMATCH_SUPPORT
+    write_velmatch_log();
+#endif
 }
 
 /// init_vel_controller_xyz - initialise the velocity controller - should be called once before the caller attempts to use the controller
@@ -1393,3 +1401,146 @@ bool AC_PosControl::pre_arm_checks(const char *param_prefix,
 
     return true;
 }
+
+#if WITH_VELMATCH_SUPPORT
+/// Initialises the velmatch velocity based on its state.
+void AC_PosControl::init_velmatch_velocity(float speed_max)
+{
+    auto &follow = AP::follow();
+    switch (_velmatchState) {
+    case OFF:
+        // set velmatch velocity to zero
+        _vel_velmatch.zero();
+        break;
+
+    case HOLD:
+        FALLTHROUGH;
+    case SET:
+        FALLTHROUGH;
+    case ZERO:
+        // Set velmatch velocity to current velocity and change to HOLD
+        Vector3f vel_of_target;  // velocity of lead vehicle
+        if (follow.update_target_pos_and_vel()) {
+            follow.get_target_vel_ned(vel_of_target);
+            _vel_velmatch = vel_of_target * 100.0f;
+            set_velmatch_state_set();
+        } else {
+            _vel_velmatch = _inav.get_velocity();
+            // limit velocity match to configured max speed
+            const float speed = _vel_velmatch.length();
+            if (speed > speed_max) {
+                _vel_velmatch *= (speed_max / speed);
+            }
+            set_velmatch_state_hold();
+        }
+        break;
+    }
+}
+
+/// Initialises the velmatch velocity based on its state.
+bool AC_PosControl::set_velmatch_state(enum VelMatchState velmatchState)
+{
+    auto &follow = AP::follow();
+    Vector3f dist_vec_offs;  // vector to lead vehicle + offset
+
+    if (_velmatchState == velmatchState) {
+        return true;
+    }
+    switch (velmatchState) {
+    case OFF:
+        gcs().send_text(MAV_SEVERITY_INFO, "VelMatch: Off");
+        _velmatchState = velmatchState;
+        break;
+
+    case HOLD:
+        gcs().send_text(MAV_SEVERITY_INFO, "VelMatch: Hold");
+        _velmatchState = velmatchState;
+        if (follow.get_target_dist_target_frame(dist_vec_offs)) {
+            gcs().send_text(MAV_SEVERITY_INFO, "Beacon X:%.1f Y:%.1f Z:%.1f", dist_vec_offs.x, dist_vec_offs.y, dist_vec_offs.z);
+        }
+        break;
+
+    case SET:
+        gcs().send_text(MAV_SEVERITY_INFO, "VelMatch: Set");
+        _velmatchState = velmatchState;
+        if (follow.get_target_dist_target_frame(dist_vec_offs)) {
+            gcs().send_text(MAV_SEVERITY_INFO, "Beacon X:%.1f Y:%.1f Z:%.1f", dist_vec_offs.x, dist_vec_offs.y, dist_vec_offs.z);
+        }
+        break;
+
+    case ZERO:
+        gcs().send_text(MAV_SEVERITY_INFO, "VelMatch: Zero");
+        _velmatchState = velmatchState;
+        break;
+
+    }
+    return true;
+}
+
+/// Proportional controller with piecewise sqrt sections to constrain second derivative
+void AC_PosControl::update_velmatch_velocity(float dt, float speed_max)
+{
+    auto &follow = AP::follow();
+
+    Vector3f vel_target;
+    switch (_velmatchState) {
+    case OFF:
+        // Slew velmatch velocity to zero
+        vel_target.zero();
+        break;
+
+    case HOLD:
+        // Keep current velmatch velocity
+        vel_target = _vel_velmatch;
+        break;
+
+    case SET:
+        if (follow.update_target_pos_and_vel()) {
+            follow.get_target_vel_ned(vel_target);
+            vel_target *= 100.0f;
+        } else {
+            vel_target = _inav.get_velocity();
+            const float speed = vel_target.length();
+            if (speed > speed_max) {
+                vel_target *= (speed_max / speed);
+            }
+        }
+        // Slew velmatch velocity to current velocity
+        break;
+    case ZERO:
+        // Set velmatch velocity to zero
+        vel_target.zero();
+        break;
+    }
+
+    Vector3f delta = vel_target - _vel_velmatch;
+    float delta_length = delta.length();
+    if (is_positive(delta_length)) {
+        _vel_velmatch += delta.normalized() * MIN(delta_length, dt * _accel_cms / 3.0f);
+    } else {
+        _vel_velmatch = vel_target;
+    }
+}
+
+// write log to dataflash
+void AC_PosControl::write_velmatch_log()
+{
+    if (velmatch_state_on()) {
+        AP::logger().Write("VMAT",
+                           "TimeUS,State,VX,VY",
+                           "s-nn",
+                           "F-00",
+                           "QBff",
+                           AP_HAL::micros64(),
+                           uint8_t(_velmatchState),
+                           double(_vel_velmatch.x * 0.01f),
+                           double(_vel_velmatch.y * 0.01f));
+    }
+}
+
+#else // WITH_VELMATCH_SUPPORT
+
+void AC_PosControl::init_velmatch_velocity(float speed_max) {}
+void AC_PosControl::update_velmatch_velocity(float dt, float speed_max) {}
+
+#endif // WITH_VELMATCH_SUPPORT
