@@ -23,6 +23,7 @@ bool ModeLoiter::init(bool ignore_checks)
         // clear out pilot desired acceleration in case radio failsafe event occurs and we do not switch to RTL for some reason
         loiter_nav->clear_pilot_desired_acceleration();
     }
+    pos_control->init_velmatch_velocity(wp_nav->get_default_speed_xy());
     loiter_nav->init_target();
 
     // initialise position and desired velocity
@@ -78,7 +79,6 @@ void ModeLoiter::run()
     float target_yaw_rate = 0.0f;
     float target_climb_rate = 0.0f;
     float takeoff_climb_rate = 0.0f;
-    loiter_nav->use_baseline();
 
     // initialize vertical speed and acceleration
     pos_control->set_max_speed_z(-get_pilot_speed_dn(), g.pilot_speed_up);

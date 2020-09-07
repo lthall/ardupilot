@@ -308,7 +308,7 @@ void shape_pos_vel_xy(Vector3f& pos_input, const Vector3f& vel_input, const Vect
 #ifndef HAL_NO_LOGGING
     AP::logger().Write("SHP",
                        "TimeUS,DT,DPX,DPY,DVX,DVY,PX,PY,VX,VY,AX,AY",
-                       "ssmmmmnnnnoo",
+                       "ssmmnnmmnnoo",
                        "F00000000000",
                        "Qfffffffffff",
                        AP_HAL::micros64(),
