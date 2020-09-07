@@ -14,6 +14,8 @@ bool ModeLand::init(bool ignore_checks)
     if (land_with_gps) {
         // set target to stopping point
         Vector3f stopping_point;
+        pos_control->init_velmatch_velocity(wp_nav->get_default_speed_xy());
+        loiter_nav->use_velmatch();
         loiter_nav->get_stopping_point_xy(stopping_point);
         loiter_nav->init_target(stopping_point);
     }

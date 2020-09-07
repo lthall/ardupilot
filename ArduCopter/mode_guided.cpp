@@ -70,6 +70,7 @@ bool ModeGuided::do_user_takeoff_start(float final_alt_above_home)
 
     // get initial alt for WP_NAVALT_MIN
     auto_takeoff_set_start_alt();
+    pos_control->init_velmatch_velocity(wp_nav->get_default_speed_xy());
 
     return true;
 }
