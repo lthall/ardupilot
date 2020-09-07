@@ -79,6 +79,7 @@ void RC_Channel_Copter::init_aux_function(const aux_func_t ch_option, const aux_
     case AUX_FUNC::WINCH_ENABLE:
     case AUX_FUNC::STANDBY:
     case AUX_FUNC::SURFACE_TRACKING:
+    case AUX_FUNC::VELOCITY_MATCH:
         do_aux_function(ch_option, ch_flag);
         break;
     // the following functions do not need to be initialised:
@@ -575,6 +576,20 @@ void RC_Channel_Copter::do_aux_function(const aux_func_t ch_option, const aux_sw
                 break;
             case HIGH:
                 copter.surface_tracking.set_surface(Copter::SurfaceTracking::Surface::CEILING);
+                break;
+            }
+            break;
+
+        case AUX_FUNC::VELOCITY_MATCH:
+            switch (ch_flag) {
+            case HIGH:
+                copter.pos_control->set_velmatch_state_off();
+                break;
+            case MIDDLE:
+                copter.pos_control->set_velmatch_state_hold();
+                break;
+            case LOW:
+                copter.pos_control->set_velmatch_state_set();
                 break;
             }
             break;
