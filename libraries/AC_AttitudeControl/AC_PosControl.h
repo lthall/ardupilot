@@ -45,7 +45,7 @@ class AC_PosControl
 public:
 
     /// Constructor
-    AC_PosControl(const AP_AHRS_View& ahrs, const AP_InertialNav& inav,
+    AC_PosControl(AP_AHRS_View& ahrs, const AP_InertialNav& inav,
                   const AP_Motors& motors, AC_AttitudeControl& attitude_control);
 
     ///
@@ -87,7 +87,7 @@ public:
     void calc_leash_length_z();
 
     /// set_alt_target - set altitude target in cm above home
-    void set_alt_target(float alt_cm) { _pos_target.z = alt_cm; }
+    void set_alt_target(float alt_cm) { _pos_target.z = alt_cm; _flags.use_desvel_ff_z = false; }
 
     /// set_alt_target_with_slew - adjusts target towards a final altitude target
     ///     should be called continuously (with dt set to be the expected time between calls)
@@ -153,6 +153,9 @@ public:
     // get_leash_down_z, get_leash_up_z - returns vertical leash lengths in cm
     float get_leash_down_z() const { return _leash_down_z; }
     float get_leash_up_z() const { return _leash_up_z; }
+
+    /// freeze_ff_z - used to stop the feed forward being calculated during a known discontinuity
+    void freeze_ff_z() { _flags.freeze_ff_z = true; }
 
     ///
     /// xy position controller
@@ -230,8 +233,8 @@ public:
     // overrides the velocity process variable for one timestep
     void override_vehicle_velocity_xy(const Vector2f& vel_xy) { _vehicle_horiz_vel = vel_xy; _flags.vehicle_horiz_vel_override = true; }
 
-    /// freeze_ff_z - used to stop the feed forward being calculated during a known discontinuity
-    void freeze_ff_z() { _flags.freeze_ff_z = true; }
+    // relax velocity controller by clearing velocity error and setting velocity target to current velocity
+    void relax_velocity_controller_xy();
 
     // is_active_xy - returns true if the xy position controller has been run very recently
     bool is_active_xy() const;
@@ -272,11 +275,11 @@ public:
     void set_target_to_stopping_point_xy();
 
     /// get_stopping_point_xy - calculates stopping point based on current position, velocity, vehicle acceleration
-    ///     distance_max allows limiting distance to stopping point
     ///     results placed in stopping_position vector
     ///     set_accel_xy() should be called before this method to set vehicle acceleration
     ///     set_leash_length() should have been called before this method
-    void get_stopping_point_xy(Vector3f &stopping_point) const;
+    void get_stopping_point_xy(Vector3f &stopping_point, Vector3f curr_vel) const;
+    void get_stopping_point_xy(Vector3f &stopping_point) {get_stopping_point_xy(stopping_point, _inav.get_velocity());}
 
     /// get_distance_to_target - get horizontal distance to position target in cm (used for reporting)
     float get_distance_to_target() const;
@@ -288,12 +291,6 @@ public:
 
     /// init_vel_controller_xyz - initialise the velocity controller - should be called once before the caller attempts to use the controller
     void init_vel_controller_xyz();
-
-    /// update_velocity_controller_xy - run the XY velocity controller - should be called at 100hz or higher
-    ///     velocity targets should we set using set_desired_velocity_xy() method
-    ///     callers should use get_roll() and get_pitch() methods and sent to the attitude controller
-    ///     throttle targets will be sent directly to the motors
-    void update_vel_controller_xy();
 
     /// update_velocity_controller_xyz - run the velocity controller - should be called at 100hz or higher
     ///     velocity targets should we set using set_desired_velocity_xyz() method
@@ -317,6 +314,7 @@ public:
 
     /// accessors for reporting
     const Vector3f& get_vel_target() const { return _vel_target; }
+    const Vector3f& get_vel_error() const { return _vel_error; }
     const Vector3f& get_accel_target() const { return _accel_target; }
 
     // lean_angles_to_accel - convert roll, pitch lean angles to lat/lon frame accelerations in cm/s/s
@@ -417,7 +415,7 @@ protected:
     void check_for_ekf_z_reset();
 
     // references to inertial nav and ahrs libraries
-    const AP_AHRS_View &        _ahrs;
+    AP_AHRS_View &        _ahrs;
     const AP_InertialNav&       _inav;
     const AP_Motors&            _motors;
     AC_AttitudeControl&         _attitude_control;
@@ -454,8 +452,8 @@ protected:
     Vector3f    _pos_target;            // target location in cm from home
     Vector3f    _pos_error;             // error between desired and actual position in cm
     Vector3f    _vel_desired;           // desired velocity in cm/s
-    Vector3f    _vel_target;            // velocity target in cm/s calculated by pos_to_rate step
-    Vector3f    _vel_error;             // error between desired and actual acceleration in cm/s
+    Vector3f    _vel_target;            // velocity target in cm/s
+    Vector3f    _vel_error;             // velocity error in cm/s
     Vector3f    _vel_last;              // previous iterations velocity in cm/s
     Vector3f    _accel_desired;         // desired acceleration in cm/s/s (feed forward)
     Vector3f    _accel_target;          // acceleration target in cm/s/s
