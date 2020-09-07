@@ -215,6 +215,17 @@ bool Location::get_vector_from_origin_NEU(Vector3f &vec_neu) const
     return true;
 }
 
+// get the location in NED and units of meters
+bool Location::get_vector_from_origin_NED(Vector3f &vec_ned) const
+{
+    Location ekf_origin;
+    if (!AP::ahrs().get_origin(ekf_origin)) {
+        return false;
+    }
+    vec_ned = -get_distance_NED(ekf_origin);
+    return true;
+}
+
 // return distance in meters between two locations
 float Location::get_distance(const struct Location &loc2) const
 {
