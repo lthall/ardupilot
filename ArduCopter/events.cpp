@@ -33,6 +33,9 @@ void Copter::failsafe_radio_on_event()
         case FS_THR_ENABLED_ALWAYS_LAND:
             desired_action = Failsafe_Action_Land;
             break;
+        case FS_THR_ENABLED_ALWAYS_SHIP_OP:
+            desired_action = Failsafe_Action_Ship_Op;
+            break;
         default:
             desired_action = Failsafe_Action_Land;
     }
@@ -163,6 +166,9 @@ void Copter::failsafe_gcs_on_event(void)
             break;
         case FS_GCS_ENABLED_ALWAYS_LAND:
             desired_action = Failsafe_Action_Land;
+            break;
+        case FS_GCS_ENABLED_ALWAYS_SHIP_OP:
+            desired_action = Failsafe_Action_Ship_Op;
             break;
         default: // if an invalid parameter value is set, the fallback is RTL
             desired_action = Failsafe_Action_RTL;
@@ -335,6 +341,20 @@ void Copter::set_mode_SmartRTL_or_RTL(ModeReason reason)
     }
 }
 
+// set_mode_Ship_Op_or_RTL_or_land_with_pause - sets mode to SHIP_LAND if possible or RTL if possible or LAND with 4 second delay before descent starts
+// this is always called from a failsafe so we trigger notification to pilot
+void Copter::set_mode_Ship_Op_or_RTL_or_land_with_pause(ModeReason reason)
+{
+    // attempt to switch to SmartRTL, if this failed then attempt to RTL
+    // if that fails, then land
+    if (!set_mode(Mode::Number::SHIP_OPS, reason)) {
+        gcs().send_text(MAV_SEVERITY_WARNING, "Ship Operations Unavailable, Trying RTL Mode");
+        set_mode_RTL_or_land_with_pause(reason);
+    } else {
+        AP_Notify::events.failsafe_mode_change = 1;
+    }
+}
+
 bool Copter::should_disarm_on_failsafe() {
     if (ap.in_arming_delay) {
         return true;
@@ -373,6 +393,9 @@ void Copter::do_failsafe_action(Failsafe_Action action, ModeReason reason){
             break;
         case Failsafe_Action_SmartRTL_Land:
             set_mode_SmartRTL_or_land_with_pause(reason);
+            break;
+        case Failsafe_Action_Ship_Op:
+            set_mode_Ship_Op_or_RTL_or_land_with_pause(reason);
             break;
         case Failsafe_Action_Terminate:
 #if ADVANCED_FAILSAFE == ENABLED

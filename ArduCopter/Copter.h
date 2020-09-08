@@ -223,6 +223,7 @@ public:
     friend class ModeFlip;
     friend class ModeFlowHold;
     friend class ModeFollow;
+    friend class ModeShipOperation;
     friend class ModeGuided;
     friend class ModeLand;
     friend class ModeLoiter;
@@ -619,7 +620,8 @@ private:
         Failsafe_Action_RTL            = 2,
         Failsafe_Action_SmartRTL       = 3,
         Failsafe_Action_SmartRTL_Land  = 4,
-        Failsafe_Action_Terminate      = 5
+        Failsafe_Action_Terminate      = 5,
+        Failsafe_Action_Ship_Op        = 6
     };
 
     enum class FailsafeOption {
@@ -636,6 +638,7 @@ private:
                                                       Failsafe_Action_RTL,
                                                       Failsafe_Action_SmartRTL_Land,
                                                       Failsafe_Action_SmartRTL,
+                                                      Failsafe_Action_Ship_Op,
                                                       Failsafe_Action_None,
                                                       -1 // the priority list must end with a sentinel of -1
                                                      };
@@ -736,6 +739,7 @@ private:
     void failsafe_terrain_on_event();
     void gpsglitch_check();
     void set_mode_RTL_or_land_with_pause(ModeReason reason);
+    void set_mode_Ship_Op_or_RTL_or_land_with_pause(ModeReason reason);
     void set_mode_SmartRTL_or_RTL(ModeReason reason);
     void set_mode_SmartRTL_or_land_with_pause(ModeReason reason);
     bool should_disarm_on_failsafe();
@@ -947,6 +951,9 @@ private:
 #endif
 #if MODE_FOLLOW_ENABLED == ENABLED
     ModeFollow mode_follow;
+#endif
+#if MODE_SHIP_OPS_ENABLED == ENABLED
+    ModeShipOperation mode_ship_ops;
 #endif
 #if MODE_GUIDED_ENABLED == ENABLED
     ModeGuided mode_guided;

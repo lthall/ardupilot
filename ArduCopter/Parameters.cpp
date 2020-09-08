@@ -961,6 +961,30 @@ const AP_Param::GroupInfo ParametersG2::var_info[] = {
     AP_SUBGROUPINFO(arot, "AROT_", 37, ParametersG2, AC_Autorotation),
 #endif
 
+#if MODE_ACRO_ENABLED == ENABLED
+    // @Param: SHIP_PCH_ANG
+    // @DisplayName: Angle from the bow of the ship of the perch position
+    // @Description: Angle from the bow of the ship of the perch position where the aircraft will wait until it is commanded to land.
+    // @Range: 0 1
+    // @User: Advanced
+    AP_GROUPINFO("SHIP_PCH_ANG", 38, ParametersG2, ship_perch_angle, 180.0f),
+
+    // @Param: SHIP_PCH_RAD
+    // @DisplayName: Distance of the perch position from the ship
+    // @Description: Distance in m of the perch position from the ship where the aircraft will wait until it is commanded to land.
+    // @Range: 0 1
+    // @User: Advanced
+    AP_GROUPINFO("SHIP_PCH_RAD", 39, ParametersG2, ship_perch_radius, 25.0f),
+
+    // @Param: SHIP_PCH_ALT
+    // @DisplayName: Altitude of the perch position from the ship
+    // @Description: Altitude in m of the perch position relative to the ship where the aircraft will wait until it is commanded to land.
+    // @Range: 0 1
+    // @User: Advanced
+    AP_GROUPINFO("SHIP_PCH_ALT", 40, ParametersG2, ship_perch_altitude, 25.0f),
+
+#endif
+
 
 
     AP_GROUPEND

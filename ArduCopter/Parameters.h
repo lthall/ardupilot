@@ -620,6 +620,13 @@ public:
     // Autonmous autorotation
     AC_Autorotation arot;
 #endif
+
+#if MODE_SHIP_OPS_ENABLED == ENABLED
+    // Throw mode parameters
+    AP_Float ship_perch_angle;
+    AP_Float ship_perch_radius;
+    AP_Float ship_perch_altitude;
+#endif
 };
 
 extern const AP_Param::Info        var_info[];

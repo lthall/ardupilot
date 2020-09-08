@@ -151,6 +151,12 @@ Mode *Copter::mode_from_mode_num(const Mode::Number mode)
             break;
 #endif
 
+#if MODE_SHIP_OPS_ENABLED == ENABLED
+        case Mode::Number::SHIP_OPS:
+            ret = &mode_ship_ops;
+            break;
+#endif
+
 #if MODE_ZIGZAG_ENABLED == ENABLED
         case Mode::Number::ZIGZAG:
             ret = &mode_zigzag;
@@ -357,6 +363,12 @@ void Copter::exit_mode(Mode *&old_flightmode,
 #if MODE_FOLLOW_ENABLED == ENABLED
     if (old_flightmode == &mode_follow) {
         mode_follow.exit();
+    }
+#endif
+
+#if MODE_SHIP_OPS_ENABLED == ENABLED
+    if (old_flightmode == &mode_ship_ops) {
+        mode_ship_ops.exit();
     }
 #endif
 

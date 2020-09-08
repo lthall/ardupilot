@@ -121,6 +121,15 @@ enum RTLState {
     RTL_Land
 };
 
+// RTL states
+enum ShipLandState {
+    ShipOps_ClimbToRTL,
+    ShipOps_ReturnToPerch,
+    ShipOps_Perch,
+    ShipOps_OverSpot,
+    ShipOps_LaunchRecovery
+};
+
 // Safe RTL states
 enum SmartRTLState {
     SmartRTL_WaitForPathCleanup,
@@ -208,6 +217,7 @@ enum HarmonicNotchDynamicMode {
 #define FS_THR_ENABLED_ALWAYS_LAND                 3
 #define FS_THR_ENABLED_ALWAYS_SMARTRTL_OR_RTL      4
 #define FS_THR_ENABLED_ALWAYS_SMARTRTL_OR_LAND     5
+#define FS_THR_ENABLED_ALWAYS_SHIP_OP              6
 
 // GCS failsafe definitions (FS_GCS_ENABLE parameter)
 #define FS_GCS_DISABLED                        0
@@ -216,6 +226,7 @@ enum HarmonicNotchDynamicMode {
 #define FS_GCS_ENABLED_ALWAYS_SMARTRTL_OR_RTL  3
 #define FS_GCS_ENABLED_ALWAYS_SMARTRTL_OR_LAND 4
 #define FS_GCS_ENABLED_ALWAYS_LAND             5
+#define FS_GCS_ENABLED_ALWAYS_SHIP_OP          6
 
 // EKF failsafe definitions (FS_EKF_ACTION parameter)
 #define FS_EKF_ACTION_LAND                  1       // switch to LAND mode on EKF failsafe

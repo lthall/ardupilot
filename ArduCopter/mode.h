@@ -21,7 +21,7 @@ public:
         RTL =           6,  // automatic return to launching point
         CIRCLE =        7,  // automatic circular flight with automatic throttle
         LAND =          9,  // automatic landing with horizontal position control
-        DRIFT =        11,  // semi-automous position, yaw and throttle control
+        DRIFT =        11,  // semi-autonomous position, yaw and throttle control
         SPORT =        13,  // manual earth-frame angular rate control with manual throttle
         FLIP =         14,  // automatically flip the vehicle on the roll axis
         AUTOTUNE =     15,  // automatically tune the vehicle's roll and pitch gains
@@ -36,6 +36,7 @@ public:
         ZIGZAG    =    24,  // ZIGZAG mode is able to fly in a zigzag manner with predefined point A and point B
         SYSTEMID  =    25,  // System ID mode produces automated system identification signals in the controllers
         AUTOROTATE =   26,  // Autonomous autorotation
+        SHIP_OPS =     27,  // Provides semi-autonomous landing on a moving platform
     };
 
     // constructor
@@ -1063,6 +1064,42 @@ private:
     uint32_t _loiter_start_time;
 
     bool terrain_following_allowed;
+};
+
+class ModeShipOperation : public Mode {
+
+public:
+
+    // inherit constructor
+    using Mode::Mode;
+
+    bool init(bool ignore_checks) override;
+    void exit();
+    void run() override;
+
+    bool requires_GPS() const override { return true; }
+    bool has_manual_throttle() const override { return false; }
+    bool allows_arming(bool from_gcs) const override { return true; }
+    bool is_autopilot() const override { return true; }
+    bool is_landing() const override;
+
+protected:
+
+    const char *name() const override { return "SHIP_OPS"; }
+    const char *name4() const override { return "SHIP"; }
+
+    // for reporting to GCS
+    bool get_wp(Location &loc) override;
+
+    ShipLandState _state = ShipOps_ClimbToRTL;  // records state of rtl (initial climb, returning home, etc)
+    uint32_t wp_distance() const override;
+    int32_t wp_bearing() const override;
+
+    uint32_t last_log_ms;   // system time of last time desired velocity was logging
+    float target_climb_rate;   // system time of last time desired velocity was logging
+    Vector3f offset;
+    bool ship_takeoff;
+    bool pilot_correction_active;
 };
 
 

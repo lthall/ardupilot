@@ -312,6 +312,12 @@
 #endif
 
 //////////////////////////////////////////////////////////////////////////////
+// Follow - follow another vehicle or GCS
+#ifndef MODE_SHIP_OPS_ENABLED
+# define MODE_SHIP_OPS_ENABLED !HAL_MINIMIZE_FEATURES
+#endif
+
+//////////////////////////////////////////////////////////////////////////////
 // Guided mode - control vehicle's position or angles from GCS
 #ifndef MODE_GUIDED_ENABLED
 # define MODE_GUIDED_ENABLED ENABLED
@@ -754,6 +760,10 @@
 
 #if MODE_GUIDED_NOGPS_ENABLED && !MODE_GUIDED_ENABLED
   #error ModeGuided-NoGPS requires ModeGuided which is disabled
+#endif
+
+#if MODE_SHIP_OPS_ENABLED && !MODE_FOLLOW_ENABLED
+  #error Shipland requires ModeFollow which is disabled
 #endif
 
 //////////////////////////////////////////////////////////////////////////////
