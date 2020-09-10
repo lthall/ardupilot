@@ -237,22 +237,24 @@ void ModeAuto::land_start()
 // auto_land_start - initialises controller to implement a landing
 void ModeAuto::land_start(const Vector3f& destination)
 {
-    _mode = Auto_Land;
+    if (!set_mode(Mode::Number::SHIP_OPS, ModeReason::MISSION_END)) {
+        _mode = Auto_Land;
 
-    // initialise loiter target destination
-    loiter_nav->init_target(destination);
+        // initialise loiter target destination
+        loiter_nav->init_target(destination);
 
-    // initialise position and desired velocity
-    if (!pos_control->is_active_z()) {
-        pos_control->set_alt_target(inertial_nav.get_altitude());
-        pos_control->set_desired_velocity_z(inertial_nav.get_velocity_z());
+        // initialise position and desired velocity
+        if (!pos_control->is_active_z()) {
+            pos_control->set_alt_target(inertial_nav.get_altitude());
+            pos_control->set_desired_velocity_z(inertial_nav.get_velocity_z());
+        }
+
+        // initialise yaw
+        auto_yaw.set_mode(AUTO_YAW_HOLD);
+
+        // optionally deploy landing gear
+        copter.landinggear.deploy_for_landing();
     }
-
-    // initialise yaw
-    auto_yaw.set_mode(AUTO_YAW_HOLD);
-
-    // optionally deploy landing gear
-    copter.landinggear.deploy_for_landing();
 }
 
 // auto_circle_movetoedge_start - initialise waypoint controller to move to edge of a circle with it's center at the specified location
