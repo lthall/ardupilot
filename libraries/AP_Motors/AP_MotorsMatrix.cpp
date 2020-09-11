@@ -143,6 +143,8 @@ void AP_MotorsMatrix::output_armed_stabilizing()
 
     // apply voltage and air pressure compensation
     const float compensation_gain = get_compensation_gain(); // compensation for battery voltage and altitude
+    // or you would do it in a layer like this with different linarisation gains for each coefficient (heli will need to do this to implement rpm scaling)
+    // we do our actuator linarisation in the motor mixer here.
     roll_thrust = (_roll_in + _roll_in_ff) * compensation_gain;
     pitch_thrust = (_pitch_in + _pitch_in_ff) * compensation_gain;
     yaw_thrust = (_yaw_in + _yaw_in_ff) * compensation_gain;
