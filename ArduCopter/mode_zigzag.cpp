@@ -221,7 +221,7 @@ void ModeZigZag::move_to_side()
         bool terr_alt;
         if (calculate_side_dest(next_dest, terr_alt)) {
             wp_nav->wp_and_spline_init();
-            if (wp_nav->set_wp_destination(next_dest, terr_alt ? Location::AltFrame::ABOVE_TERRAIN : Location::AltFrame::ABOVE_ORIGIN)) {
+            if (wp_nav->set_wp_destination(next_dest, terr_alt)) {
                 stage = AUTO;
                 auto_stage = AutoState::SIDEWAYS;
                 current_dest = next_dest;
@@ -544,7 +544,7 @@ void ModeZigZag::run_auto()
             save_or_move_to_destination(ab_dest_stored);
         } else if (auto_stage == AutoState::SIDEWAYS) {
             wp_nav->wp_and_spline_init();
-            if (wp_nav->set_wp_destination(current_dest, current_terr_alt ? Location::AltFrame::ABOVE_TERRAIN : Location::AltFrame::ABOVE_ORIGIN)) {
+            if (wp_nav->set_wp_destination(current_dest, current_terr_alt)) {
                 stage = AUTO;
                 reach_wp_time_ms = 0;
                 char const *dir[] = {"forward", "right", "backward", "left"};
