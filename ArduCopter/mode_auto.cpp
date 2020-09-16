@@ -1139,11 +1139,9 @@ void ModeAuto::do_next_wp(const AP_Mission::Mission_Command& cmd)
                 }
                 break;
             case MAV_CMD_NAV_RETURN_TO_LAUNCH:
-                // do not stop for RTL
-                break;
             case MAV_CMD_NAV_TAKEOFF:
             default:
-                // always stop for takeoff commands
+                // always stop for RTL and takeoff commands
                 // for unsupported commands it is safer to stop
                 break;
         }
