@@ -617,17 +617,20 @@ void AC_PosControl::run_z_controller()
     _vel_z_control_ratio += _dt*0.1f*(0.5-error_ratio);
     _vel_z_control_ratio = constrain_float(_vel_z_control_ratio, 0.0f, 2.0f);
 
-//    AP::logger().Write("LEN", "TimeUS,pt,pm,vd,vt,vm,ad,at,am,to", "Qfffffffff",
-//                                                  AP_HAL::micros64(),
-//                                                  (double)_pos_target.z,
-//                                                  (double)curr_alt,
-//                                                  (double)_vel_desired.z,
-//                                                  (double)_vel_target.z,
-//                                                  (double)curr_vel.z,
-//                                                  (double)_accel_desired.z,
-//                                                  (double)_accel_target.z,
-//                                                  (double)z_accel_meas,
-//                                                  (double)thr_out);
+    AP::logger().Write("PSZ", "TimeUS,pt,pm,vd,vt,vm,ad,at,am,to",
+            "smmnnnooo-",
+            "F000000000",
+            "Qfffffffff",
+            AP_HAL::micros64(),
+            (double)_pos_target.z,
+            (double)curr_alt,
+            (double)_vel_desired.z,
+            (double)_vel_target.z,
+            (double)curr_vel.z,
+            (double)_accel_desired.z,
+            (double)_accel_target.z,
+            (double)z_accel_meas,
+            (double)thr_out);
 }
 
 // get throttle using vibration resistant calculation (uses feed forward with manually calculated gain)
