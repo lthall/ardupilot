@@ -278,6 +278,7 @@ bool AC_WPNav::set_wp_destination(const Vector3f& destination, bool terrain_alt)
     _destination = destination;
     _terrain_alt = terrain_alt;
 
+    set_kinematic_limits(_scurve_this_leg, _origin, _destination);
     _scurve_this_leg.calculate_straight_leg(_origin, _destination);
     _scurve_next_leg.init();
     _flags.fast_waypoint = false;   // default waypoint back to slow
@@ -297,6 +298,7 @@ bool AC_WPNav::set_wp_destination_next(const Vector3f& destination, bool terrain
         return false;
     }
 
+    set_kinematic_limits(_scurve_next_leg, _destination, destination);
     _scurve_next_leg.calculate_straight_leg(_destination, destination);
 
     // next destination provided so fast waypoint
@@ -711,6 +713,7 @@ bool AC_WPNav::set_spline_destination(const Vector3f& destination, bool terrain_
             // leave this segment moving parallel to next segment
             destination_vector = next_destination - _destination;
         }
+        set_kinematic_limits(_scurve_this_leg, _origin, _destination);
         _scurve_this_leg.calculate_spline_leg(_origin, _destination, origin_vector, destination_vector);
     }
 
@@ -748,6 +751,7 @@ bool AC_WPNav::set_spline_destination_next(const Vector3f& destination, bool ter
         destination_vector = next_destination - destination;
     }
 
+    set_kinematic_limits(_scurve_this_leg, _destination, destination);
     _scurve_next_leg.calculate_spline_leg(_destination, destination, origin_vector, destination_vector);
 
     // next destination provided so fast waypoint
@@ -848,4 +852,44 @@ void AC_WPNav::wp_speed_update(float dt)
 
     // update position controller speed
     _pos_control.set_max_speed_xy(curr_max_speed_xy_cms);
+}
+
+/// update scruve with acceleration and velocity limits
+void AC_WPNav::set_kinematic_limits(scurves &scurve_leg, const Vector3f &origin, const Vector3f &destination)
+{
+    float accel_max, vel_max;
+    float z_length = destination.z - origin.z;
+    float xy_length = Vector2f(destination.x - origin.x, destination.y - origin.y).length();
+
+    if (is_zero(xy_length)) {
+        accel_max = _wp_accel_z_cmss;
+        if (is_positive(z_length)) {
+            vel_max = _wp_speed_up_cms;
+        } else {
+            vel_max = _wp_speed_down_cms;
+        }
+    } else {
+        float slope = z_length/xy_length;
+
+        if (fabsf(slope) < _wp_accel_z_cmss/_wp_accel_cmss) {
+            accel_max = _wp_accel_cmss;
+        } else {
+            accel_max = _wp_accel_z_cmss;
+        }
+
+        if (is_positive(slope)) {
+            if (fabsf(slope) < _wp_speed_up_cms/_wp_speed_cms) {
+                vel_max = _wp_speed_cms;
+            } else {
+                vel_max = _wp_speed_up_cms;
+            }
+        } else {
+            if (fabsf(slope) < _wp_speed_down_cms/_wp_speed_cms) {
+                vel_max = _wp_speed_cms;
+            } else {
+                vel_max = _wp_speed_down_cms;
+            }
+        }
+    }
+    scurve_leg.set_accel_vel_max(accel_max, vel_max);
 }
