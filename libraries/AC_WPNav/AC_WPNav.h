@@ -258,13 +258,13 @@ protected:
     AP_Float    _wp_speed_down_cms;     // default maximum descent rate in cm/s
     AP_Float    _wp_radius_cm;          // distance from a waypoint in cm that, when crossed, indicates the wp has been reached
     AP_Float    _wp_accel_cmss;          // horizontal acceleration in cm/s/s during missions
-    AP_Float    _wp_jerk;
+    AP_Float    _wp_jerk;               // maximum jerk used to generate s-curve trajectories
     AP_Float    _wp_accel_z_cmss;        // vertical acceleration in cm/s/s during missions
 
     // scurve
-    scurves _scurve_prev_leg;
-    scurves _scurve_this_leg;
-    scurves _scurve_next_leg;
+    scurves _scurve_prev_leg;           // previous spline trajectory used to blend with current s-curve trajectory
+    scurves _scurve_this_leg;           // current spline trajectory
+    scurves _scurve_next_leg;           // next spline trajectory used to blend with current s-curve trajectory
 
     // waypoint controller internal variables
     uint32_t    _wp_last_update;        // time of last update_wpnav call
@@ -273,9 +273,9 @@ protected:
     Vector3f    _destination;           // target destination in cm from ekf origin
     float       _track_error_xy;        // horizontal error of the actual position vs the desired position
     float       _track_desired;         // our desired distance along the track in cm
-    float       _track_scaler_dt;       // our desired distance along the track in cm
-    float       _yaw;                   // heading according to yaw
-    float       _yaw_rate;
+    float       _track_scaler_dt;       // time compression multiplier to slow the progress along the track
+    float       _yaw;                   // current yaw heading based on track direction
+    float       _yaw_rate;              // current yaw rate based on track curvature
 
     // terrain following variables
     bool        _terrain_alt;   // true if origin and destination.z are alt-above-terrain, false if alt-above-ekf-origin
