@@ -250,9 +250,6 @@ bool AC_WPNav::set_wp_destination(const Vector3f& destination, bool terrain_alt)
         // use previous destination as origin
         _origin = _destination;
 
-        // initialise flags
-        _flags.wp_yaw_set = false;
-
         // store previous leg
         _scurve_prev_leg = _scurve_this_leg;
     } else {
@@ -285,6 +282,7 @@ bool AC_WPNav::set_wp_destination(const Vector3f& destination, bool terrain_alt)
     _scurve_next_leg.init();
     _flags.fast_waypoint = false;   // default waypoint back to slow
     _flags.reached_destination = false;
+    _flags.wp_yaw_set = false;
 
     return true;
 }
@@ -541,7 +539,6 @@ bool AC_WPNav::update_wpnav()
 // returns target yaw in centi-degrees (used for wp and spline navigation)
 float AC_WPNav::get_yaw() const
 {
-    return _yaw;
     if (_flags.wp_yaw_set) {
         return _yaw;
     } else {
@@ -665,9 +662,6 @@ bool AC_WPNav::set_spline_destination(const Vector3f& destination, bool terrain_
         // use previous destination as origin
         _origin = _destination;
 
-        // initialise flags
-        _flags.wp_yaw_set = false;
-
         // store previous leg
         _scurve_prev_leg = _scurve_this_leg;
     } else {
@@ -723,6 +717,7 @@ bool AC_WPNav::set_spline_destination(const Vector3f& destination, bool terrain_
     _scurve_next_leg.init();
     _flags.fast_waypoint = false;   // default waypoint back to slow
     _flags.reached_destination = false;
+    _flags.wp_yaw_set = false;
 
     return true;
 }
