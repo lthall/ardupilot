@@ -54,6 +54,13 @@ void scurves::init()
     _delta_unit_3.zero();
 }
 
+// set maximum acceleration and velocity
+void scurves::set_accel_vel_max(float acceleration_max, float velocity_max)
+{
+    accel_max = acceleration_max;
+    vel_max = velocity_max;
+}
+
 // generate an optimal jerk limited curve in 3D space that moves over a straight line between two points
 void scurves::calculate_straight_leg(const Vector3f &origin, const Vector3f &destination)
 {

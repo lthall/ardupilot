@@ -13,6 +13,9 @@ public:
     // initialise the S-curve track
     void init();
 
+    // set maximum acceleration and velocity
+    void set_accel_vel_max(float acceleration_max, float velocity_max);
+
     // generate an optimal jerk limited curve in 3D space that moves over a straight line between two points
     void calculate_straight_leg(const Vector3f &origin, const Vector3f &destination);
 
