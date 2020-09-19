@@ -170,6 +170,9 @@ public:
     /// update_wpnav - run the wp controller - should be called at 100hz or higher
     virtual bool update_wpnav();
 
+    // returns true if update_wpnav has been run very recently
+    bool is_active() const;
+
     ///
     /// spline methods
     ///
@@ -191,9 +194,6 @@ public:
     ///     next_destination.z  must be in the same "frame" as destination.z (i.e. if destination is a alt-above-terrain, next_destination should be too)
     bool set_spline_destination(const Vector3f& destination, bool terrain_alt, const Vector3f& next_destination, bool next_terrain_alt, bool next_is_spline);
     bool set_spline_destination_next(const Vector3f& destination, bool terrain_alt, const Vector3f& next_destination, bool next_terrain_alt, bool next_is_spline);
-
-    /// reached_spline_destination - true when we have come within RADIUS cm of the waypoint
-    bool reached_spline_destination() const { return _flags.reached_destination; }
 
     ///
     /// shared methods
