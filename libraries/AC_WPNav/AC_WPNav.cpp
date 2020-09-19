@@ -246,7 +246,7 @@ bool AC_WPNav::get_wp_destination_loc(Location& destination) const
 ///     returns false on failure (likely caused by missing terrain data)
 bool AC_WPNav::set_wp_destination(const Vector3f& destination, bool terrain_alt)
 {
-    if (((AP_HAL::millis() - _wp_last_update) < 200) && _flags.reached_destination && (terrain_alt == _terrain_alt)) {
+    if (is_active() && _flags.reached_destination && (terrain_alt == _terrain_alt)) {
         // use previous destination as origin
         _origin = _destination;
 
@@ -538,6 +538,12 @@ bool AC_WPNav::update_wpnav()
     return ret;
 }
 
+// returns true if update_wpnav has been run very recently
+bool AC_WPNav::is_active() const
+{
+    return (AP_HAL::millis() - _wp_last_update) < 200;
+}
+
 // returns target yaw in centi-degrees (used for wp and spline navigation)
 float AC_WPNav::get_yaw() const
 {
@@ -660,7 +666,7 @@ bool AC_WPNav::set_spline_destination_next_loc(const Location& destination, Loca
 ///     next_destination.z  must be in the same "frame" as destination.z (i.e. if destination is a alt-above-terrain, next_destination should be too)
 bool AC_WPNav::set_spline_destination(const Vector3f& destination, bool terrain_alt, const Vector3f& next_destination, bool next_terrain_alt, bool next_is_spline)
 {
-    if (((AP_HAL::millis() - _wp_last_update) < 200) && _flags.reached_destination && (terrain_alt == _terrain_alt)) {
+    if (is_active() && _flags.reached_destination && (terrain_alt == _terrain_alt)) {
         // use previous destination as origin
         _origin = _destination;
 
