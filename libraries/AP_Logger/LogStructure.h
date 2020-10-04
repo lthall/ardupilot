@@ -281,8 +281,9 @@ static_assert(sizeof(log_ISBD) < 256, "log_ISBD is over-size");
 struct PACKED log_Vibe {
     LOG_PACKET_HEADER;
     uint64_t time_us;
+    uint8_t imu;
     float vibe_x, vibe_y, vibe_z;
-    uint32_t clipping_0, clipping_1, clipping_2;
+    uint32_t clipping;
 };
 
 struct PACKED log_Gimbal1 {
@@ -1572,7 +1573,7 @@ struct PACKED log_Arm_Disarm {
     { LOG_BAR3_MSG, sizeof(log_BARO), \
       "BAR3",  BARO_FMT, BARO_LABELS, BARO_UNITS, BARO_MULTS }, \
     { LOG_VIBE_MSG, sizeof(log_Vibe), \
-      "VIBE", "QfffIII",     "TimeUS,VibeX,VibeY,VibeZ,Clip0,Clip1,Clip2", "s------", "F------" }, \
+      "VIBE", "QBfffI",     "TimeUS,IMU,VibeX,VibeY,VibeZ,Clip", "s#----", "F-----" }, \
     { LOG_IMUDT_MSG, sizeof(log_IMUDT), \
       "IMT",IMT_FMT,IMT_LABELS, IMT_UNITS, IMT_MULTS }, \
     { LOG_IMUDT2_MSG, sizeof(log_IMUDT), \
