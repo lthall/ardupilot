@@ -338,12 +338,9 @@ void AC_WPNav::shift_wp_origin_to_current_pos()
     // calculate difference between current position and target
     Vector3f pos_diff = curr_pos - pos_target;
 
-    // shift origin
+    // shift origin and destination
     _origin += pos_diff;
-
-    // shift destination only in x and y
-    _destination.x += pos_diff.x;
-    _destination.y += pos_diff.y;
+    _destination += pos_diff;
 
     // move pos controller target and disable feed forward
     _pos_control.set_pos_target(curr_pos);
