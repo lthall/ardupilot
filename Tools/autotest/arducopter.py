@@ -3056,28 +3056,28 @@ class AutoTestCopter(AutoTest):
         """stop the vehicle moving in guided mode"""
         self.progress("Stopping vehicle")
         tstart = self.get_sim_time()
+        # send a position-control command
+        self.mav.mav.set_position_target_local_ned_send(
+            0, # timestamp
+            1, # target system_id
+            1, # target component id
+            mavutil.mavlink.MAV_FRAME_BODY_NED,
+            0b1111111111111000, # mask specifying use-only-x-y-z
+            0, # x
+            0, # y
+            0, # z
+            0, # vx
+            0, # vy
+            0, # vz
+            0, # afx
+            0, # afy
+            0, # afz
+            0, # yaw
+            0, # yawrate
+        )
         while True:
             if self.get_sim_time_cached() - tstart > timeout:
                 raise NotAchievedException("Vehicle did not stop")
-            # send a position-control command
-            self.mav.mav.set_position_target_local_ned_send(
-                0, # timestamp
-                1, # target system_id
-                1, # target component id
-                mavutil.mavlink.MAV_FRAME_BODY_NED,
-                0b1111111111111000, # mask specifying use-only-x-y-z
-                0, # x
-                0, # y
-                0, # z
-                0, # vx
-                0, # vy
-                0, # vz
-                0, # afx
-                0, # afy
-                0, # afz
-                0, # yaw
-                0, # yawrate
-            )
             m = self.mav.recv_match(type='VFR_HUD', blocking=True)
             print("%s" % str(m))
             if (m.groundspeed < groundspeed_tolerance and
@@ -3089,28 +3089,28 @@ class AutoTestCopter(AutoTest):
                                        blocking=True)
 
         tstart = self.get_sim_time()
+        # send position-control command
+        self.mav.mav.set_position_target_global_int_send(
+            0, # timestamp
+            1, # target system_id
+            1, # target component id
+            mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT_INT,
+            0b1111111111111000, # mask specifying use-only-lat-lon-alt
+            lat, # lat
+            lon, # lon
+            alt, # alt
+            0, # vx
+            0, # vy
+            0, # vz
+            0, # afx
+            0, # afy
+            0, # afz
+            0, # yaw
+            0, # yawrate
+        )
         while True:
             if self.get_sim_time_cached() - tstart > 200:
                 raise NotAchievedException("Did not move far enough")
-            # send a position-control command
-            self.mav.mav.set_position_target_global_int_send(
-                0, # timestamp
-                1, # target system_id
-                1, # target component id
-                mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT_INT,
-                0b1111111111111000, # mask specifying use-only-lat-lon-alt
-                lat, # lat
-                lon, # lon
-                alt, # alt
-                0, # vx
-                0, # vy
-                0, # vz
-                0, # afx
-                0, # afy
-                0, # afz
-                0, # yaw
-                0, # yawrate
-            )
             pos = self.mav.recv_match(type='GLOBAL_POSITION_INT',
                                       blocking=True)
             delta = self.get_distance_int(startpos, pos)
@@ -3124,28 +3124,28 @@ class AutoTestCopter(AutoTest):
         self.progress("startpos=%s" % str(startpos))
 
         tstart = self.get_sim_time()
+        # send position-control command
+        self.mav.mav.set_position_target_local_ned_send(
+            0, # timestamp
+            1, # target system_id
+            1, # target component id
+            mavutil.mavlink.MAV_FRAME_LOCAL_NED,
+            0b1111111111111000, # mask specifying use-only-x-y-z
+            x, # x
+            y, # y
+            -z_up,# z
+            0, # vx
+            0, # vy
+            0, # vz
+            0, # afx
+            0, # afy
+            0, # afz
+            0, # yaw
+            0, # yawrate
+        )
         while True:
             if self.get_sim_time_cached() - tstart > timeout:
                 raise NotAchievedException("Did not start to move")
-            # send a position-control command
-            self.mav.mav.set_position_target_local_ned_send(
-                0, # timestamp
-                1, # target system_id
-                1, # target component id
-                mavutil.mavlink.MAV_FRAME_LOCAL_NED,
-                0b1111111111111000, # mask specifying use-only-x-y-z
-                x, # x
-                y, # y
-                -z_up,# z
-                0, # vx
-                0, # vy
-                0, # vz
-                0, # afx
-                0, # afy
-                0, # afz
-                0, # yaw
-                0, # yawrate
-            )
             m = self.mav.recv_match(type='VFR_HUD', blocking=True)
             print("%s" % m)
             if m.groundspeed > 0.5:
