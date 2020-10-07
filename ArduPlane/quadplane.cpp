@@ -730,6 +730,7 @@ bool QuadPlane::setup(void)
         hal.console->printf("%s wp_nav\n", strUnableToAllocate);
         goto failed;
     }
+    wp_nav->wp_and_spline_init();
     AP_Param::load_object_from_eeprom(wp_nav, wp_nav->var_info);
 
     loiter_nav = new AC_Loiter(inertial_nav, *ahrs_view, *pos_control, *attitude_control);
