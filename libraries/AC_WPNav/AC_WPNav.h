@@ -73,9 +73,10 @@ public:
     ///
 
     /// wp_and_spline_init - initialise straight line and spline waypoint controllers
+    ///     speed_cms should be set to a positive value or left at zero to use the default speed
     ///     updates target roll, pitch targets and I terms based on vehicle lean angles
     ///     should be called once before the waypoint controller is used but does not need to be called before subsequent updates to destination
-    void wp_and_spline_init();
+    void wp_and_spline_init(float speed_cms = 0.0f);
 
     /// set current target horizontal speed during wp navigation
     void set_speed_xy(float speed_cms);

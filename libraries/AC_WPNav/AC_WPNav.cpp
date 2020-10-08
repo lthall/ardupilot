@@ -123,9 +123,10 @@ AC_WPNav::TerrainSource AC_WPNav::get_terrain_source() const
 ///
 
 /// wp_and_spline_init - initialise straight line and spline waypoint controllers
+///     speed_cms should be set to a positive value or left at zero to use the default speed
 ///     updates target roll, pitch targets and I terms based on vehicle lean angles
 ///     should be called once before the waypoint controller is used but does not need to be called before subsequent updates to destination
-void AC_WPNav::wp_and_spline_init()
+void AC_WPNav::wp_and_spline_init(float speed_cms)
 {
     // check _wp_accel_cmss is reasonable
     if (_wp_accel_cmss <= 0) {
@@ -140,10 +141,10 @@ void AC_WPNav::wp_and_spline_init()
     _pos_control.set_desired_velocity_xy(0.0f, 0.0f);
 
     // initialize the desired wp speed if not already done
-    _wp_desired_speed_xy_cms = _wp_speed_cms;
+    _wp_desired_speed_xy_cms = is_positive(speed_cms) ? speed_cms : _wp_speed_cms;
 
     // initialise position controller speed and acceleration
-    _pos_control.set_max_speed_xy(_wp_speed_cms);
+    _pos_control.set_max_speed_xy(_wp_desired_speed_xy_cms);
     _pos_control.set_max_accel_xy(_wp_accel_cmss);
     _pos_control.set_max_speed_z(-_wp_speed_down_cms, _wp_speed_up_cms);
     _pos_control.set_max_accel_z(_wp_accel_z_cmss);
@@ -166,9 +167,9 @@ void AC_WPNav::wp_and_spline_init()
         tc = MAX(_attitude_control.get_input_tc(), 0.1f);
     }
 
-    _scurve_prev_leg = scurves(tc * 2.0, jerk * 100.0, _wp_accel_cmss, _wp_speed_cms);
-    _scurve_this_leg = scurves(tc * 2.0, jerk * 100.0, _wp_accel_cmss, _wp_speed_cms);
-    _scurve_next_leg = scurves(tc * 2.0, jerk * 100.0, _wp_accel_cmss, _wp_speed_cms);
+    _scurve_prev_leg = scurves(tc * 2.0, jerk * 100.0, _wp_accel_cmss, _wp_desired_speed_xy_cms);
+    _scurve_this_leg = scurves(tc * 2.0, jerk * 100.0, _wp_accel_cmss, _wp_desired_speed_xy_cms);
+    _scurve_next_leg = scurves(tc * 2.0, jerk * 100.0, _wp_accel_cmss, _wp_desired_speed_xy_cms);
     _scurve_prev_leg.init();
     _scurve_this_leg.init();
 
