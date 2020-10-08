@@ -447,7 +447,9 @@ bool AC_WPNav::advance_wp_target_along_track(float dt)
         turn_pos = -_scurve_this_leg.get_track();
         _scurve_this_leg.move_from_time_pos_vel_accel(_scurve_this_leg.get_time_elapsed() + time_to_destination/2.0, 1.0, turn_pos, turn_vel, turn_accel);
         _scurve_next_leg.move_from_time_pos_vel_accel(time_to_destination/2.0, _track_scaler_dt, turn_pos, turn_vel, turn_accel);
-        s_finish = s_finish || ((_scurve_this_leg.get_time_remaining() < _scurve_next_leg.time_end()/2.0) && (turn_pos.length() < _wp_radius_cm) && (Vector2f(turn_vel.x, turn_vel.y).length() < _wp_speed_cms) && (Vector2f(turn_accel.x, turn_accel.y).length() < 2*_wp_accel_cmss));
+        const float vel_min = MIN(_scurve_this_leg.get_vel_max(), _scurve_next_leg.get_vel_max());
+        const float accel_min = MIN(_scurve_this_leg.get_accel_max(), _scurve_next_leg.get_accel_max());
+        s_finish = s_finish || ((_scurve_this_leg.get_time_remaining() < _scurve_next_leg.time_end()/2.0) && (turn_pos.length() < _wp_radius_cm) && (Vector2f(turn_vel.x, turn_vel.y).length() < vel_min) && (Vector2f(turn_accel.x, turn_accel.y).length() < 2*accel_min));
     }
 
     // check if we've reached the waypoint
@@ -862,38 +864,44 @@ void AC_WPNav::wp_speed_update(float dt)
 void AC_WPNav::set_kinematic_limits(scurves &scurve_leg, const Vector3f &origin, const Vector3f &destination)
 {
     float accel_max, vel_max;
-    float z_length = destination.z - origin.z;
-    float xy_length = Vector2f(destination.x - origin.x, destination.y - origin.y).length();
+    const float z_length = destination.z - origin.z;
+    const float xy_length = Vector2f(destination.x - origin.x, destination.y - origin.y).length();
+    const float wp_speed_xy_cms = MAX(_wp_desired_speed_xy_cms, WPNAV_WP_SPEED_MIN);
+    const float wp_accel_xy_cmss = _pos_control.get_max_accel_xy();
+    const float wp_speed_up_cms = _pos_control.get_max_speed_up();
+    const float wp_speed_down_cms = fabsf(_pos_control.get_max_speed_down());
+    const float wp_accel_z_cmss = _pos_control.get_max_accel_z();
 
     if (is_zero(xy_length)) {
-        accel_max = _wp_accel_z_cmss;
+        accel_max = wp_accel_z_cmss;
         if (is_positive(z_length)) {
-            vel_max = _wp_speed_up_cms;
+            vel_max = wp_speed_up_cms;
         } else {
-            vel_max = _wp_speed_down_cms;
+            vel_max = wp_speed_down_cms;
         }
     } else {
         float slope = z_length/xy_length;
 
-        if (fabsf(slope) < _wp_accel_z_cmss/_wp_accel_cmss) {
-            accel_max = _wp_accel_cmss;
+        if (fabsf(slope) < wp_accel_z_cmss/wp_accel_xy_cmss) {
+            accel_max = wp_accel_xy_cmss;
         } else {
-            accel_max = _wp_accel_z_cmss;
+            accel_max = wp_accel_z_cmss;
         }
 
         if (is_positive(slope)) {
-            if (fabsf(slope) < _wp_speed_up_cms/_wp_speed_cms) {
-                vel_max = _wp_speed_cms;
+            if (fabsf(slope) < wp_speed_up_cms/wp_speed_xy_cms) {
+                vel_max = wp_speed_xy_cms;
             } else {
-                vel_max = _wp_speed_up_cms;
+                vel_max = wp_speed_up_cms;
             }
         } else {
-            if (fabsf(slope) < _wp_speed_down_cms/_wp_speed_cms) {
-                vel_max = _wp_speed_cms;
+            if (fabsf(slope) < wp_speed_down_cms/wp_speed_xy_cms) {
+                vel_max = wp_speed_xy_cms;
             } else {
-                vel_max = _wp_speed_down_cms;
+                vel_max = wp_speed_down_cms;
             }
         }
     }
-    scurve_leg.set_accel_vel_max(accel_max, vel_max);
+    scurve_leg.set_vel_max(vel_max);
+    scurve_leg.set_accel_max(accel_max);
 }
