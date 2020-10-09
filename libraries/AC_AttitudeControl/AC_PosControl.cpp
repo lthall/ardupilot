@@ -1420,7 +1420,9 @@ void AC_PosControl::init_velmatch_velocity(float speed_max)
             _vel_velmatch = _inav.get_velocity();
             // limit velocity match to configured max speed
             const float speed = _vel_velmatch.length();
-            if (speed > speed_max) {
+            if (!is_positive(speed_max)) {
+                _vel_velmatch.zero();
+            } else if ( speed > speed_max ) {
                 _vel_velmatch *= (speed_max / speed);
             }
             set_velmatch_state_hold();
@@ -1493,7 +1495,9 @@ void AC_PosControl::update_velmatch_velocity(float dt, float speed_max)
         } else {
             vel_target = _inav.get_velocity();
             const float speed = vel_target.length();
-            if (speed > speed_max) {
+            if (!is_positive(speed_max)) {
+                vel_target.zero();
+            } else if ( speed > speed_max ) {
                 vel_target *= (speed_max / speed);
             }
         }
