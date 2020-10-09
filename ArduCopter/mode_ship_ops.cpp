@@ -272,6 +272,10 @@ void ModeShipOperation::run()
             // move to target position and velocity using position and velocity control
             Vector3f pos = pos_with_ofs;
             pos += offset;
+            // relax stop target if we might be landed
+            if (copter.ap.land_complete_maybe) {
+                loiter_nav->soften_for_landing();
+            }
             pos_control->input_pos_vel_xy(pos, vel_ned,
                     wp_nav->get_default_speed_xy(),
                     wp_nav->get_default_speed_xy() + vel_ned.length(),
@@ -331,7 +335,7 @@ void ModeShipOperation::run()
             }
             break;
         case ShipOps_LaunchRecovery:
-            // if accent requested and altitude has reached or exceded the perch altitude then move to Perch
+            // if accent requested and altitude has reached or exceeded the perch altitude then move to Perch
             if (!is_positive(-offset.z - pos_control->get_pos_target().z) && is_positive(target_climb_rate)) {
                 _state = ShipOps_Perch;
                 gcs().send_text(MAV_SEVERITY_INFO, "ShipLand: ShipOps_ReturnToPerch");
