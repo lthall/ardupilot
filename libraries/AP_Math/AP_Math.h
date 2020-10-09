@@ -145,10 +145,10 @@ float wrap_2PI(const T radian);
 template <typename T>
 T constrain_value(const T amt, const T low, const T high);
 
-inline float constrain_float(const float amt, const float low, const float high)
-{
-    return constrain_value(amt, low, high);
-}
+template <typename T>
+T constrain_value_line(const T amt, const T low, const T high, uint32_t line);
+
+#define constrain_float(amt, low, high) constrain_value_line(float(amt), float(low), float(high), uint32_t(__LINE__))
 
 inline int16_t constrain_int16(const int16_t amt, const int16_t low, const int16_t high)
 {
