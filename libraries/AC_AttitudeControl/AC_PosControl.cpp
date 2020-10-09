@@ -1223,7 +1223,7 @@ void AC_PosControl::run_xy_controller(float dt)
 
     // update i term if we have not hit the accel or throttle limits OR the i term will reduce
     // TODO: move limit handling into the PI and PID controller
-    if (!_limit.accel_xy && !_motors.limit.throttle_upper) {
+    if (!_limit.accel_xy && !_motors.limit.throttle_upper && !_motors.limit.throttle_lower) {
         vel_xy_i = _pid_vel_xy.get_i();
     } else {
         vel_xy_i = _pid_vel_xy.get_i_shrink();
