@@ -42,7 +42,7 @@ scurves::scurves(float tj, float Jp, float Ap, float Vp) :
 }
 
 // initialise the S-curve track
-void scurves::init()
+bool scurves::init()
 {
     segtype = SegmentType::EMPTY;
     _t = 0.0f;
@@ -52,12 +52,18 @@ void scurves::init()
     _delta_unit_1.zero();
     _delta_unit_2.zero();
     _delta_unit_3.zero();
+
+    return is_positive(otj) && is_positive(jerk_max) && is_positive(accel_max) && is_positive(vel_max);
 }
 
 // generate an optimal jerk limited curve in 3D space that moves over a straight line between two points
 void scurves::calculate_straight_leg(const Vector3f &origin, const Vector3f &destination)
 {
-    init();
+    if (!init()) {
+        // Some parameters have been set to zero
+        return;
+    }
+
     _track = destination - origin;
     float track_length = _track.length();
     if (is_zero(track_length)) {
@@ -73,7 +79,11 @@ void scurves::calculate_straight_leg(const Vector3f &origin, const Vector3f &des
 // generate jerk limited curve in 3D space approximating a spline between two points
 void scurves::calculate_spline_leg(const Vector3f &origin, const Vector3f &destination, Vector3f origin_vector, Vector3f destination_vector)
 {
-    init();
+    if (!init()) {
+        // Some parameters have been set to zero
+        return;
+    }
+
     _track = destination - origin;
     if (_track.is_zero()) {
         return;

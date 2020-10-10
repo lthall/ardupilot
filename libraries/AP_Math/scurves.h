@@ -11,7 +11,7 @@ public:
     scurves(float tj, float Jp, float Ap, float Vp);
 
     // initialise the S-curve track
-    void init();
+    bool init();
 
     // get or set maximum velocity in cm/s
     float get_vel_max() const { return vel_max; }
