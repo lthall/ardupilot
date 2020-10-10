@@ -125,7 +125,7 @@ void scurves::calculate_spline_leg(const Vector3f &origin, const Vector3f &desti
         _delta_unit_3 = destination_vector;
     }
 
-    Vector3f track_2 = _track - (_delta_unit_1 + _delta_unit_3)*(track_length*x);
+    Vector3f track_2 = _track - (_delta_unit_1 + _delta_unit_3) * (track_length * x);
     _delta_unit_2 = track_2.normalized();
     segtype = SegmentType::SPLINE;
     add_segments_curved(track_length * x, track_2.length());
@@ -283,20 +283,20 @@ bool scurves::move_from_time_pva_spline(float time, float time_scale, Vector3f &
     vel += _delta_unit_1 * scurve_V1;
     accel += _delta_unit_1 * scurve_A1;
 
-    update(MAX(time-time_start + segment[11].start_time, segment[11].start_time), scurve_J1, scurve_A1, scurve_V1, scurve_P1);
+    update(MAX(time - time_start + segment[11].start_time, segment[11].start_time), scurve_J1, scurve_A1, scurve_V1, scurve_P1);
     pos += _delta_unit_2 * (scurve_P1 - segment[11].start_pos);
     vel += _delta_unit_2 * scurve_V1;
     accel += _delta_unit_2 * scurve_A1;
 
-    update(MIN(segment[11].start_time - (time-time_start*2-time_mid+segment[11].start_time), segment[11].start_time), scurve_J1, scurve_A1, scurve_V1, scurve_P1);
+    update(MIN(segment[11].start_time - (time - time_start * 2 - time_mid + segment[11].start_time), segment[11].start_time), scurve_J1, scurve_A1, scurve_V1, scurve_P1);
     pos += _delta_unit_3 * (segment[11].start_pos - scurve_P1);
     vel += _delta_unit_3 * scurve_V1;
     accel += _delta_unit_3 * (-scurve_A1);
 
-    finish = _t > (time_mid + 2.0*time_start);
-    finish = _t > (time_mid + 2.0*time_start);
+    finish = _t > (time_mid + 2.0 * time_start);
+    finish = _t > (time_mid + 2.0 * time_start);
 
-    vel *=  MIN(time_scale * 1.1f, 1.0f);
+    vel *= MIN(time_scale * 1.1f, 1.0f);
     accel *= time_scale;
     return finish;
 }
@@ -349,7 +349,7 @@ float scurves::pos_end_spline() const
 
 float scurves::time_end_spline() const
 {
-    return segment[num_segs - 1].start_time - segment[11].start_time + segment[7].start_time*2.0;
+    return segment[num_segs - 1].start_time - segment[11].start_time + segment[7].start_time * 2.0;
 }
 
 float scurves::get_time_remaining_spline() const
@@ -449,7 +449,7 @@ void scurves::add_segments_straight(float Pp)
 }
 
 // generate time segments to generate large curved corners
-void scurves::add_segments_curved(float Pp,  float Pm)
+void scurves::add_segments_curved(float Pp, float Pm)
 {
     if (is_zero(Pp)) {
         return;
@@ -468,9 +468,9 @@ void scurves::add_segments_curved(float Pp,  float Pm)
     float Vc = 0;
     float Pc = 0;
 
-    Pc = Pp*2.0/3.0;
+    Pc = Pp * 2.0 / 3.0;
     Ps = Pp - Pc;
-    Vs = MIN(Vp, MIN(MIN(safe_sqrt(Ap*Pc), powf(0.5*Jp*sq(Pc), 1.0/3.0)), Pc/(2*tj)));
+    Vs = MIN(Vp, MIN(MIN(safe_sqrt(Ap * Pc), powf(0.5 * Jp * sq(Pc), 1.0 / 3.0)), Pc / (2 * tj)));
 
     float t2, t4, t6;
     cal_posfast(tj, Jp, Ap, Vs, Ps, Js, t2, t4, t6);
@@ -496,7 +496,7 @@ void scurves::add_segments_curved(float Pp,  float Pm)
     add_segment_incr_jerk(tc, -Jc);
     add_segment_decr_jerk(tc, -Jc);
 
-    float Tcv = (Pm - 2.0*(segment[num_segs - 1].start_pos-Pp)) / segment[num_segs - 1].start_vel;
+    float Tcv = (Pm - 2.0 * (segment[num_segs - 1].start_pos - Pp)) / segment[num_segs - 1].start_vel;
     add_segment_const_jerk(Tcv, 0.0);
 
     add_segment_incr_jerk(tc, -Jc);
