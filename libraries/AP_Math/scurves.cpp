@@ -83,15 +83,20 @@ void scurves::calculate_spline_leg(const Vector3f &origin, const Vector3f &desti
     }
 
     float track_length = _track.length();
+    // x is the length of the origin and destination vector assuming a unit length track
+    // y is the length of the track assuming a unit length origin and destination vector
     float x, y;
     float cos_phi = 0.0f;
     float cos_alpha = 0.0f;
+
+    // non-zero length : _track, origin_vector, destination_vector
 
     Vector3f track_unit = _track.normalized();
     if (destination_vector.is_zero()) {
         origin_vector.normalize();
         cos_phi = track_unit * origin_vector;
         y = cos_phi + safe_sqrt(9.0f - (1 - sq(cos_phi)));
+        // y must always be positive because cos_phi -1 to 1
         x = 1.0 / y;
         destination_vector = track_unit - origin_vector * x;
         destination_vector.normalize();
@@ -101,6 +106,7 @@ void scurves::calculate_spline_leg(const Vector3f &origin, const Vector3f &desti
         destination_vector.normalize();
         cos_alpha = track_unit * destination_vector;
         y = cos_alpha + safe_sqrt(9.0f - (1 - sq(cos_alpha)));
+        // y must always be positive because cos_phi -1 to 1
         x = 1.0 / y;
         origin_vector = destination_vector * x - track_unit;
         origin_vector.normalize();
@@ -111,21 +117,10 @@ void scurves::calculate_spline_leg(const Vector3f &origin, const Vector3f &desti
         destination_vector.normalize();
         cos_phi = track_unit * origin_vector;
         cos_alpha = track_unit * destination_vector;
-        if (cos_phi + cos_alpha >= 2.0f) {
-            x = 0.5;
-        } else if (is_zero(cos_phi - 1.0f) && is_zero(cos_alpha - 1.0f)) {
-            x = 0.25;
-        } else {
-            Vector3f vector_zero_gap = origin_vector + destination_vector - track_unit * (cos_phi + cos_alpha);
-            if (!vector_zero_gap.is_zero()) {
-                float zero_gap = vector_zero_gap.length_squared();
-                y = (cos_phi + cos_alpha + safe_sqrt(4.0 - zero_gap));
-                x = MIN(1.0 / y, 0.5f);
-            } else {
-                y = (cos_phi + cos_alpha + 2.0f);
-                x = MIN(1.0 / y, 0.5f);
-            }
-        }
+        Vector3f vector_zero_gap = origin_vector + destination_vector - track_unit * (cos_phi + cos_alpha);
+        float zero_gap_squared = vector_zero_gap.length_squared();
+        y = MAX(2.0f, cos_phi + cos_alpha + safe_sqrt(4.0 - zero_gap_squared));
+        x = 1.0 / y;
         _delta_unit_1 = origin_vector;
         _delta_unit_3 = destination_vector;
     }
