@@ -357,6 +357,8 @@ void ModeShipOperation::run()
     pos_control->update_z_controller();
 
     // call attitude controller
+    if (isnan(nav_roll)) {AP::internalerror().error(AP_InternalError::error_t::constraining_nan, __LINE__);}
+    if (isnan(nav_pitch)) {AP::internalerror().error(AP_InternalError::error_t::constraining_nan, __LINE__);}
     attitude_control->input_euler_angle_roll_pitch_yaw(nav_roll, nav_pitch, yaw_cd, true);
 }
 

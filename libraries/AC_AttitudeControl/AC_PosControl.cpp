@@ -1262,7 +1262,11 @@ void AC_PosControl::run_xy_controller(float dt)
     _limit.accel_xy = limit_vector_length(_accel_target.x, _accel_target.y, accel_max);
 
     // update angle targets that will be passed to stabilize controller
+    if (isnan(_accel_target.x)) {AP::internalerror().error(AP_InternalError::error_t::constraining_nan, __LINE__);}
+    if (isnan(_accel_target.y)) {AP::internalerror().error(AP_InternalError::error_t::constraining_nan, __LINE__);}
     accel_to_lean_angles(_accel_target.x, _accel_target.y, _roll_target, _pitch_target);
+    if (isnan(_roll_target)) {AP::internalerror().error(AP_InternalError::error_t::constraining_nan, __LINE__);}
+    if (isnan(_pitch_target)) {AP::internalerror().error(AP_InternalError::error_t::constraining_nan, __LINE__);}
 }
 
 // get_lean_angles_to_accel - convert roll, pitch lean angles to lat/lon frame accelerations in cm/s/s

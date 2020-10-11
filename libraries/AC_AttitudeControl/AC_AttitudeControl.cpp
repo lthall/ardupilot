@@ -248,6 +248,8 @@ void AC_AttitudeControl::input_euler_angle_roll_pitch_euler_rate_yaw(float euler
 
     // Add roll trim to compensate tail rotor thrust in heli (will return zero on multirotors)
     euler_roll_angle += get_roll_trim_rad();
+    if (isnan(euler_roll_angle)) {AP::internalerror().error(AP_InternalError::error_t::constraining_nan, __LINE__);}
+    if (isnan(euler_pitch_angle)) {AP::internalerror().error(AP_InternalError::error_t::constraining_nan, __LINE__);}
 
     if (_rate_bf_ff_enabled) {
         // translate the roll pitch and yaw acceleration limits to the euler axis
@@ -256,11 +258,14 @@ void AC_AttitudeControl::input_euler_angle_roll_pitch_euler_rate_yaw(float euler
         // When acceleration limiting and feedforward are enabled, the sqrt controller is used to compute an euler
         // angular velocity that will cause the euler angle to smoothly stop at the input angle with limited deceleration
         // and an exponential decay specified by smoothing_gain at the end.
+        if (isnan(wrap_PI(euler_roll_angle - _attitude_target_euler_angle.x))) {AP::internalerror().error(AP_InternalError::error_t::constraining_nan, __LINE__);}
         _attitude_target_euler_rate.x = input_shaping_angle(wrap_PI(euler_roll_angle - _attitude_target_euler_angle.x), _input_tc, euler_accel.x, _attitude_target_euler_rate.x, _dt);
+        if (isnan(wrap_PI(euler_pitch_angle - _attitude_target_euler_angle.y))) {AP::internalerror().error(AP_InternalError::error_t::constraining_nan, __LINE__);}
         _attitude_target_euler_rate.y = input_shaping_angle(wrap_PI(euler_pitch_angle - _attitude_target_euler_angle.y), _input_tc, euler_accel.y, _attitude_target_euler_rate.y, _dt);
 
         // When yaw acceleration limiting is enabled, the yaw input shaper constrains angular acceleration about the yaw axis, slewing
         // the output rate towards the input rate.
+        if (isnan(_attitude_target_euler_rate.z)) {AP::internalerror().error(AP_InternalError::error_t::constraining_nan, __LINE__);}
         _attitude_target_euler_rate.z = input_shaping_ang_vel(_attitude_target_euler_rate.z, euler_yaw_rate, euler_accel.z, _dt);
 
         // Convert euler angle derivative of desired attitude into a body-frame angular velocity vector for feedforward
@@ -291,8 +296,11 @@ void AC_AttitudeControl::input_euler_angle_roll_pitch_yaw(float euler_roll_angle
 {
     // Convert from centidegrees on public interface to radians
     float euler_roll_angle = radians(euler_roll_angle_cd * 0.01f);
+    if (isnan(euler_roll_angle)) {AP::internalerror().error(AP_InternalError::error_t::constraining_nan, __LINE__);}
     float euler_pitch_angle = radians(euler_pitch_angle_cd * 0.01f);
+    if (isnan(euler_pitch_angle)) {AP::internalerror().error(AP_InternalError::error_t::constraining_nan, __LINE__);}
     float euler_yaw_angle = radians(euler_yaw_angle_cd * 0.01f);
+    if (isnan(euler_yaw_angle)) {AP::internalerror().error(AP_InternalError::error_t::constraining_nan, __LINE__);}
 
     // calculate the attitude target euler angles
     _attitude_target_quat.to_euler(_attitude_target_euler_angle.x, _attitude_target_euler_angle.y, _attitude_target_euler_angle.z);
@@ -307,8 +315,11 @@ void AC_AttitudeControl::input_euler_angle_roll_pitch_yaw(float euler_roll_angle
         // When acceleration limiting and feedforward are enabled, the sqrt controller is used to compute an euler
         // angular velocity that will cause the euler angle to smoothly stop at the input angle with limited deceleration
         // and an exponential decay specified by _input_tc at the end.
+        if (isnan(wrap_PI(euler_roll_angle - _attitude_target_euler_angle.x))) {AP::internalerror().error(AP_InternalError::error_t::constraining_nan, __LINE__);}
         _attitude_target_euler_rate.x = input_shaping_angle(wrap_PI(euler_roll_angle - _attitude_target_euler_angle.x), _input_tc, euler_accel.x, _attitude_target_euler_rate.x, _dt);
+        if (isnan(wrap_PI(euler_pitch_angle - _attitude_target_euler_angle.y))) {AP::internalerror().error(AP_InternalError::error_t::constraining_nan, __LINE__);}
         _attitude_target_euler_rate.y = input_shaping_angle(wrap_PI(euler_pitch_angle - _attitude_target_euler_angle.y), _input_tc, euler_accel.y, _attitude_target_euler_rate.y, _dt);
+        if (isnan(wrap_PI(euler_yaw_angle - _attitude_target_euler_angle.z))) {AP::internalerror().error(AP_InternalError::error_t::constraining_nan, __LINE__);}
         _attitude_target_euler_rate.z = input_shaping_angle(wrap_PI(euler_yaw_angle - _attitude_target_euler_angle.z), _input_tc, euler_accel.z, _attitude_target_euler_rate.z, _dt);
         if (slew_yaw) {
             _attitude_target_euler_rate.z = constrain_float(_attitude_target_euler_rate.z, -get_slew_yaw_rads(), get_slew_yaw_rads());
@@ -716,8 +727,12 @@ void AC_AttitudeControl::thrust_heading_rotation_angles(Quaternion& att_to_quat,
 // deceleration limits including basic jerk limiting using _input_tc
 float AC_AttitudeControl::input_shaping_angle(float error_angle, float input_tc, float accel_max, float target_ang_vel, float dt)
 {
+    if (isnan(error_angle)) {AP::internalerror().error(AP_InternalError::error_t::constraining_nan, __LINE__);}
+
     // Calculate the velocity as error approaches zero with acceleration limited by accel_max_radss
     float desired_ang_vel = sqrt_controller(error_angle, 1.0f / MAX(input_tc, 0.01f), accel_max, dt);
+
+    if (isnan(desired_ang_vel)) {AP::internalerror().error(AP_InternalError::error_t::constraining_nan, __LINE__);}
 
     // Acceleration is limited directly to smooth the beginning of the curve.
     return input_shaping_ang_vel(target_ang_vel, desired_ang_vel, accel_max, dt);
@@ -741,6 +756,8 @@ void AC_AttitudeControl::input_shaping_rate_predictor(const Vector2f &error_angl
 {
     if (_rate_bf_ff_enabled) {
         // translate the roll pitch and yaw acceleration limits to the euler axis
+        if (isnan(wrap_PI(error_angle.x))) {AP::internalerror().error(AP_InternalError::error_t::constraining_nan, __LINE__);}
+        if (isnan(wrap_PI(error_angle.y))) {AP::internalerror().error(AP_InternalError::error_t::constraining_nan, __LINE__);}
         target_ang_vel.x = input_shaping_angle(wrap_PI(error_angle.x), _input_tc, get_accel_roll_max_radss(), target_ang_vel.x, dt);
         target_ang_vel.y = input_shaping_angle(wrap_PI(error_angle.y), _input_tc, get_accel_pitch_max_radss(), target_ang_vel.y, dt);
     } else {
