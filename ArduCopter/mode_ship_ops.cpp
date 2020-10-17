@@ -64,7 +64,7 @@ void ModeShipOperation::run()
     float nav_pitch;
 
     Vector3f desired_velocity_neu_cms;
-    float yaw_cd = 0.0f;
+    float yaw_cd = attitude_control->get_att_target_euler_cd().z;
 
     Vector2f perch_offset = Vector2f(g2.ship_perch_radius * 100.0, 0.0f);
     perch_offset.rotate(radians(g2.ship_perch_angle));
@@ -101,38 +101,40 @@ void ModeShipOperation::run()
         vel_ned *= 100.0f;
 
         // calculate vehicle heading
-        switch (g2.follow.get_yaw_behave()) {
-            case AP_Follow::YAW_BEHAVE_FACE_LEAD_VEHICLE: {
-                Vector3f dist_vec;  // vector to lead vehicle
-                g2.follow.get_target_dist_ned(dist_vec);
-                const Vector3f dist_vec_xy(dist_vec.x, dist_vec.y, 0.0f);
-                if (dist_vec_xy.length() > 1.0f) {
-                    yaw_cd = get_bearing_cd(Vector3f(), dist_vec_xy);
+        if (_state != ShipOps_LaunchRecovery) {
+            switch (g2.follow.get_yaw_behave()) {
+                case AP_Follow::YAW_BEHAVE_FACE_LEAD_VEHICLE: {
+                    Vector3f dist_vec;  // vector to lead vehicle
+                    g2.follow.get_target_dist_ned(dist_vec);
+                    const Vector3f dist_vec_xy(dist_vec.x, dist_vec.y, 0.0f);
+                    if (dist_vec_xy.length() > 1.0f) {
+                        yaw_cd = get_bearing_cd(Vector3f(), dist_vec_xy);
+                    }
+                    break;
                 }
-                break;
-            }
 
-            case AP_Follow::YAW_BEHAVE_SAME_AS_LEAD_VEHICLE: {
-                float target_hdg = 0.0f;
-                if (g2.follow.get_target_heading_deg(target_hdg)) {
-                    yaw_cd = target_hdg * 100.0f;
+                case AP_Follow::YAW_BEHAVE_SAME_AS_LEAD_VEHICLE: {
+                    float target_hdg = 0.0f;
+                    if (g2.follow.get_target_heading_deg(target_hdg)) {
+                        yaw_cd = target_hdg * 100.0f;
+                    }
+                    break;
                 }
-                break;
-            }
 
-            case AP_Follow::YAW_BEHAVE_DIR_OF_FLIGHT: {
-                Vector3f vel_target = pos_control->get_vel_target();
-                const Vector3f vel_vec(vel_target.x, vel_target.y, 0.0f);
-                if (vel_vec.length() > 100.0f) {
-                    yaw_cd = get_bearing_cd(Vector3f(), vel_vec);
+                case AP_Follow::YAW_BEHAVE_DIR_OF_FLIGHT: {
+                    Vector3f vel_target = pos_control->get_vel_target();
+                    const Vector3f vel_vec(vel_target.x, vel_target.y, 0.0f);
+                    if (vel_vec.length() > 100.0f) {
+                        yaw_cd = get_bearing_cd(Vector3f(), vel_vec);
+                    }
+                    break;
                 }
-                break;
-            }
 
-            case AP_Follow::YAW_BEHAVE_NONE:
-            default:
-                // do nothing
-               break;
+                case AP_Follow::YAW_BEHAVE_NONE:
+                default:
+                    // do nothing
+                   break;
+            }
         }
     } else {
         _state = ShipOps_ClimbToRTL;
