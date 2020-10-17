@@ -172,10 +172,15 @@ void Mode::auto_takeoff_run()
         pos_control->set_limit_accel_xy();
         pos_control->relax_velocity_controller_xy();
         pos_control->init_velmatch_velocity(wp_nav->get_default_speed_xy());
+        pos_control->relax_alt_hold_controllers(0.0f);   // forces throttle output to go to zero
+        attitude_control->set_yaw_target_to_current_heading();
+        attitude_control->reset_rate_controller_I_terms();
     }
 
     // aircraft stays in landed state until rotor speed runup has finished
     if (motors->get_spool_state() == AP_Motors::SpoolState::THROTTLE_UNLIMITED && copter.ap.land_complete) {
+        wp_nav->shift_takeoff_origin_to_current_pos(constrain_float(g.pilot_takeoff_alt,0.0f,1000.0f));
+        wp_nav->shift_takeoff_origin_and_destination_to_stopping_point_xy();
         set_land_complete(false);
     }
 
