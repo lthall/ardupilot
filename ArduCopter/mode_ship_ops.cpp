@@ -242,7 +242,7 @@ void ModeShipOperation::run()
                 max_land_descent_velocity = pos_control->get_max_speed_down();
             }
             max_land_descent_velocity = MIN(max_land_descent_velocity, -abs(g.land_speed));
-            float alt_above_deck = fabsf(-pos_with_ofs.z - pos_control->get_pos_target().z);
+            float alt_above_deck = MAX(0.0f, -pos_with_ofs.z - pos_control->get_pos_target().z);
             if (copter.rangefinder_alt_ok()) {
                 // check if range finder detects the deck is closer than expected
                 alt_above_deck = MIN(alt_above_deck, copter.rangefinder_state.alt_cm_filt.get());
