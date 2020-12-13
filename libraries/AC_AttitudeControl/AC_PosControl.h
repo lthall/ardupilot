@@ -134,9 +134,6 @@ public:
 
     /// get_vel_z_error_ratio - returns the proportion of error relative to the maximum request
     float get_vel_z_control_ratio() const { return constrain_float(_vel_z_control_ratio, 0.0f, 1.0f); }
-    
-    // returns horizontal error in cm
-    float get_horizontal_error() const;
 
     /// set_target_to_stopping_point_z - sets altitude target to reasonable stopping altitude in cm above home
     void set_target_to_stopping_point_z();
@@ -212,6 +209,9 @@ public:
     void shift_pos_xy_target(float x_cm, float y_cm);
 
     /// get_desired_velocity - returns xy desired velocity (i.e. feed forward) in cm/s in lat and lon direction
+    const Vector3f get_velocity() { return _inav.get_velocity(); }
+
+    /// get_desired_velocity - returns xy desired velocity (i.e. feed forward) in cm/s in lat and lon direction
     const Vector3f& get_desired_velocity() { return _vel_desired; }
 
     /// set_desired_velocity_z - sets desired velocity in cm/s in z axis
@@ -251,8 +251,11 @@ public:
     ///     set_leash_length() should have been called before this method
     void get_stopping_point_xy(Vector3f &stopping_point) const;
 
-    /// get_distance_to_target - get horizontal distance to position target in cm (used for reporting)
-    float get_distance_to_target() const;
+    /// get_pos_error - get position error vector between the current and target position
+    const Vector3f get_pos_error() const { return _pos_target - _inav.get_position(); }
+
+    /// get_pos_error_xy - get the length of the position error vector in the xy plane
+    float get_pos_error_xy() const { return norm(_pos_target.x - _inav.get_position().x, _pos_target.y - _inav.get_position().y); }
 
     /// get_bearing_to_target - get bearing to target position in centi-degrees
     int32_t get_bearing_to_target() const;
