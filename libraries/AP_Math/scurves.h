@@ -30,11 +30,11 @@ public:
     void calculate_spline_leg(const Vector3f &origin, const Vector3f &destination, Vector3f origin_vector, Vector3f destination_vector);
 
     // increment time pointer and return the position, velocity and acceleration vectors relative to the origin
-    bool move_from_pos_vel_accel(float dt, float time_scale, Vector3f &pos, Vector3f &vel, Vector3f &accel);
+    void move_from_pos_vel_accel(float dt, Vector3f &pos, Vector3f &vel, Vector3f &accel);
     // return the position, velocity and acceleration vectors relative to the destination
-    bool move_to_pos_vel_accel(float dt, float time_scale, Vector3f &pos, Vector3f &vel, Vector3f &accel);
+    void move_to_pos_vel_accel(float dt, Vector3f &pos, Vector3f &vel, Vector3f &accel);
     // return the position, velocity and acceleration vectors relative to the origin
-    bool move_from_time_pos_vel_accel(float time, float time_scale, Vector3f &pos, Vector3f &vel, Vector3f &accel);
+    void move_from_time_pos_vel_accel(float time, Vector3f &pos, Vector3f &vel, Vector3f &accel);
 
     // return the change in position from origin to destination
     const Vector3f& get_track() const { return _track; };
@@ -48,11 +48,19 @@ public:
     // magnitude of the position vector at the end of the sequence
     float pos_end() const;
 
+    // time has reached the end of the sequence
+    bool finished() const;
+
     // time at the end of the sequence
     float time_end() const;
 
     // time left before sequence will complete
     float get_time_remaining() const;
+
+    // time left before sequence will complete
+    float get_accel_finished_time() const;
+    float get_accel_finished_time_straight() const;
+    float get_accel_finished_time_spline() const;
 
     // return true if the sequence is braking to a stop
     bool braking() const;
@@ -62,21 +70,21 @@ private:
     // Straight implementations
 
     // increment time pointer and return the position, velocity and acceleration vectors relative to the origin
-    bool move_from_pva_straight(float dt, float time_scale, Vector3f &pos, Vector3f &vel, Vector3f &accel);
+    void move_from_pva_straight(float dt, Vector3f &pos, Vector3f &vel, Vector3f &accel);
     // return the position, velocity and acceleration vectors relative to the destination
-    bool move_to_pva_straight(float dt, float time_scale, Vector3f &pos, Vector3f &vel, Vector3f &accel);
+    void move_to_pva_straight(float dt, Vector3f &pos, Vector3f &vel, Vector3f &accel);
     // return the position, velocity and acceleration vectors relative to the origin
-    bool move_from_time_pva_straight(float time, float time_scale, Vector3f &pos, Vector3f &vel, Vector3f &accel);
+    void move_from_time_pva_straight(float time, Vector3f &pos, Vector3f &vel, Vector3f &accel);
 
 
     // Spline implementations
 
     // increment time pointer and return the position, velocity and acceleration vectors relative to the origin
-    bool move_from_pva_spline(float dt, float time_scale, Vector3f &pos, Vector3f &vel, Vector3f &accel);
+    void move_from_pva_spline(float dt, Vector3f &pos, Vector3f &vel, Vector3f &accel);
     // return the position, velocity and acceleration vectors relative to the destination
-    bool move_to_pva_spline(float dt, float time_scale, Vector3f &pos, Vector3f &vel, Vector3f &accel);
+    void move_to_pva_spline(float dt, Vector3f &pos, Vector3f &vel, Vector3f &accel);
     // return the position, velocity and acceleration vectors relative to the origin
-    bool move_from_time_pva_spline(float time, float time_scale, Vector3f &pos, Vector3f &vel, Vector3f &accel);
+    void move_from_time_pva_spline(float time, Vector3f &pos, Vector3f &vel, Vector3f &accel);
 
     // debugging messages
     void debug();
@@ -113,9 +121,9 @@ private:
     void advance_time(float dt) { _t += dt; }
 
     // calculate the jerk, acceleration, velocity and position at time t
-    bool update(float t, float &Jt_out, float &At_out, float &Vt_out, float &Pt_out);
+    void update(float t, float &Jt_out, float &At_out, float &Vt_out, float &Pt_out);
     // calculate the jerk, acceleration, velocity and position at time _t
-    bool update(float &Jt_out, float &At_out, float &Vt_out, float &Pt_out) {
+    void update(float &Jt_out, float &At_out, float &Vt_out, float &Pt_out) {
         return update(_t, Jt_out, At_out, Vt_out, Pt_out);
     }
 
