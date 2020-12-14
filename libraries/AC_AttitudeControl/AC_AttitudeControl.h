@@ -141,6 +141,9 @@ public:
     // Command a Quaternion attitude with feedforward and smoothing
     void input_quaternion(Quaternion attitude_desired_quat);
 
+    // Command a thrust vector and heading based attitude with feedforward and smoothing
+    void input_thrust_vector_heading_rate_heading(Vector3f att_to_thrust_vec, float euler_yaw_angle_cd, float euler_yaw_rate_cds);
+
     // Command an euler roll and pitch angle and an euler yaw rate with angular velocity feedforward and smoothing
     virtual void input_euler_angle_roll_pitch_euler_rate_yaw(float euler_roll_angle_cd, float euler_pitch_angle_cd, float euler_yaw_rate_cds);
 

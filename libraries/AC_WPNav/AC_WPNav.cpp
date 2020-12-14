@@ -410,23 +410,39 @@ bool AC_WPNav::advance_wp_target_along_track(float dt)
     const Vector3f &curr_pos = _inav.get_position() - Vector3f(0, 0, terr_offset);
 
     // Use _track_scalar_dt to slow down S-Curve time to prevent target moving too far in front of aircraft
-    float target_velocity = _pos_control.get_desired_velocity().length();
+    Vector3f target_velocity = _pos_control.get_desired_velocity();
+    target_velocity.z += _pos_control.get_vel_target().z;
     float track_error = 0.0f;
     float track_velocity = 0.0f;
     float track_scaler_dt = 1.0f;
     // check target velocity is non-zero
-    if (is_positive(target_velocity)) {
-        Vector3f track_direction = _pos_control.get_desired_velocity().normalized();
+    if (is_positive(target_velocity.length())) {
+        Vector3f track_direction = target_velocity.normalized();
         track_error = _pos_control.get_pos_error().dot(track_direction);
         track_velocity = _pos_control.get_velocity().dot(track_direction);
         // set time scaler to be consistent with the acheivable aircraft speed
-        track_scaler_dt = constrain_float((track_velocity - _pos_control.get_pos_xy_p().kP() * track_error) / target_velocity, 0.1f, 1.0f);
+        track_scaler_dt = constrain_float((track_velocity - _pos_control.get_pos_xy_p().kP() * track_error) / target_velocity.length(), 0.1f, 1.0f);
     } else {
         track_scaler_dt = 1.0f;
     }
     // change s-curve time speed with a time constant of maximum acceleration / maximum jerk
     float track_scaler_tc = 0.01f * _wp_accel_cmss/_wp_jerk;
     _track_scalar_dt += (track_scaler_dt - _track_scalar_dt) * (dt / track_scaler_tc);
+
+    AP::logger().Write("LEN",
+        "TimeUS,dt,sdt,sdti,tme,tma,te,v,tv",
+        "ss--ssmnn",
+        "F00000000",
+        "Qffffffff",
+          AP_HAL::micros64(),
+          (double)_track_scalar_dt * dt,
+          (double)_track_scalar_dt,
+          (double)track_scaler_dt,
+          (double)_scurve_this_leg.get_time_elapsed(),
+          (double)_scurve_this_leg.get_accel_finished_time(),
+          (double)0.01f*track_error,
+          (double)0.01f*track_velocity,
+          (double)0.01f*target_velocity.length());
 
     // generate current position, velocity and acceleration
     Vector3f target_pos, target_vel, target_accel;

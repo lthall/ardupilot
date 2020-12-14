@@ -62,7 +62,7 @@ float AC_P_1D::update_all(float &target, float measurement, bool &limit_min, boo
     float error = target - measurement;
 
     if (asymetric_limit(error, _lim_err_neg, _lim_err_pos, limit_min, limit_max )) {
-        target = measurement + error;
+//        target = measurement + error;
     }
 
     // ToDo: Replace sqrt_controller with optimal acceleration and jerk limited curve
