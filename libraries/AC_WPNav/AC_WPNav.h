@@ -210,9 +210,6 @@ public:
     /// return the crosstrack_error - horizontal error of the actual position vs the desired position
     float crosstrack_error() const { return _track_error_xy;}
 
-    // update target position (an offset from ekf origin), velocity and acceleration to consume the altitude offset
-    void update_targets_with_offset(float alt_offset, Vector3f &target_pos, Vector3f &target_vel, Vector3f &target_accel, float dt);
-
     static const struct AP_Param::GroupInfo var_info[];
 
 protected:
@@ -289,8 +286,8 @@ protected:
     float       _rangefinder_alt_cm;    // latest distance from the rangefinder
 
     // position, velocity and acceleration targets passed to position controller
-    float       _pos_target_offset;
-    float       _vel_target_offset;
-    float       _accel_target_offset;
+    float       _pos_terrain_offset;
+    float       _vel_terrain_offset;
+    float       _accel_terrain_offset;
 
 };

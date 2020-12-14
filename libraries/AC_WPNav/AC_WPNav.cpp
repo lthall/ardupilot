@@ -411,7 +411,7 @@ bool AC_WPNav::advance_wp_target_along_track(float dt)
 
     // Use _track_scalar_dt to slow down S-Curve time to prevent target moving too far in front of aircraft
     Vector3f target_velocity = _pos_control.get_desired_velocity();
-    target_velocity.z += _pos_control.get_vel_target().z;
+//    target_velocity.z += _pos_control.get_vel_target().z;
     float track_error = 0.0f;
     float track_velocity = 0.0f;
     float track_scaler_dt = 1.0f;
@@ -422,6 +422,11 @@ bool AC_WPNav::advance_wp_target_along_track(float dt)
         track_velocity = _pos_control.get_velocity().dot(track_direction);
         // set time scaler to be consistent with the acheivable aircraft speed
         track_scaler_dt = constrain_float((track_velocity - _pos_control.get_pos_xy_p().kP() * track_error) / target_velocity.length(), 0.1f, 1.0f);
+        if (is_positive(target_velocity.z)) {
+            track_scaler_dt = MIN(track_scaler_dt, fabsf(_wp_speed_up_cms / target_velocity.z));
+        } else {
+            track_scaler_dt = MIN(track_scaler_dt, fabsf(_wp_speed_down_cms / target_velocity.z));
+        }
     } else {
         track_scaler_dt = 1.0f;
     }
@@ -452,10 +457,13 @@ bool AC_WPNav::advance_wp_target_along_track(float dt)
     bool s_finish = _scurve_this_leg.finished();
 
     // add input shaped offset
-    //update_targets_with_offset(origin_alt_offset, target_pos, target_vel, target_accel, dt);
+    shape_pos_vel(terr_offset, 0.0f, _pos_terrain_offset, _vel_terrain_offset, _accel_terrain_offset, 0.0f, 0.0f, _pos_control.get_max_accel_z()*4.0f, 0.05f, _track_scalar_dt * dt);
+    update_pos_vel_accel(_pos_terrain_offset, _vel_terrain_offset, _accel_terrain_offset, _track_scalar_dt * dt);
 
     // convert final_target.z to altitude above the ekf origin
-    target_pos.z += terr_offset;
+    target_pos.z += _pos_terrain_offset;
+    target_vel.z += _vel_terrain_offset;
+    target_accel.z += _accel_terrain_offset;
 
     // pass new target to the position controller
     _pos_control.set_pos_vel_accel(target_pos, target_vel, target_accel);
@@ -814,38 +822,6 @@ bool AC_WPNav::get_vector_NEU(const Location &loc, Vector3f &vec, bool &terrain_
     vec.y = res_vec.y;
 
     return true;
-}
-
-// update target position (an offset from ekf origin), velocity and acceleration to consume the altitude offset
-void AC_WPNav::update_targets_with_offset(float alt_offset, Vector3f &target_pos, Vector3f &target_vel, Vector3f &target_accel, float dt)
-{
-    const float timeconstant = 2.0f;
-    const float kp_v = 1.0f/timeconstant;
-    const float kp_a = 4.0f/timeconstant;
-    const float jerk_max = _wp_accel_z_cmss * kp_a;
-
-    const float pos_error = _pos_target_offset + alt_offset;
-    const float accel_v_max = _wp_accel_z_cmss*(1-kp_v/kp_a);
-    const float linear_error = accel_v_max / (kp_v * kp_v);
-    const float pos_error_mag = fabsf(pos_error);
-    float offset_vel_target;
-    if (pos_error_mag > linear_error) {
-        float kp_s = safe_sqrt(2.0 * accel_v_max * (pos_error_mag - (linear_error / 2.0))) / pos_error_mag;
-        offset_vel_target = kp_s * pos_error;
-    } else {
-        offset_vel_target = kp_v * pos_error;
-    }
-    offset_vel_target = constrain_float(offset_vel_target, -_wp_speed_down_cms, _wp_speed_up_cms);
-
-    const float vel_error = (offset_vel_target - _vel_target_offset);
-    _accel_target_offset = constrain_float(kp_a * vel_error, MAX(-_wp_accel_z_cmss, _accel_target_offset - jerk_max * dt), MIN(_wp_accel_z_cmss, _accel_target_offset + jerk_max * dt));
-
-    _pos_target_offset += _vel_target_offset * dt + _accel_target_offset * dt * dt;
-    _vel_target_offset += _accel_target_offset * dt;
-
-    target_pos.z += _pos_target_offset;
-    target_vel.z += _vel_target_offset;
-    target_accel.z += _accel_target_offset;
 }
 
 /// wp_speed_update - calculates how to handle speed change requests

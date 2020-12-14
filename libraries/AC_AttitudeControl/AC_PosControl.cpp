@@ -587,7 +587,7 @@ void AC_PosControl::run_z_controller()
     // calculate the target velocity correction
     _vel_target.z = _p_pos_z.update_all(_pos_target.z, curr_alt, _limit.pos_down, _limit.pos_up);
     // add feed forward component
-    _vel_target.z += _vel_desired.z;
+    _vel_target.z += constrain_float(_vel_desired.z, -fabsf(_speed_down_cms), _speed_up_cms);
 
     // Velocity Controller
 
@@ -1150,35 +1150,6 @@ void AC_PosControl::check_for_ekf_z_reset()
     if (reset_ms != 0 && reset_ms != _ekf_z_reset_ms) {
         shift_alt_target(-alt_shift * 100.0f);
         _ekf_z_reset_ms = reset_ms;
-    }
-}
-
-/// limit vector to a given length, returns true if vector was limited
-bool AC_PosControl::limit_vector_length(float& vector_x, float& vector_y, float max_length)
-{
-    float vector_length = norm(vector_x, vector_y);
-    if ((vector_length > max_length) && is_positive(vector_length)) {
-        vector_x *= (max_length / vector_length);
-        vector_y *= (max_length / vector_length);
-        return true;
-    }
-    return false;
-}
-
-/// Proportional controller with piecewise sqrt sections to constrain second derivative
-Vector3f AC_PosControl::sqrt_controller(const Vector3f& error, float p, float second_ord_lim)
-{
-    if (second_ord_lim < 0.0f || is_zero(second_ord_lim) || is_zero(p)) {
-        return Vector3f(error.x * p, error.y * p, error.z);
-    }
-
-    float linear_dist = second_ord_lim / sq(p);
-    float error_length = norm(error.x, error.y);
-    if (error_length > linear_dist) {
-        float first_order_scale = safe_sqrt(2.0f * second_ord_lim * (error_length - (linear_dist * 0.5f))) / error_length;
-        return Vector3f(error.x * first_order_scale, error.y * first_order_scale, error.z);
-    } else {
-        return Vector3f(error.x * p, error.y * p, error.z);
     }
 }
 
