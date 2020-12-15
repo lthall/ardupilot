@@ -587,7 +587,7 @@ void AC_PosControl::run_z_controller()
     // calculate the target velocity correction
     _vel_target.z = _p_pos_z.update_all(_pos_target.z, curr_alt, _limit.pos_down, _limit.pos_up);
     // add feed forward component
-    _vel_target.z += _vel_desired.z;
+    _vel_target.z += constrain_float(_vel_desired.z, -fabsf(_speed_down_cms), _speed_up_cms);
 
     // Velocity Controller
 
