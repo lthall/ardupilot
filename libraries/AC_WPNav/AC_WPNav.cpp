@@ -782,38 +782,6 @@ bool AC_WPNav::get_vector_NEU(const Location &loc, Vector3f &vec, bool &terrain_
     return true;
 }
 
-// update target position (an offset from ekf origin), velocity and acceleration to consume the altitude offset
-void AC_WPNav::update_targets_with_offset(float alt_offset, Vector3f &target_pos, Vector3f &target_vel, Vector3f &target_accel, float dt)
-{
-    const float timeconstant = 2.0f;
-    const float kp_v = 1.0f/timeconstant;
-    const float kp_a = 4.0f/timeconstant;
-    const float jerk_max = _wp_accel_z_cmss * kp_a;
-
-    const float pos_error = _pos_target_offset + alt_offset;
-    const float accel_v_max = _wp_accel_z_cmss*(1-kp_v/kp_a);
-    const float linear_error = accel_v_max / (kp_v * kp_v);
-    const float pos_error_mag = fabsf(pos_error);
-    float offset_vel_target;
-    if (pos_error_mag > linear_error) {
-        float kp_s = safe_sqrt(2.0 * accel_v_max * (pos_error_mag - (linear_error / 2.0))) / pos_error_mag;
-        offset_vel_target = kp_s * pos_error;
-    } else {
-        offset_vel_target = kp_v * pos_error;
-    }
-    offset_vel_target = constrain_float(offset_vel_target, -_wp_speed_down_cms, _wp_speed_up_cms);
-
-    const float vel_error = (offset_vel_target - _vel_target_offset);
-    _accel_target_offset = constrain_float(kp_a * vel_error, MAX(-_wp_accel_z_cmss, _accel_target_offset - jerk_max * dt), MIN(_wp_accel_z_cmss, _accel_target_offset + jerk_max * dt));
-
-    _pos_target_offset += _vel_target_offset * dt + _accel_target_offset * dt * dt;
-    _vel_target_offset += _accel_target_offset * dt;
-
-    target_pos.z += _pos_target_offset;
-    target_vel.z += _vel_target_offset;
-    target_accel.z += _accel_target_offset;
-}
-
 /// wp_speed_update - calculates how to handle speed change requests
 void AC_WPNav::wp_speed_update(float dt)
 {
