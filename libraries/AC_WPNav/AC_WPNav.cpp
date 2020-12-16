@@ -151,6 +151,9 @@ void AC_WPNav::wp_and_spline_init(float speed_cms)
     _pos_control.calc_leash_length_xy();
     _pos_control.calc_leash_length_z();
 
+    if (!is_positive(_wp_jerk)) {
+        _wp_jerk = _wp_accel_cmss;
+    }
     float jerk = MIN(_attitude_control.get_ang_vel_roll_max_radss() * GRAVITY_MSS, _attitude_control.get_ang_vel_pitch_max_radss() * GRAVITY_MSS);
     if (is_zero(jerk)) {
         jerk = _wp_jerk;
@@ -172,6 +175,7 @@ void AC_WPNav::wp_and_spline_init(float speed_cms)
     _scurve_next_leg = scurves(tc * 2.0, jerk * 100.0, _wp_accel_cmss, _wp_desired_speed_xy_cms);
     _scurve_prev_leg.init();
     _scurve_this_leg.init();
+    _track_scalar_dt = 1.0f;
 
     // set flag so get_yaw() returns current heading target
     _flags.wp_yaw_set = false;
@@ -408,20 +412,52 @@ bool AC_WPNav::advance_wp_target_along_track(float dt)
     // get current position and adjust altitude to origin and destination's frame (i.e. _frame)
     const Vector3f &curr_pos = _inav.get_position() - Vector3f(0, 0, terr_offset);
 
-    // ToDo: adjust time to prevent target moving too far in front of aircraft
-    _track_scaler_dt = 1.0f;
+    // Use _track_scalar_dt to slow down S-Curve time to prevent target moving too far in front of aircraft
+    Vector3f target_velocity = _pos_control.get_desired_velocity();
+//    target_velocity.z += _pos_control.get_vel_target().z;
+    float track_error = 0.0f;
+    float track_velocity = 0.0f;
+    float track_scaler_dt = 1.0f;
+    // check target velocity is non-zero
+    if (is_positive(target_velocity.length())) {
+        Vector3f track_direction = target_velocity.normalized();
+        track_error = _pos_control.get_pos_error().dot(track_direction);
+        track_velocity = _pos_control.get_velocity().dot(track_direction);
+        // set time scaler to be consistent with the achievable aircraft speed with a 5% buffer for short term variation.
+        track_scaler_dt = constrain_float(0.05f + (track_velocity - _pos_control.get_pos_xy_p().kP() * track_error) / target_velocity.length(), 0.1f, 1.0f);
+        // set time scaler to not exceed the maximum vertical velocity during terrain following.
+        if (is_positive(target_velocity.z)) {
+            track_scaler_dt = MIN(track_scaler_dt, fabsf(_wp_speed_up_cms / target_velocity.z));
+        } else if (is_negative(target_velocity.z)) {
+            track_scaler_dt = MIN(track_scaler_dt, fabsf(_wp_speed_down_cms / target_velocity.z));
+        }
+    } else {
+        track_scaler_dt = 1.0f;
+    }
+    // change s-curve time speed with a time constant of maximum acceleration / maximum jerk
+    float track_scaler_tc = 0.01f * _wp_accel_cmss/_wp_jerk;
+    if (!is_zero(_wp_jerk)) {
+        track_scaler_tc = 0.01f * _wp_accel_cmss/_wp_jerk;
+    } else {
+        track_scaler_tc = 1.0f;
+    }
+    _track_scalar_dt += (track_scaler_dt - _track_scalar_dt) * (dt / track_scaler_tc);
 
     // generate current position, velocity and acceleration
     Vector3f target_pos, target_vel, target_accel;
     target_pos = _origin;
-    _scurve_prev_leg.move_to_pos_vel_accel(dt, _track_scaler_dt, target_pos, target_vel, target_accel);
-    bool s_finish = _scurve_this_leg.move_from_pos_vel_accel(dt, _track_scaler_dt, target_pos, target_vel, target_accel);
+    _scurve_prev_leg.move_to_pos_vel_accel(_track_scalar_dt * dt, target_pos, target_vel, target_accel);
+    _scurve_this_leg.move_from_pos_vel_accel(_track_scalar_dt * dt, target_pos, target_vel, target_accel);
+    bool s_finish = _scurve_this_leg.finished();
 
     // add input shaped offset
-    //update_targets_with_offset(origin_alt_offset, target_pos, target_vel, target_accel, dt);
+    shape_pos_vel(terr_offset, 0.0f, _pos_terrain_offset, _vel_terrain_offset, _accel_terrain_offset, 0.0f, 0.0f, _pos_control.get_max_accel_z()*4.0f, 0.05f, _track_scalar_dt * dt);
+    update_pos_vel_accel(_pos_terrain_offset, _vel_terrain_offset, _accel_terrain_offset, _track_scalar_dt * dt);
 
     // convert final_target.z to altitude above the ekf origin
-    target_pos.z += terr_offset;
+    target_pos.z += _pos_terrain_offset;
+    target_vel.z += _vel_terrain_offset;
+    target_accel.z += _accel_terrain_offset;
 
     // pass new target to the position controller
     _pos_control.set_pos_vel_accel(target_pos, target_vel, target_accel);
@@ -431,11 +467,11 @@ bool AC_WPNav::advance_wp_target_along_track(float dt)
         float time_to_destination = _scurve_this_leg.get_time_remaining();
         Vector3f turn_pos, turn_vel, turn_accel;
         turn_pos = -_scurve_this_leg.get_track();
-        _scurve_this_leg.move_from_time_pos_vel_accel(_scurve_this_leg.get_time_elapsed() + time_to_destination/2.0, 1.0, turn_pos, turn_vel, turn_accel);
-        _scurve_next_leg.move_from_time_pos_vel_accel(time_to_destination/2.0, _track_scaler_dt, turn_pos, turn_vel, turn_accel);
+        _scurve_this_leg.move_from_time_pos_vel_accel(_scurve_this_leg.get_time_elapsed() + time_to_destination / 2.0, turn_pos, turn_vel, turn_accel);
+        _scurve_next_leg.move_from_time_pos_vel_accel(time_to_destination / 2.0, turn_pos, turn_vel, turn_accel);
         const float vel_min = MIN(_scurve_this_leg.get_vel_max(), _scurve_next_leg.get_vel_max());
         const float accel_min = MIN(_scurve_this_leg.get_accel_max(), _scurve_next_leg.get_accel_max());
-        s_finish = s_finish || ((_scurve_this_leg.get_time_remaining() < _scurve_next_leg.time_end()/2.0) && (turn_pos.length() < _wp_radius_cm) && (Vector2f(turn_vel.x, turn_vel.y).length() < vel_min) && (Vector2f(turn_accel.x, turn_accel.y).length() < 2*accel_min));
+        s_finish = s_finish || ((_scurve_this_leg.get_time_remaining() < _scurve_next_leg.time_end() / 2.0) && (turn_pos.length() < _wp_radius_cm) && (Vector2f(turn_vel.x, turn_vel.y).length() < vel_min) && (Vector2f(turn_accel.x, turn_accel.y).length() < 2*accel_min));
     }
 
     // check if we've reached the waypoint
@@ -461,7 +497,7 @@ bool AC_WPNav::advance_wp_target_along_track(float dt)
     if (is_positive(target_vel.length())) {
         accel_forward = (target_accel.x * target_vel.x + target_accel.y * target_vel.y + target_accel.z * target_vel.z)/target_vel.length();
         accel_turn = target_accel - target_vel * accel_forward / target_vel.length();
-        turn_rate = accel_turn.length() / (_track_scaler_dt*target_vel.length());
+        turn_rate = accel_turn.length() / (target_vel.length());
         if (accel_turn.y * target_vel.x - accel_turn.x * target_vel.y < 0.0) {
             turn_rate *= -1.0f;
         }

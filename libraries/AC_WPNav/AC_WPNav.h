@@ -274,7 +274,7 @@ protected:
     Vector3f    _destination;           // target destination in cm from ekf origin
     float       _track_error_xy;        // horizontal error of the actual position vs the desired position
     float       _track_desired;         // our desired distance along the track in cm
-    float       _track_scaler_dt;       // time compression multiplier to slow the progress along the track
+    float       _track_scalar_dt;       // time compression multiplier to slow the progress along the track
     float       _yaw;                   // current yaw heading based on track direction
     float       _yaw_rate;              // current yaw rate based on track curvature
 
@@ -286,8 +286,8 @@ protected:
     float       _rangefinder_alt_cm;    // latest distance from the rangefinder
 
     // position, velocity and acceleration targets passed to position controller
-    float       _pos_target_offset;
-    float       _vel_target_offset;
-    float       _accel_target_offset;
+    float       _pos_terrain_offset;
+    float       _vel_terrain_offset;
+    float       _accel_terrain_offset;
 
 };
