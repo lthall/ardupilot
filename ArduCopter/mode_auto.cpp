@@ -1508,7 +1508,7 @@ bool ModeAuto::verify_land()
 
         default:
             // this should never happen
-            // TO-DO: log an error
+            INTERNAL_ERROR(AP_InternalError::error_t::flow_of_control);
             retval = true;
             break;
     }
@@ -1670,7 +1670,7 @@ bool ModeAuto::verify_payload_place()
         return true;
     default:
         // this should never happen
-        // TO-DO: log an error
+        INTERNAL_ERROR(AP_InternalError::error_t::flow_of_control);
         return true;
     }
     // should never get here
