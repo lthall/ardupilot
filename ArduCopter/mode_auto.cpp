@@ -1171,8 +1171,8 @@ bool ModeAuto::set_next_wp(const AP_Mission::Mission_Command& cmd, const Locatio
                 // stop because we may change between rel,abs and terrain alt types
             case MAV_CMD_NAV_RETURN_TO_LAUNCH:
             case MAV_CMD_NAV_TAKEOFF:
-            default:
                 // always stop for RTL and takeoff commands
+            default:
                 // for unsupported commands it is safer to stop
                 break;
         }
