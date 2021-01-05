@@ -269,7 +269,8 @@ void scurves::move_to_pva_straight(float dt, Vector3f &pos, Vector3f &vel, Vecto
 // return the position, velocity and acceleration vectors relative to the origin
 void scurves::move_from_time_pva_straight(float time, Vector3f &pos, Vector3f &vel, Vector3f &accel)
 {
-    float scurve_P1, scurve_V1, scurve_A1, scurve_J1;
+    float scurve_P1 = 0.0f;
+    float scurve_V1, scurve_A1, scurve_J1;
     update(time, scurve_J1, scurve_A1, scurve_V1, scurve_P1);
     pos += _delta_unit_1 * scurve_P1;
     vel += _delta_unit_1 * scurve_V1;
