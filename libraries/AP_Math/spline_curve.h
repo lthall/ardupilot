@@ -28,6 +28,9 @@ public:
     // returns true if vehicle has reached destination
     bool reached_destination() const { return _reached_destination; }
 
+    // returns the unscaled destination velocity vector
+    const Vector3f& get_destination_vel() { return _destination_vel; }
+
 private:
 
     // recalculate hermite_spline_solution grid
