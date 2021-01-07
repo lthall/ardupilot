@@ -414,7 +414,6 @@ bool AC_WPNav::advance_wp_target_along_track(float dt)
 
     // Use _track_scalar_dt to slow down S-Curve time to prevent target moving too far in front of aircraft
     Vector3f target_velocity = _pos_control.get_desired_velocity();
-//    target_velocity.z += _pos_control.get_vel_target().z;
     float track_error = 0.0f;
     float track_velocity = 0.0f;
     float track_scaler_dt = 1.0f;
