@@ -4,6 +4,7 @@
 #include <AP_Param/AP_Param.h>
 #include <AP_Math/AP_Math.h>
 #include <AP_Math/scurves.h>
+#include <AP_Math/spline_curve.h>
 #include <AP_Common/Location.h>
 #include <AP_InertialNav/AP_InertialNav.h>     // Inertial Navigation library
 #include <AC_AttitudeControl/AC_PosControl.h>      // Position control library
@@ -186,7 +187,6 @@ public:
     ///     returns false if conversion from location to vector from ekf origin cannot be calculated
     ///     next_destination should be set to the next segment's destination
     bool set_spline_destination_loc(const Location& destination, Location next_destination, bool next_is_spline);
-    bool set_spline_destination_next_loc(const Location& destination, Location next_destination, bool next_is_spline);
 
     /// set_spline_destination waypoint using position vector (distance from ekf origin in cm)
     ///     terrain_alt should be true if destination.z is a desired altitude above terrain (false if its desired altitudes above ekf origin)
@@ -194,7 +194,6 @@ public:
     ///     next_terrain_alt should be true if next_destination.z is a desired altitude above terrain (false if its desired altitudes above ekf origin)
     ///     next_destination.z  must be in the same "frame" as destination.z (i.e. if destination is a alt-above-terrain, next_destination should be too)
     bool set_spline_destination(const Vector3f& destination, bool terrain_alt, const Vector3f& next_destination, bool next_terrain_alt, bool next_is_spline);
-    bool set_spline_destination_next(const Vector3f& destination, bool terrain_alt, const Vector3f& next_destination, bool next_terrain_alt, bool next_is_spline);
 
     ///
     /// shared methods
@@ -266,6 +265,12 @@ protected:
     scurves _scurve_prev_leg;           // previous spline trajectory used to blend with current s-curve trajectory
     scurves _scurve_this_leg;           // current spline trajectory
     scurves _scurve_next_leg;           // next spline trajectory used to blend with current s-curve trajectory
+
+    // spline curves
+    spline_curve _spline_this_leg;      // spline curve
+
+    // the type of this leg
+    bool _this_leg_is_spline;           // true if this leg is a spline
 
     // waypoint controller internal variables
     uint32_t    _wp_last_update;        // time of last update_wpnav call

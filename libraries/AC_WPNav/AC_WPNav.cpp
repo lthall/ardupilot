@@ -251,12 +251,15 @@ bool AC_WPNav::get_wp_destination_loc(Location& destination) const
 ///     returns false on failure (likely caused by missing terrain data)
 bool AC_WPNav::set_wp_destination(const Vector3f& destination, bool terrain_alt)
 {
+    _scurve_prev_leg.init();
     if (is_active() && _flags.reached_destination && (terrain_alt == _terrain_alt)) {
         // use previous destination as origin
         _origin = _destination;
 
-        // store previous leg
-        _scurve_prev_leg = _scurve_this_leg;
+        if (!_this_leg_is_spline) {
+            // store previous leg
+            _scurve_prev_leg = _scurve_this_leg;
+        }
     } else {
 
         // use stopping point as the origin
@@ -270,8 +273,6 @@ bool AC_WPNav::set_wp_destination(const Vector3f& destination, bool terrain_alt)
             }
             _origin.z -= origin_terr_offset;
         }
-
-        _scurve_prev_leg.init();
     }
 
     // update destination
@@ -280,6 +281,7 @@ bool AC_WPNav::set_wp_destination(const Vector3f& destination, bool terrain_alt)
 
     set_kinematic_limits(_scurve_this_leg, _origin, _destination);
     _scurve_this_leg.calculate_straight_leg(_origin, _destination);
+    _this_leg_is_spline = false;
     _scurve_next_leg.init();
     _flags.fast_waypoint = false;   // default waypoint back to slow
     _flags.reached_destination = false;
@@ -293,6 +295,11 @@ bool AC_WPNav::set_wp_destination(const Vector3f& destination, bool terrain_alt)
 ///     provide next_destination
 bool AC_WPNav::set_wp_destination_next(const Vector3f& destination, bool terrain_alt)
 {
+    // exit immediately if this leg is not straight.  This can only happen because of a programming mistake
+    if (_this_leg_is_spline) {
+        return false;
+    }
+
     // ToDo: improve handling of mismatching terrain alt
     if (terrain_alt != _terrain_alt) {
         return false;
@@ -412,42 +419,64 @@ bool AC_WPNav::advance_wp_target_along_track(float dt)
     // get current position and adjust altitude to origin and destination's frame (i.e. _frame)
     const Vector3f &curr_pos = _inav.get_position() - Vector3f(0, 0, terr_offset);
 
-    // Use _track_scalar_dt to slow down S-Curve time to prevent target moving too far in front of aircraft
-    Vector3f target_velocity = _pos_control.get_desired_velocity();
-    float track_error = 0.0f;
-    float track_velocity = 0.0f;
-    float track_scaler_dt = 1.0f;
-    // check target velocity is non-zero
-    if (is_positive(target_velocity.length())) {
-        Vector3f track_direction = target_velocity.normalized();
-        track_error = _pos_control.get_pos_error().dot(track_direction);
-        track_velocity = _pos_control.get_velocity().dot(track_direction);
-        // set time scaler to be consistent with the achievable aircraft speed with a 5% buffer for short term variation.
-        track_scaler_dt = constrain_float(0.05f + (track_velocity - _pos_control.get_pos_xy_p().kP() * track_error) / target_velocity.length(), 0.1f, 1.0f);
-        // set time scaler to not exceed the maximum vertical velocity during terrain following.
-        if (is_positive(target_velocity.z)) {
-            track_scaler_dt = MIN(track_scaler_dt, fabsf(_wp_speed_up_cms / target_velocity.z));
-        } else if (is_negative(target_velocity.z)) {
-            track_scaler_dt = MIN(track_scaler_dt, fabsf(_wp_speed_down_cms / target_velocity.z));
+    // target position, velocity and acceleration from straight line or spline calculators
+    Vector3f target_pos, target_vel, target_accel;
+    bool s_finish;
+
+    if (!_this_leg_is_spline) {
+        // Use _track_scalar_dt to slow down S-Curve time to prevent target moving too far in front of aircraft
+        const Vector3f target_velocity = _pos_control.get_desired_velocity();
+        float track_error = 0.0f;
+        float track_velocity = 0.0f;
+        float track_scaler_dt = 1.0f;
+        // check target velocity is non-zero
+        if (is_positive(target_velocity.length())) {
+            Vector3f track_direction = target_velocity.normalized();
+            track_error = _pos_control.get_pos_error().dot(track_direction);
+            track_velocity = _pos_control.get_velocity().dot(track_direction);
+            // set time scaler to be consistent with the achievable aircraft speed with a 5% buffer for short term variation.
+            track_scaler_dt = constrain_float(0.05f + (track_velocity - _pos_control.get_pos_xy_p().kP() * track_error) / target_velocity.length(), 0.1f, 1.0f);
+            // set time scaler to not exceed the maximum vertical velocity during terrain following.
+            if (is_positive(target_velocity.z)) {
+                track_scaler_dt = MIN(track_scaler_dt, fabsf(_wp_speed_up_cms / target_velocity.z));
+            } else if (is_negative(target_velocity.z)) {
+                track_scaler_dt = MIN(track_scaler_dt, fabsf(_wp_speed_down_cms / target_velocity.z));
+            }
+        } else {
+            track_scaler_dt = 1.0f;
+        }
+        // change s-curve time speed with a time constant of maximum acceleration / maximum jerk
+        float track_scaler_tc = 0.01f * _wp_accel_cmss/_wp_jerk;
+        if (!is_zero(_wp_jerk)) {
+            track_scaler_tc = 0.01f * _wp_accel_cmss/_wp_jerk;
+        } else {
+            track_scaler_tc = 1.0f;
+        }
+        _track_scalar_dt += (track_scaler_dt - _track_scalar_dt) * (dt / track_scaler_tc);
+
+        // generate current position, velocity and acceleration
+        target_pos = _origin;
+        _scurve_prev_leg.move_to_pos_vel_accel(_track_scalar_dt * dt, target_pos, target_vel, target_accel);
+        _scurve_this_leg.move_from_pos_vel_accel(_track_scalar_dt * dt, target_pos, target_vel, target_accel);
+        s_finish = _scurve_this_leg.finished();
+
+        // check for change of leg on fast waypoint
+        if (_flags.fast_waypoint && _scurve_this_leg.braking()) {
+            float time_to_destination = _scurve_this_leg.get_time_remaining();
+            Vector3f turn_pos, turn_vel, turn_accel;
+            turn_pos = -_scurve_this_leg.get_track();
+            _scurve_this_leg.move_from_time_pos_vel_accel(_scurve_this_leg.get_time_elapsed() + time_to_destination / 2.0, turn_pos, turn_vel, turn_accel);
+            _scurve_next_leg.move_from_time_pos_vel_accel(time_to_destination / 2.0, turn_pos, turn_vel, turn_accel);
+            const float vel_min = MIN(_scurve_this_leg.get_vel_max(), _scurve_next_leg.get_vel_max());
+            const float accel_min = MIN(_scurve_this_leg.get_accel_max(), _scurve_next_leg.get_accel_max());
+            s_finish = s_finish || ((_scurve_this_leg.get_time_remaining() < _scurve_next_leg.time_end() / 2.0) && (turn_pos.length() < _wp_radius_cm) && (Vector2f(turn_vel.x, turn_vel.y).length() < vel_min) && (Vector2f(turn_accel.x, turn_accel.y).length() < 2*accel_min));
         }
     } else {
-        track_scaler_dt = 1.0f;
+        // spline
+        Vector3f target_vel_do_not_use;
+        _spline_this_leg.advance_target_along_track(curr_pos, dt, target_pos, target_vel_do_not_use);
+        s_finish = _spline_this_leg.reached_destination();
     }
-    // change s-curve time speed with a time constant of maximum acceleration / maximum jerk
-    float track_scaler_tc = 0.01f * _wp_accel_cmss/_wp_jerk;
-    if (!is_zero(_wp_jerk)) {
-        track_scaler_tc = 0.01f * _wp_accel_cmss/_wp_jerk;
-    } else {
-        track_scaler_tc = 1.0f;
-    }
-    _track_scalar_dt += (track_scaler_dt - _track_scalar_dt) * (dt / track_scaler_tc);
-
-    // generate current position, velocity and acceleration
-    Vector3f target_pos, target_vel, target_accel;
-    target_pos = _origin;
-    _scurve_prev_leg.move_to_pos_vel_accel(_track_scalar_dt * dt, target_pos, target_vel, target_accel);
-    _scurve_this_leg.move_from_pos_vel_accel(_track_scalar_dt * dt, target_pos, target_vel, target_accel);
-    bool s_finish = _scurve_this_leg.finished();
 
     // add input shaped offset
     shape_pos_vel(terr_offset, 0.0f, _pos_terrain_offset, _vel_terrain_offset, _accel_terrain_offset, 0.0f, 0.0f, _pos_control.get_max_accel_z()*4.0f, 0.05f, _track_scalar_dt * dt);
@@ -460,18 +489,6 @@ bool AC_WPNav::advance_wp_target_along_track(float dt)
 
     // pass new target to the position controller
     _pos_control.set_pos_vel_accel(target_pos, target_vel, target_accel);
-
-    // Check for change of leg on fast waypoint
-    if (_flags.fast_waypoint && _scurve_this_leg.braking()) {
-        float time_to_destination = _scurve_this_leg.get_time_remaining();
-        Vector3f turn_pos, turn_vel, turn_accel;
-        turn_pos = -_scurve_this_leg.get_track();
-        _scurve_this_leg.move_from_time_pos_vel_accel(_scurve_this_leg.get_time_elapsed() + time_to_destination / 2.0, turn_pos, turn_vel, turn_accel);
-        _scurve_next_leg.move_from_time_pos_vel_accel(time_to_destination / 2.0, turn_pos, turn_vel, turn_accel);
-        const float vel_min = MIN(_scurve_this_leg.get_vel_max(), _scurve_next_leg.get_vel_max());
-        const float accel_min = MIN(_scurve_this_leg.get_accel_max(), _scurve_next_leg.get_accel_max());
-        s_finish = s_finish || ((_scurve_this_leg.get_time_remaining() < _scurve_next_leg.time_end() / 2.0) && (turn_pos.length() < _wp_radius_cm) && (Vector2f(turn_vel.x, turn_vel.y).length() < vel_min) && (Vector2f(turn_accel.x, turn_accel.y).length() < 2*accel_min));
-    }
 
     // check if we've reached the waypoint
     if (!_flags.reached_destination) {
@@ -656,30 +673,6 @@ bool AC_WPNav::set_spline_destination_loc(const Location& destination, Location 
     return set_spline_destination(dest_neu, dest_terr_alt, next_dest_neu, next_dest_terr_alt, next_is_spline);
 }
 
-/// set_spline_destination waypoint using location class
-///     returns false if conversion from location to vector from ekf origin cannot be calculated
-///     next_destination should be set to the next segment's destination
-bool AC_WPNav::set_spline_destination_next_loc(const Location& destination, Location next_destination, bool next_is_spline)
-{
-    // convert destination location to vector
-    Vector3f dest_neu;
-    bool dest_terr_alt;
-    // convert destination location to vector
-    if (!get_vector_NEU(destination, dest_neu, dest_terr_alt)) {
-        return false;
-    }
-
-    // convert next destination to vector
-    Vector3f next_dest_neu;
-    bool next_dest_terr_alt;
-    if (!get_vector_NEU(next_destination, next_dest_neu, next_dest_terr_alt)) {
-        return false;
-    }
-
-    // set target as vector from EKF origin
-    return set_spline_destination_next(dest_neu, dest_terr_alt, next_dest_neu, next_dest_terr_alt, next_is_spline);
-}
-
 /// set_spline_destination waypoint using position vector (distance from ekf origin in cm)
 ///     terrain_alt should be true if destination.z is a desired altitude above terrain (false if its desired altitudes above ekf origin)
 ///     next_destination should be set to the next segment's destination
@@ -687,12 +680,27 @@ bool AC_WPNav::set_spline_destination_next_loc(const Location& destination, Loca
 ///     next_destination.z  must be in the same "frame" as destination.z (i.e. if destination is a alt-above-terrain, next_destination should be too)
 bool AC_WPNav::set_spline_destination(const Vector3f& destination, bool terrain_alt, const Vector3f& next_destination, bool next_terrain_alt, bool next_is_spline)
 {
+    // update spline calculators speeds, accelerations and leash lengths
+    _spline_this_leg.set_speed_accel_leash(_pos_control.get_max_speed_xy(), _pos_control.get_max_speed_up(), _pos_control.get_max_speed_down(),
+                                           _pos_control.get_max_accel_xy(), _pos_control.get_max_accel_z(),
+                                           _pos_control.get_leash_xy(), _pos_control.get_leash_up_z(), _pos_control.get_leash_down_z());
+
+    // get current velocity target if available
+    float vel_target_length = _pos_control.is_active_xy() ? _pos_control.get_desired_velocity().length() : 0.0f;
+
+    // calculate origin and origin velocity vector
+    Vector3f origin_vector;
     if (is_active() && _flags.reached_destination && (terrain_alt == _terrain_alt)) {
         // use previous destination as origin
         _origin = _destination;
 
-        // store previous leg
-        _scurve_prev_leg = _scurve_this_leg;
+        // if previous leg was a spline we can use destination velocity vector for origin velocity vector
+        if (_this_leg_is_spline) {
+            origin_vector = _spline_this_leg.get_destination_vel();
+        } else {
+            // use the direction of the previous straight line segment
+            origin_vector = _destination - _origin;
+        }
     } else {
         // use stopping point as the origin
         get_wp_stopping_point(_origin);
@@ -705,79 +713,30 @@ bool AC_WPNav::set_spline_destination(const Vector3f& destination, bool terrain_
             }
             _origin.z -= origin_terr_offset;
         }
-
-        _scurve_prev_leg.init();
-
-        // make sure we do not use next leg below
-        _flags.fast_waypoint = false;
     }
 
     // store destination location
     _destination = destination;
     _terrain_alt = terrain_alt;
 
-    if (_flags.fast_waypoint) {
-        // if we have next leg then store it as this leg
-        // ToDo: ensure the destination has not changed
-        _scurve_this_leg = _scurve_next_leg;
-    } else {
-        // vehicle has stopped so origin vector is simply vector from origin to destination
-        Vector3f origin_vector = _destination - _origin;
-
-        Vector3f destination_vector;
-        if (terrain_alt != next_terrain_alt) {
-            // change in terrain alt type so leave destination vector as zero
-            origin_vector.zero();
-        } else if (next_is_spline) {
+    // calculate destination velocity vector
+    Vector3f destination_vector;
+    if (terrain_alt == next_terrain_alt) {
+        if (next_is_spline) {
             // leave this segment moving parallel to vector from origin to next destination
             destination_vector = next_destination - _origin;
         } else {
             // leave this segment moving parallel to next segment
             destination_vector = next_destination - _destination;
         }
-        set_kinematic_limits(_scurve_this_leg, _origin, _destination);
-        _scurve_this_leg.calculate_spline_leg(_origin, _destination, origin_vector, destination_vector);
     }
+    _flags.fast_waypoint = !destination_vector.is_zero();
 
-    _scurve_next_leg.init();
-    _flags.fast_waypoint = false;   // default waypoint back to slow
+    // setup spline leg
+    _spline_this_leg.set_origin_and_destination(_origin, _destination, origin_vector, destination_vector, vel_target_length);
+    _this_leg_is_spline = true;
     _flags.reached_destination = false;
     _flags.wp_yaw_set = false;
-
-    return true;
-}
-
-/// set_spline_destination_next waypoint using position vector (distance from ekf origin in cm)
-///     terrain_alt should be true if destination.z is a desired altitude above terrain (false if its desired altitudes above ekf origin)
-///     next_destination should be set to the next segment's destination
-///     next_terrain_alt should be true if next_destination.z is a desired altitude above terrain (false if its desired altitudes above ekf origin)
-///     next_destination.z  must be in the same "frame" as destination.z (i.e. if destination is a alt-above-terrain, next_destination should be too)
-bool AC_WPNav::set_spline_destination_next(const Vector3f& destination, bool terrain_alt, const Vector3f& next_destination, bool next_terrain_alt, bool next_is_spline)
-{
-    // only use next waypoint if terrain_alt matches
-    if (terrain_alt != _terrain_alt) {
-        return false;
-    }
-
-    Vector3f origin_vector, destination_vector;
-    if (_scurve_this_leg.is_straight()) {
-        origin_vector = _destination - _origin;
-    } else {
-        origin_vector = destination - _origin;
-    }
-    if (terrain_alt != next_terrain_alt) {
-        // change in terrain alt type so leave destination vector as zero
-    } else if (next_is_spline) {
-        destination_vector = next_destination - _destination;
-    } else {
-        destination_vector = next_destination - destination;
-    }
-
-    set_kinematic_limits(_scurve_next_leg, _destination, destination);
-    _scurve_next_leg.calculate_spline_leg(_destination, destination, origin_vector, destination_vector);
-
-    // next destination provided so fast waypoint
-    _flags.fast_waypoint = true;
 
     return true;
 }
