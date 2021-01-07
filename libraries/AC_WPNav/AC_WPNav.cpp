@@ -773,7 +773,7 @@ bool AC_WPNav::set_spline_destination_next(const Vector3f& destination, bool ter
         destination_vector = next_destination - destination;
     }
 
-    set_kinematic_limits(_scurve_this_leg, _destination, destination);
+    set_kinematic_limits(_scurve_next_leg, _destination, destination);
     _scurve_next_leg.calculate_spline_leg(_destination, destination, origin_vector, destination_vector);
 
     // next destination provided so fast waypoint
