@@ -1158,15 +1158,9 @@ bool ModeAuto::set_next_wp(const AP_Mission::Mission_Command& cmd, const Locatio
                 }
                 break;
             }
-            case MAV_CMD_NAV_SPLINE_WAYPOINT: {
-                Location dest_loc, next_dest_loc;
-                bool next_dest_loc_is_spline;
-                get_spline_from_cmd(temp_cmd, default_loc, dest_loc, next_dest_loc, next_dest_loc_is_spline);
-                if (!wp_nav->set_spline_destination_next_loc(dest_loc, next_dest_loc, next_dest_loc_is_spline)) {
-                    return false;
-                }
-                break;
-            }
+            case MAV_CMD_NAV_SPLINE_WAYPOINT:
+                // stop because vehicle changes from straight to spline
+                // ToDo: allow non-stop changing from straight line to spline
             case MAV_CMD_NAV_LAND:
                 // stop because we may change between rel,abs and terrain alt types
             case MAV_CMD_NAV_RETURN_TO_LAUNCH:
