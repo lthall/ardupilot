@@ -1108,13 +1108,6 @@ void ModeAuto::do_spline_wp(const AP_Mission::Mission_Command& cmd)
     // this is the delay, stored in seconds
     loiter_time_max = cmd.p1;
 
-    // set next destination if necessary
-    if (!set_next_wp(cmd, dest_loc)) {
-        // failure to set next destination can only be because of missing terrain data
-        copter.failsafe_terrain_on_event();
-        return;
-    }
-
     // initialise yaw
     // To-Do: reset the yaw only when the previous navigation command is not a WP.  this would allow removing the special check for ROI
     if (auto_yaw.mode() != AUTO_YAW_ROI) {
