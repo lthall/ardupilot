@@ -59,7 +59,7 @@ void spline_curve::set_origin_and_destination(const Vector3f &origin, const Vect
     // store origin and destination locations
     _origin = origin;
     _destination = destination;
-    _origin_vel = origin_vel;   // Note: _origin_vel was, "(destination - origin) * dt" instead of being zero
+    _origin_vel = origin_vel;
     _destination_vel = destination_vel;
     _vel_scalar = vel_target_length;
     _reached_destination = false;
@@ -109,13 +109,15 @@ void spline_curve::advance_target_along_track(const Vector3f &curr_pos, float dt
     Vector3f target_vel_unscaled;
     calc_target_pos_vel(_time, target_pos, target_vel_unscaled);
 
-    // if target velocity is zero the origin and destination must be the same
-    // so flag reached destination (and protect against divide by zero)
+    // if target velocity is zero we must protect against divide by zero
+    // so only update position target
     const float target_vel_unscaled_len = target_vel_unscaled.length();
     if (is_zero(target_vel_unscaled_len)) {
-        _reached_destination = true;
-        target_pos = curr_pos;
         target_vel.zero();
+        _time += dt; // ToDo: advance time based on scaling of accelerations vs vehicle maximum
+        if (_time >= 1.0f) {
+            _reached_destination = true;
+        }
         return;
     }
 
