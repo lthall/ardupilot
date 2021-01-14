@@ -473,9 +473,9 @@ bool AC_WPNav::advance_wp_target_along_track(float dt)
             s_finish = s_finish || ((_scurve_this_leg.get_time_remaining() < _scurve_next_leg.time_end() / 2.0) && (turn_pos.length() < _wp_radius_cm) && (Vector2f(turn_vel.x, turn_vel.y).length() < vel_min) && (Vector2f(turn_accel.x, turn_accel.y).length() < 2*accel_min));
         }
     } else {
-        // spline
-        Vector3f target_vel_do_not_use;
-        _spline_this_leg.advance_target_along_track(curr_pos, _track_scalar_dt * dt, target_pos, target_vel, target_accel);
+        // splinetarget_vel
+        target_vel = _pos_control.get_desired_velocity();
+        _spline_this_leg.advance_target_along_track(_track_scalar_dt * dt, target_pos, target_vel, target_accel);
         s_finish = _spline_this_leg.reached_destination();
     }
 
