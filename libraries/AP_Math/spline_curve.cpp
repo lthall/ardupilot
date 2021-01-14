@@ -97,15 +97,8 @@ void spline_curve::update_solution(const Vector3f &origin, const Vector3f &dest,
 // move target location along track from origin to destination
 // target_pos is updated with the target position in cm from EKF origin in NEU frame
 // target_vel is updated with the target velocity in cm/s in NEU frame
-void spline_curve::advance_target_along_track(const Vector3f &curr_pos, float dt, Vector3f &target_pos, Vector3f &target_vel, Vector3f &target_accel)
+void spline_curve::advance_target_along_track(float dt, Vector3f &target_pos, Vector3f &target_vel, Vector3f &target_accel)
 {
-    // return immediately if already reached destination
-    if (_reached_destination) {
-        target_pos = curr_pos;
-        target_vel.zero();
-        return;
-    }
-
     // calculate target position and velocity using spline calculator
     Vector3f spline_vel;
     Vector3f spline_accel;
@@ -118,8 +111,8 @@ void spline_curve::advance_target_along_track(const Vector3f &curr_pos, float dt
 
     calc_target_pos_vel(_time, target_pos, spline_vel, spline_accel, spline_jerk);
 
-    float distance_delta = _speed_xy_cms * dt;
-    float speed_xy_cms = _speed_xy_cms;
+    float speed_xy_cms = target_vel.length();
+    float distance_delta = speed_xy_cms * dt;
 
     // aircraft velocity and acceleration along the spline will be defined based on the aircraft kinimatic limits
     // aircraft velocity along the spline should be reduced to ensure normal accelerations do not exceed kinimatic limits
@@ -149,7 +142,7 @@ void spline_curve::advance_target_along_track(const Vector3f &curr_pos, float dt
         float spline_accel_norm_length = spline_accel_norm.length();
         spline_dt = distance_delta / spline_vel_length;
         if (2.0*spline_accel_norm_length/_accel_xy_cmss > sq(spline_vel_length / _speed_xy_cms)) {
-            speed_xy_cms = spline_vel_length / safe_sqrt(2.0*spline_accel_norm_length/_accel_xy_cmss);
+            speed_xy_cms = constrain_float(spline_vel_length / safe_sqrt(2.0*spline_accel_norm_length/_accel_xy_cmss), speed_xy_cms - _accel_xy_cmss * dt, speed_xy_cms + _accel_xy_cmss * dt);
         }
         target_accel = spline_accel_norm * sq(speed_xy_cms/spline_vel_length);
     }
@@ -160,6 +153,7 @@ void spline_curve::advance_target_along_track(const Vector3f &curr_pos, float dt
     // we will reach the destination in the next step so set reached_destination flag
     // To-Do: is this one step too early?
     if (_time >= 1.0f) {
+        _time = 1.0f;
         _reached_destination = true;
     }
     AP::logger().Write("PSS",

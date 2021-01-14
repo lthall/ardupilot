@@ -23,7 +23,7 @@ public:
     // move target location along track from origin to destination
     // target_pos is updated with the target position in cm from EKF origin in NEU frame
     // target_vel is updated with the target velocity in cm/s in NEU frame
-    void advance_target_along_track(const Vector3f &curr_pos, float dt, Vector3f &target_pos, Vector3f &target_vel, Vector3f &target_accel);
+    void advance_target_along_track(float dt, Vector3f &target_pos, Vector3f &target_vel, Vector3f &target_accel);
 
     // returns true if vehicle has reached destination
     bool reached_destination() const { return _reached_destination; }
