@@ -52,7 +52,7 @@ private:
     // position is updated with target position as an offset from EKF origin in NEU frame
     // velocity is updated with the unscaled velocity
     // relies on set_origin_and_destination having been called to update_solution
-    void calc_target_pos_vel(float time, Vector3f &position, Vector3f &velocity);
+    void calc_target_pos_vel(float time, Vector3f &position, Vector3f &velocity, Vector3f &acceleration, Vector3f &jerk);
 
     // interval variables
     Vector3f    _origin;            // origin offset in cm (in NEU frame) from EKF

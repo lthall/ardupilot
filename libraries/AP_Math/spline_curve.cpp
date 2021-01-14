@@ -238,7 +238,7 @@ void spline_curve::calc_slow_down_distance(float speed_cms, float accel_cmss)
 // position is updated with target position as an offset from EKF origin in NEU frame
 // velocity is updated with the unscaled velocity
 // relies on set_origin_and_destination having been called to update_solution
-void spline_curve::calc_target_pos_vel(float time, Vector3f &position, Vector3f &velocity)
+void spline_curve::calc_target_pos_vel(float time, Vector3f &position, Vector3f &velocity, Vector3f &acceleration, Vector3f &jerk)
 {
     float time_sq = sq(time);
     float time_cubed = time_sq * time;
@@ -251,5 +251,10 @@ void spline_curve::calc_target_pos_vel(float time, Vector3f &position, Vector3f 
     velocity = _hermite_solution[1] + \
                _hermite_solution[2] * 2.0f * time + \
                _hermite_solution[3] * 3.0f * time_sq;
+
+    acceleration = _hermite_solution[2] * 2.0f + \
+               _hermite_solution[3] * 6.0f * time;
+
+    jerk = _hermite_solution[3] * 6.0f;
 }
 
