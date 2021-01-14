@@ -423,36 +423,37 @@ bool AC_WPNav::advance_wp_target_along_track(float dt)
     Vector3f target_pos, target_vel, target_accel;
     bool s_finish;
 
+    // Use _track_scalar_dt to slow down S-Curve time to prevent target moving too far in front of aircraft
+    const Vector3f target_velocity = _pos_control.get_desired_velocity();
+    float track_error = 0.0f;
+    float track_velocity = 0.0f;
+    float track_scaler_dt = 1.0f;
+    // check target velocity is non-zero
+    if (is_positive(target_velocity.length())) {
+        Vector3f track_direction = target_velocity.normalized();
+        track_error = _pos_control.get_pos_error().dot(track_direction);
+        track_velocity = _pos_control.get_velocity().dot(track_direction);
+        // set time scaler to be consistent with the achievable aircraft speed with a 5% buffer for short term variation.
+        track_scaler_dt = constrain_float(0.05f + (track_velocity - _pos_control.get_pos_xy_p().kP() * track_error) / target_velocity.length(), 0.1f, 1.0f);
+        // set time scaler to not exceed the maximum vertical velocity during terrain following.
+        if (is_positive(target_velocity.z)) {
+            track_scaler_dt = MIN(track_scaler_dt, fabsf(_wp_speed_up_cms / target_velocity.z));
+        } else if (is_negative(target_velocity.z)) {
+            track_scaler_dt = MIN(track_scaler_dt, fabsf(_wp_speed_down_cms / target_velocity.z));
+        }
+    } else {
+        track_scaler_dt = 1.0f;
+    }
+    // change s-curve time speed with a time constant of maximum acceleration / maximum jerk
+    float track_scaler_tc = 0.01f * _wp_accel_cmss/_wp_jerk;
+    if (!is_zero(_wp_jerk)) {
+        track_scaler_tc = 0.01f * _wp_accel_cmss/_wp_jerk;
+    } else {
+        track_scaler_tc = 1.0f;
+    }
+    _track_scalar_dt += (track_scaler_dt - _track_scalar_dt) * (dt / track_scaler_tc);
+
     if (!_this_leg_is_spline) {
-        // Use _track_scalar_dt to slow down S-Curve time to prevent target moving too far in front of aircraft
-        const Vector3f target_velocity = _pos_control.get_desired_velocity();
-        float track_error = 0.0f;
-        float track_velocity = 0.0f;
-        float track_scaler_dt = 1.0f;
-        // check target velocity is non-zero
-        if (is_positive(target_velocity.length())) {
-            Vector3f track_direction = target_velocity.normalized();
-            track_error = _pos_control.get_pos_error().dot(track_direction);
-            track_velocity = _pos_control.get_velocity().dot(track_direction);
-            // set time scaler to be consistent with the achievable aircraft speed with a 5% buffer for short term variation.
-            track_scaler_dt = constrain_float(0.05f + (track_velocity - _pos_control.get_pos_xy_p().kP() * track_error) / target_velocity.length(), 0.1f, 1.0f);
-            // set time scaler to not exceed the maximum vertical velocity during terrain following.
-            if (is_positive(target_velocity.z)) {
-                track_scaler_dt = MIN(track_scaler_dt, fabsf(_wp_speed_up_cms / target_velocity.z));
-            } else if (is_negative(target_velocity.z)) {
-                track_scaler_dt = MIN(track_scaler_dt, fabsf(_wp_speed_down_cms / target_velocity.z));
-            }
-        } else {
-            track_scaler_dt = 1.0f;
-        }
-        // change s-curve time speed with a time constant of maximum acceleration / maximum jerk
-        float track_scaler_tc = 0.01f * _wp_accel_cmss/_wp_jerk;
-        if (!is_zero(_wp_jerk)) {
-            track_scaler_tc = 0.01f * _wp_accel_cmss/_wp_jerk;
-        } else {
-            track_scaler_tc = 1.0f;
-        }
-        _track_scalar_dt += (track_scaler_dt - _track_scalar_dt) * (dt / track_scaler_tc);
 
         // generate current position, velocity and acceleration
         target_pos = _origin;
@@ -474,7 +475,7 @@ bool AC_WPNav::advance_wp_target_along_track(float dt)
     } else {
         // spline
         Vector3f target_vel_do_not_use;
-        _spline_this_leg.advance_target_along_track(curr_pos, dt, target_pos, target_vel_do_not_use);
+        _spline_this_leg.advance_target_along_track(curr_pos, _track_scalar_dt * dt, target_pos, target_vel, target_accel);
         s_finish = _spline_this_leg.reached_destination();
     }
 
