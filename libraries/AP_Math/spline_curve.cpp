@@ -16,6 +16,7 @@
 #include <AP_HAL/AP_HAL.h>
 #include <AP_Math/AP_Math.h>
 #include "spline_curve.h"
+#include <AP_Logger/AP_Logger.h>
 
 extern const AP_HAL::HAL &hal;
 
@@ -161,6 +162,22 @@ void spline_curve::advance_target_along_track(const Vector3f &curr_pos, float dt
     if (_time >= 1.0f) {
         _reached_destination = true;
     }
+    AP::logger().Write("PSS",
+                       "TimeUS,DT,SDT,PX,PY,VX,VY,AX,AY,VM",
+                       "sssmmnnoon",
+                       "F000000000",
+                       "Qfffffffff",
+                       AP_HAL::micros64(),
+                       double(dt),
+                       double(spline_dt),
+                       double(target_pos.x*0.01f),
+                       double(target_pos.y*0.01f),
+                       double(target_vel.x*0.01f),
+                       double(target_vel.y*0.01f),
+                       double(target_accel.x*0.01f),
+                       double(target_accel.y*0.01f),
+                       double(speed_xy_cms*0.01f));
+    target_accel.zero();
 }
 
 // calculates horizontal and vertical leash lengths for waypoint controller
