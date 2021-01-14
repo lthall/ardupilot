@@ -96,7 +96,7 @@ void spline_curve::update_solution(const Vector3f &origin, const Vector3f &dest,
 // move target location along track from origin to destination
 // target_pos is updated with the target position in cm from EKF origin in NEU frame
 // target_vel is updated with the target velocity in cm/s in NEU frame
-void spline_curve::advance_target_along_track(const Vector3f &curr_pos, float dt, Vector3f &target_pos, Vector3f &target_vel)
+void spline_curve::advance_target_along_track(const Vector3f &curr_pos, float dt, Vector3f &target_pos, Vector3f &target_vel, Vector3f &target_accel)
 {
     // return immediately if already reached destination
     if (_reached_destination) {
@@ -106,69 +106,55 @@ void spline_curve::advance_target_along_track(const Vector3f &curr_pos, float dt
     }
 
     // calculate target position and velocity using spline calculator
-    Vector3f target_vel_unscaled;
-    calc_target_pos_vel(_time, target_pos, target_vel_unscaled);
+    Vector3f spline_vel;
+    Vector3f spline_accel;
+    Vector3f spline_jerk;
+    Vector3f spline_vel_unit;
+    Vector3f spline_accel_norm;
+    float spline_vel_length;
+    float spline_accel_tangent_length;
+    float spline_dt;
 
-    // if target velocity is zero we must protect against divide by zero
-    // so only update position target
-    const float target_vel_unscaled_len = target_vel_unscaled.length();
-    if (is_zero(target_vel_unscaled_len)) {
-        target_vel.zero();
-        _time += dt; // ToDo: advance time based on scaling of accelerations vs vehicle maximum
-        if (_time >= 1.0f) {
-            _reached_destination = true;
+    calc_target_pos_vel(_time, target_pos, spline_vel, spline_accel, spline_jerk);
+
+    float distance_delta = _speed_xy_cms * dt;
+    float speed_xy_cms = _speed_xy_cms;
+
+    // aircraft velocity and acceleration along the spline will be defined based on the aircraft kinimatic limits
+    // aircraft velocity along the spline should be reduced to ensure normal accelerations do not exceed kinimatic limits
+    spline_vel_length = spline_vel.length();
+    if (is_zero(spline_vel_length)) {
+        // if spline velocity is zero then direction must be defined by acceleration or jerk
+        if (is_zero(spline_accel.length_squared())) {
+            // if acceleration is zero then direction must be defined by jerk
+            if (is_zero(spline_jerk.length_squared())) {
+                // spline jerk should never be zero
+                _reached_destination = true;
+                return;
+            } else {
+                spline_vel_unit = spline_jerk.normalized();
+                spline_dt = powf(6.0f * distance_delta / spline_jerk.length(), 1/3.0f);
+            }
+        } else {
+            // all spline acceleration is in the direction of travel
+            spline_vel_unit = spline_accel.normalized();
+            spline_accel_tangent_length = spline_accel.length();
+            spline_dt = safe_sqrt(2.0f * distance_delta / spline_accel_tangent_length);
         }
-        return;
-    }
-
-    calc_leash_length(target_vel_unscaled / target_vel_unscaled_len);
-
-    // calculate the horizontal and vertical error
-    const Vector3f track_error = curr_pos - target_pos;
-    const float track_error_xy = norm(track_error.x, track_error.y);
-    const float track_error_z = fabsf(track_error.z);
-
-    // get position control leash lengths
-    float leash_xy = _leash_xy_cm;
-    float leash_z;
-    if (track_error.z >= 0) {
-        leash_z = _leash_up_cm;
     } else {
-        leash_z = _leash_down_cm;
+        spline_vel_unit = spline_vel.normalized();
+        spline_accel_tangent_length = spline_accel.dot(spline_vel_unit);
+        spline_accel_norm = spline_accel - (spline_vel_unit * spline_accel_tangent_length);
+        float spline_accel_norm_length = spline_accel_norm.length();
+        spline_dt = distance_delta / spline_vel_length;
+        if (2.0*spline_accel_norm_length/_accel_xy_cmss > sq(spline_vel_length / _speed_xy_cms)) {
+            speed_xy_cms = spline_vel_length / safe_sqrt(2.0*spline_accel_norm_length/_accel_xy_cmss);
+        }
+        target_accel = spline_accel_norm * sq(speed_xy_cms/spline_vel_length);
     }
+    target_vel = spline_vel_unit * speed_xy_cms;
 
-    // calculate how far along the track we could move the intermediate target before reaching the end of the leash
-    float track_leash_slack = MIN(_track_leash_length*(leash_z-track_error_z)/leash_z, _track_leash_length*(leash_xy-track_error_xy)/leash_xy);
-    if (track_leash_slack < 0.0f) {
-        track_leash_slack = 0.0f;
-    }
-
-    // update velocity
-    const float dist_to_wp = (_destination - target_pos).length();
-    float vel_limit = _speed_xy_cms;
-    if (!is_zero(dt)) {
-        vel_limit = MIN(vel_limit, track_leash_slack / dt);
-    }
-
-    // if within the stopping distance from destination, set target velocity to sqrt of distance * 2 * acceleration
-    if (_destination_vel.is_zero() && (dist_to_wp < _slow_down_dist)) {
-        _vel_scalar = safe_sqrt(dist_to_wp * 2.0f * _accel_xy_cmss);
-    } else if (_vel_scalar < vel_limit) {
-        // increase velocity using acceleration
-        _vel_scalar += _accel_xy_cmss * dt;
-    }
-
-    // constrain target velocity
-    _vel_scalar = constrain_float(_vel_scalar, 0.0f, vel_limit);
-
-    // update target velocity
-    target_vel = target_vel_unscaled * _vel_scalar;
-
-    // scale the time by the velocity we've calculated vs the velocity that came out of the spline calculator
-    const float time_scale = _vel_scalar / target_vel_unscaled_len;
-
-    // advance time to next step
-    _time += time_scale * dt;
+    _time += spline_dt; // ToDo: advance time based on scaling of accelerations vs vehicle maximum
 
     // we will reach the destination in the next step so set reached_destination flag
     // To-Do: is this one step too early?
