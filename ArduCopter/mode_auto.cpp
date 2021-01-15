@@ -1108,6 +1108,13 @@ void ModeAuto::do_spline_wp(const AP_Mission::Mission_Command& cmd)
     // this is the delay, stored in seconds
     loiter_time_max = cmd.p1;
 
+    // set next destination if necessary
+    if (!set_next_wp(cmd, dest_loc)) {
+        // failure to set next destination can only be because of missing terrain data
+        copter.failsafe_terrain_on_event();
+        return;
+    }
+
     // initialise yaw
     // To-Do: reset the yaw only when the previous navigation command is not a WP.  this would allow removing the special check for ROI
     if (auto_yaw.mode() != AUTO_YAW_ROI) {
@@ -1131,38 +1138,49 @@ void ModeAuto::get_spline_from_cmd(const AP_Mission::Mission_Command& cmd, const
     }
 }
 
-// checks the next navigation command and adds it as a destination if necessary
-bool ModeAuto::set_next_wp(const AP_Mission::Mission_Command& cmd, const Location& default_loc)
+// checks the next mission command and adds it as a destination if necessary
+// supports both straight line and spline waypoints
+// cmd should be the current command
+// default_loc should be the destination from the current_cmd but corrected for cases where user set lat, lon or alt to zero
+// returns true on success, false on failure which should only happen due to a failure to retrieve terrain data
+bool ModeAuto::set_next_wp(const AP_Mission::Mission_Command& current_cmd, const Location &default_loc)
 {
-    // if no delay get next command
-    AP_Mission::Mission_Command temp_cmd;
-    if (cmd.p1 == 0 && mission.get_next_nav_cmd(cmd.index+1, temp_cmd)) {
+    // do not add next wp if current command has a delay meaning the vehicle will stop at the destination
+    if (current_cmd.p1 > 0) {
+        return true;
+    }
 
-        // whether vehicle should stop at the target position depends upon the next command
-        switch (temp_cmd.id) {
-            case MAV_CMD_NAV_WAYPOINT:
-            case MAV_CMD_NAV_LOITER_UNLIM:
-            case MAV_CMD_NAV_LOITER_TURNS:
-            case MAV_CMD_NAV_LOITER_TIME: {
-                const Location dest_loc = loc_from_cmd(cmd, default_loc);
-                const Location next_loc = loc_from_cmd(temp_cmd, dest_loc);
-                if (!wp_nav->set_wp_destination_loc_next(next_loc)) {
-                    return false;
-                }
-                break;
-            }
-            case MAV_CMD_NAV_SPLINE_WAYPOINT:
-                // stop because vehicle changes from straight to spline
-                // ToDo: allow non-stop changing from straight line to spline
-            case MAV_CMD_NAV_LAND:
-                // stop because we may change between rel,abs and terrain alt types
-            case MAV_CMD_NAV_RETURN_TO_LAUNCH:
-            case MAV_CMD_NAV_TAKEOFF:
-                // always stop for RTL and takeoff commands
-            default:
-                // for unsupported commands it is safer to stop
-                break;
-        }
+    // do not add next wp if there are no more navigation commands
+    AP_Mission::Mission_Command next_cmd;
+    if (!mission.get_next_nav_cmd(current_cmd.index+1, next_cmd)) {
+        return true;
+    }
+
+    // whether vehicle should stop at the target position depends upon the next command
+    switch (next_cmd.id) {
+    case MAV_CMD_NAV_WAYPOINT:
+    case MAV_CMD_NAV_LOITER_UNLIM:
+    case MAV_CMD_NAV_LOITER_TURNS:
+    case MAV_CMD_NAV_LOITER_TIME: {
+        const Location dest_loc = loc_from_cmd(current_cmd, default_loc);
+        const Location next_dest_loc = loc_from_cmd(next_cmd, dest_loc);
+        return wp_nav->set_wp_destination_loc_next(next_dest_loc);
+    }
+    case MAV_CMD_NAV_SPLINE_WAYPOINT: {
+        // get spline's location and next location from command and send to wp_nav
+        Location next_dest_loc, next_next_dest_loc;
+        bool next_next_dest_loc_is_spline;
+        get_spline_from_cmd(next_cmd, default_loc, next_dest_loc, next_next_dest_loc, next_next_dest_loc_is_spline);
+        return wp_nav->set_spline_destination_next_loc(next_dest_loc, next_next_dest_loc, next_next_dest_loc_is_spline);
+    }
+    case MAV_CMD_NAV_LAND:
+        // stop because we may change between rel,abs and terrain alt types
+    case MAV_CMD_NAV_RETURN_TO_LAUNCH:
+    case MAV_CMD_NAV_TAKEOFF:
+        // always stop for RTL and takeoff commands
+    default:
+        // for unsupported commands it is safer to stop
+        break;
     }
 
     return true;
