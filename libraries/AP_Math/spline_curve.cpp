@@ -30,26 +30,19 @@ spline_curve::spline_curve() :
     _speed_up_cms(SPEED_MIN),
     _speed_down_cms(SPEED_MIN),
     _accel_xy_cmss(ACCEL_MIN),
-    _accel_z_cmss(ACCEL_MIN),
-    _leash_xy_cm(LEASH_LENGTH_MIN),
-    _leash_up_cm(LEASH_LENGTH_MIN),
-    _leash_down_cm(LEASH_LENGTH_MIN)
+    _accel_z_cmss(ACCEL_MIN)
 {
 }
 
 // set maximum speed, acceleration and leash lengths
 void spline_curve::set_speed_accel_leash(float speed_xy_cms, float speed_up_cms, float speed_down_cms,
-                                         float accel_xy_cms, float accel_z_cms,
-                                         float leash_xy_cm, float leash_up_cm, float leash_down_cm)
+                                         float accel_xy_cms, float accel_z_cms)
 {
     _speed_xy_cms = MAX(speed_xy_cms, SPEED_MIN);
     _speed_up_cms = MAX(speed_up_cms, SPEED_MIN);
     _speed_down_cms = MAX(fabsf(speed_down_cms), SPEED_MIN);
     _accel_xy_cmss = MAX(accel_xy_cms, ACCEL_MIN);
     _accel_z_cmss = MAX(accel_z_cms, ACCEL_MIN);
-    _leash_xy_cm = MAX(leash_xy_cm, LEASH_LENGTH_MIN);
-    _leash_up_cm = MAX(leash_up_cm, LEASH_LENGTH_MIN);
-    _leash_down_cm = MAX(leash_down_cm, LEASH_LENGTH_MIN);
 }
 
 // set origin and destination using position vectors (offset from EKF origin in cm
@@ -62,7 +55,6 @@ void spline_curve::set_origin_and_destination(const Vector3f &origin, const Vect
     _destination = destination;
     _origin_vel = origin_vel;
     _destination_vel = destination_vel;
-    _vel_scalar = vel_target_length;
     _reached_destination = false;
 
     // reset time
@@ -172,62 +164,6 @@ void spline_curve::advance_target_along_track(float dt, Vector3f &target_pos, Ve
                        double(target_accel.y*0.01f),
                        double(speed_xy_cms*0.01f));
     target_accel.zero();
-}
-
-// calculates horizontal and vertical leash lengths for waypoint controller
-// pos_delta_unit should be a unit vector (in NEU frame) pointing from origin to destination
-// or pointing in the direction of the latest target velocity
-void spline_curve::calc_leash_length(const Vector3f &pos_delta_unit)
-{
-    // length of the unit direction vector in the horizontal
-    float pos_delta_unit_xy = norm(pos_delta_unit.x, pos_delta_unit.y);
-    float pos_delta_unit_z = fabsf(pos_delta_unit.z);
-
-    float speed_z;
-    float leash_z;
-    if (pos_delta_unit.z >= 0.0f) {
-        speed_z = _speed_up_cms;
-        leash_z = _leash_up_cm;
-    } else {
-        speed_z = _speed_down_cms;
-        leash_z = _leash_down_cm;
-    }
-
-    // calculate the maximum acceleration, maximum velocity, and leash length in the direction of travel
-    float track_accel, track_speed;
-    if (is_zero(pos_delta_unit_z) && is_zero(pos_delta_unit_xy)){
-        track_accel = 0;
-        track_speed = 0;
-        _track_leash_length = LEASH_LENGTH_MIN;
-    } else if (is_zero(pos_delta_unit.z)){
-        track_accel = _accel_xy_cmss/pos_delta_unit_xy;
-        track_speed = _speed_xy_cms / pos_delta_unit_xy;
-        _track_leash_length = _leash_xy_cm/pos_delta_unit_xy;
-    } else if (is_zero(pos_delta_unit_xy)){
-        track_accel = _accel_z_cmss/pos_delta_unit_z;
-        track_speed = speed_z/pos_delta_unit_z;
-        _track_leash_length = leash_z/pos_delta_unit_z;
-    } else {
-        track_accel = MIN(_accel_z_cmss / pos_delta_unit_z, _accel_xy_cmss / pos_delta_unit_xy);
-        track_speed = MIN(speed_z / pos_delta_unit_z, _speed_xy_cms / pos_delta_unit_xy);
-        _track_leash_length = MIN(leash_z / pos_delta_unit_z, _leash_xy_cm / pos_delta_unit_xy);
-    }
-
-    // calculate slow down distance (the distance from the destination when the target point should begin to slow down)
-    calc_slow_down_distance(track_speed, track_accel);
-}
-
-// calculates distance before waypoint that target point should begin to slow-down assuming it is travelling at full speed
-void spline_curve::calc_slow_down_distance(float speed_cms, float accel_cmss)
-{
-    // protect against divide by zero
-    if (accel_cmss <= 0.0f) {
-        _slow_down_dist = 0.0f;
-        return;
-    }
-    // To-Do: should we use a combination of horizontal and vertical speeds?
-    // To-Do: update this automatically when speed or acceleration is changed
-    _slow_down_dist = speed_cms * speed_cms / (4.0f*accel_cmss);
 }
 
 // calculate target position and velocity from given spline time

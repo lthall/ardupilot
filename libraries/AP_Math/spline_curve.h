@@ -11,8 +11,7 @@ public:
 
     // set maximum speed, acceleration and leash lengths
     void set_speed_accel_leash(float speed_xy_cms, float speed_up_cms, float speed_down_cms,
-                               float accel_xy_cms, float accel_z_cms,
-                               float leash_xy_cm, float leash_up_cm, float leash_down_cm);
+                               float accel_xy_cms, float accel_z_cms);
 
     // set origin and destination using position vectors (offset from EKF origin in cm
     // origin_vel is vehicle velocity at origin (in cm/s in NEU frame)
@@ -36,17 +35,6 @@ private:
     // recalculate hermite_spline_solution grid
     void update_solution(const Vector3f &origin, const Vector3f &dest, const Vector3f &origin_vel, const Vector3f &dest_vel);
 
-    // calculates horizontal and vertical leash lengths for waypoint controller
-    // pos_delta_unit should be a unit vector (in NEU frame) pointing from origin to destination
-    // or pointing in the direction of the latest target velocity
-    // results placed in _track_leash_length
-    // also calls calc_slow_down_distance() to update _slow_down_dist
-    void calc_leash_length(const Vector3f &pos_delta_unit);
-
-    // calculates distance before waypoint that target point should begin to slow-down assuming it is travelling at full speed
-    // results placed in _slow_down_dist
-    void calc_slow_down_distance(float speed_cms, float accel_cmss);
-
     // calculate target position and velocity from given spline time
     // time is a value from 0 to 1
     // position is updated with target position as an offset from EKF origin in NEU frame
@@ -66,12 +54,5 @@ private:
     float       _speed_down_cms;    // maximum speed upwards in cm/s
     float       _accel_xy_cmss;     // maximum horizontal acceleration in cm/s/s in NEU frame
     float       _accel_z_cmss;      // maximum vertical acceleration in cm/s/s in NEU frame
-    float       _leash_xy_cm;       // horizontal leash length in cm
-    float       _leash_up_cm;       // vertical (upwards) leash length in cm
-    float       _leash_down_cm;     // vertical (downwards) leash length in cm
-    float       _vel_scalar;        // scaling to reduce velocity from the hermite solution to an actual velocity
-    float       _time_scalar;        // scaling to reduce velocity and acceleration from the hermite solution to an actual velocity
-    float       _track_leash_length;    // leash length in cm which is the shorter of the horizontal and vertical leashes depending upon the direction of the track
-    float       _slow_down_dist;    // distance from the destination (in cm) after which vehicle should begin to slowdown
     bool        _reached_destination;   // true once vehicle has reached destination
 };
