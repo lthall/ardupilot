@@ -476,7 +476,7 @@ bool AC_WPNav::advance_wp_target_along_track(float dt)
     } else {
         // splinetarget_vel
         target_vel = _pos_control.get_desired_velocity();
-        _spline_this_leg.advance_target_along_track(_track_scalar_dt * dt, target_pos, target_vel, target_accel);
+        _spline_this_leg.advance_target_along_track(_track_scalar_dt * dt, target_pos, target_vel);
         s_finish = _spline_this_leg.reached_destination();
     }
 
