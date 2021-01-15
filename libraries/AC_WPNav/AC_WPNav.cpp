@@ -295,9 +295,9 @@ bool AC_WPNav::set_wp_destination(const Vector3f& destination, bool terrain_alt)
 ///     provide next_destination
 bool AC_WPNav::set_wp_destination_next(const Vector3f& destination, bool terrain_alt)
 {
-    // exit immediately if this leg is not straight.  This can only happen because of a programming mistake
+    // ToDo: use spline's destination vector to initialise next leg's starting velocity
     if (_this_leg_is_spline) {
-        return false;
+        // do something
     }
 
     // ToDo: improve handling of mismatching terrain alt
@@ -307,6 +307,7 @@ bool AC_WPNav::set_wp_destination_next(const Vector3f& destination, bool terrain
 
     set_kinematic_limits(_scurve_next_leg, _destination, destination);
     _scurve_next_leg.calculate_straight_leg(_destination, destination);
+    _next_leg_is_spline = false;
 
     // next destination provided so fast waypoint
     _flags.fast_waypoint = true;
@@ -674,6 +675,29 @@ bool AC_WPNav::set_spline_destination_loc(const Location& destination, Location 
     return set_spline_destination(dest_neu, dest_terr_alt, next_dest_neu, next_dest_terr_alt, next_is_spline);
 }
 
+/// set next destination (e.g. the one after the current destination) as a spline segment specified as a location
+///     returns false if conversion from location to vector from ekf origin cannot be calculated
+///     next_next_destination should be set to the next segment's destination
+bool AC_WPNav::set_spline_destination_next_loc(const Location& next_destination, Location next_next_destination, bool next_next_is_spline)
+{
+    // convert next_destination location to vector
+    Vector3f next_dest_neu;
+    bool next_dest_terr_alt;
+    if (!get_vector_NEU(next_destination, next_dest_neu, next_dest_terr_alt)) {
+        return false;
+    }
+
+    // convert next_next_destination to vector
+    Vector3f next_next_dest_neu;
+    bool next_next_dest_terr_alt;
+    if (!get_vector_NEU(next_next_destination, next_next_dest_neu, next_next_dest_terr_alt)) {
+        return false;
+    }
+
+    // set target as vector from EKF origin
+    return set_spline_destination_next(next_dest_neu, next_dest_terr_alt, next_next_dest_neu, next_next_dest_terr_alt, next_next_is_spline);
+}
+
 /// set_spline_destination waypoint using position vector (distance from ekf origin in cm)
 ///     terrain_alt should be true if destination.z is a desired altitude above terrain (false if its desired altitudes above ekf origin)
 ///     next_destination should be set to the next segment's destination
@@ -692,16 +716,16 @@ bool AC_WPNav::set_spline_destination(const Vector3f& destination, bool terrain_
     // calculate origin and origin velocity vector
     Vector3f origin_vector;
     if (is_active() && _flags.reached_destination && (terrain_alt == _terrain_alt)) {
-        // use previous destination as origin
-        _origin = _destination;
-
-        // if previous leg was a spline we can use destination velocity vector for origin velocity vector
+        // calculate origin vector
         if (_this_leg_is_spline) {
+            // if previous leg was a spline we can use destination velocity vector for origin velocity vector
             origin_vector = _spline_this_leg.get_destination_vel();
         } else {
-            // use the direction of the previous straight line segment
+            // use direction of the previous straight line segment
             origin_vector = _destination - _origin;
         }
+        // use previous destination as origin
+        _origin = _destination;
     } else {
         // use stopping point as the origin
         get_wp_stopping_point(_origin);
@@ -738,6 +762,56 @@ bool AC_WPNav::set_spline_destination(const Vector3f& destination, bool terrain_
     _this_leg_is_spline = true;
     _flags.reached_destination = false;
     _flags.wp_yaw_set = false;
+
+    return true;
+}
+
+/// set next destination (e.g. the one after the current destination) as an offset (in cm, NEU frame) from the EKF origin
+///     next_terrain_alt should be true if next_destination.z is a desired altitude above terrain (false if its desired altitudes above ekf origin)
+///     next_next_destination should be set to the next segment's destination
+///     next_next_terrain_alt should be true if next_next_destination.z is a desired altitude above terrain (false if it is desired altitude above ekf origin)
+///     next_next_destination.z  must be in the same "frame" as destination.z (i.e. if next_destination is a alt-above-terrain, next_next_destination should be too)
+bool AC_WPNav::set_spline_destination_next(const Vector3f& next_destination, bool next_terrain_alt, const Vector3f& next_next_destination, bool next_next_terrain_alt, bool next_next_is_spline)
+{
+    // calculate origin and origin velocity vector
+    Vector3f origin_vector;
+    if (_this_leg_is_spline) {
+        // if previous leg was a spline we can use destination velocity vector for origin velocity vector
+        origin_vector = _spline_this_leg.get_destination_vel();
+    } else {
+        // use the direction of the previous straight line segment
+        origin_vector = _destination - _origin;
+    }
+
+    // calculate destination velocity vector
+    Vector3f destination_vector;
+    if (next_terrain_alt == next_next_terrain_alt) {
+        if (next_next_is_spline) {
+            // leave this segment moving parallel to vector from this leg's origin (i.e. prev leg's destination) to next next destination
+            destination_vector = next_next_destination - _destination;
+        } else {
+            // leave this segment moving parallel to next segment
+            destination_vector = next_next_destination - next_destination;
+        }
+    }
+
+    // update spline calculators speeds, accelerations and leash lengths
+    _spline_next_leg.set_speed_accel_leash(_pos_control.get_max_speed_xy(), _pos_control.get_max_speed_up(), _pos_control.get_max_speed_down(),
+                                           _pos_control.get_max_accel_xy(), _pos_control.get_max_accel_z(),
+                                           _pos_control.get_leash_xy(), _pos_control.get_leash_up_z(), _pos_control.get_leash_down_z());
+
+    // get current velocity target if available
+    // ToDo: this needs fixing
+    float vel_target_length = _pos_control.is_active_xy() ? _pos_control.get_desired_velocity().length() : 0.0f;
+
+    // setup next spline leg.  Could this be made local?
+    _spline_next_leg.set_origin_and_destination(_destination, next_destination, origin_vector, destination_vector, vel_target_length);
+    _next_leg_is_spline = true;
+
+    // ToDo: update "this leg" if it is a straight line waypoints so that it can adjust its final velocity based on next spline leg
+    if (!_this_leg_is_spline) {
+        // do something
+    }
 
     return true;
 }
