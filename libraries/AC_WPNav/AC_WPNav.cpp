@@ -707,8 +707,7 @@ bool AC_WPNav::set_spline_destination(const Vector3f& destination, bool terrain_
 {
     // update spline calculators speeds, accelerations and leash lengths
     _spline_this_leg.set_speed_accel_leash(_pos_control.get_max_speed_xy(), _pos_control.get_max_speed_up(), _pos_control.get_max_speed_down(),
-                                           _pos_control.get_max_accel_xy(), _pos_control.get_max_accel_z(),
-                                           _pos_control.get_leash_xy(), _pos_control.get_leash_up_z(), _pos_control.get_leash_down_z());
+                                           _pos_control.get_max_accel_xy(), _pos_control.get_max_accel_z());
 
     // get current velocity target if available
     float vel_target_length = _pos_control.is_active_xy() ? _pos_control.get_desired_velocity().length() : 0.0f;
@@ -797,8 +796,7 @@ bool AC_WPNav::set_spline_destination_next(const Vector3f& next_destination, boo
 
     // update spline calculators speeds, accelerations and leash lengths
     _spline_next_leg.set_speed_accel_leash(_pos_control.get_max_speed_xy(), _pos_control.get_max_speed_up(), _pos_control.get_max_speed_down(),
-                                           _pos_control.get_max_accel_xy(), _pos_control.get_max_accel_z(),
-                                           _pos_control.get_leash_xy(), _pos_control.get_leash_up_z(), _pos_control.get_leash_down_z());
+                                           _pos_control.get_max_accel_xy(), _pos_control.get_max_accel_z());
 
     // get current velocity target if available
     // ToDo: this needs fixing
