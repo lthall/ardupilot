@@ -76,35 +76,59 @@ void spline_curve::set_origin_and_destination(const Vector3f &origin, const Vect
     }
 }
 
-// recalculate hermite_solution grid
-//     relies on _origin_vel, _destination_vel and _origin and _destination
-void spline_curve::update_solution(const Vector3f &origin, const Vector3f &dest, const Vector3f &origin_vel, const Vector3f &dest_vel)
-{
-    _hermite_solution[0] = origin;
-    _hermite_solution[1] = origin_vel;
-    _hermite_solution[2] = -origin*3.0f -origin_vel*2.0f + dest*3.0f - dest_vel;
-    _hermite_solution[3] = origin*2.0f + origin_vel -dest*2.0f + dest_vel;
-}
-
 // move target location along track from origin to destination
 // target_pos is updated with the target position in cm from EKF origin in NEU frame
 // target_vel is updated with the target velocity in cm/s in NEU frame
-void spline_curve::advance_target_along_track(float dt, Vector3f &target_pos, Vector3f &target_vel, Vector3f &target_accel)
+void spline_curve::advance_target_along_track(float dt, Vector3f &target_pos, Vector3f &target_vel)
+{
+    // calculate target position and velocity using spline calculator
+    Vector3f spline_vel_unit;
+    float spline_dt;
+
+    float speed_xy_cms = target_vel.length();
+    float distance_delta = speed_xy_cms * dt;
+    float speed_xy_max = _speed_xy_cms;
+
+    calc_dt_speed_max(_time, distance_delta, spline_dt, target_pos, spline_vel_unit, speed_xy_max);
+    speed_xy_cms = constrain_float(speed_xy_max, speed_xy_cms - _accel_xy_cmss * dt, speed_xy_cms + _accel_xy_cmss * dt);
+    target_vel = spline_vel_unit * speed_xy_cms;
+
+    _time += spline_dt; // ToDo: advance time based on scaling of accelerations vs vehicle maximum
+
+    // we will reach the destination in the next step so set reached_destination flag
+    // To-Do: is this one step too early?
+    if (_time >= 1.0f) {
+        _time = 1.0f;
+        _reached_destination = true;
+    }
+    AP::logger().Write("PSS",
+                       "TimeUS,DT,SDT,PX,PY,VX,VY,VM,V",
+                       "sssmmnnnn",
+                       "F00000000",
+                       "Qffffffff",
+                       AP_HAL::micros64(),
+                       double(dt),
+                       double(spline_dt),
+                       double(target_pos.x*0.01f),
+                       double(target_pos.y*0.01f),
+                       double(target_vel.x*0.01f),
+                       double(target_vel.y*0.01f),
+                       double(speed_xy_max*0.01f),
+                       double(speed_xy_cms*0.01f));
+}
+
+// recalculate hermite_solution grid
+//     relies on _origin_vel, _destination_vel and _origin and _destination
+void spline_curve::calc_dt_speed_max(float time, float distance_delta, float &spline_dt, Vector3f &target_pos, Vector3f &spline_vel_unit, float &speed_xy_max)
 {
     // calculate target position and velocity using spline calculator
     Vector3f spline_vel;
     Vector3f spline_accel;
     Vector3f spline_jerk;
-    Vector3f spline_vel_unit;
-    Vector3f spline_accel_norm;
     float spline_vel_length;
-    float spline_accel_tangent_length;
-    float spline_dt;
+    float spline_accel_norm_length;
 
-    calc_target_pos_vel(_time, target_pos, spline_vel, spline_accel, spline_jerk);
-
-    float speed_xy_cms = target_vel.length();
-    float distance_delta = speed_xy_cms * dt;
+    calc_target_pos_vel(time, target_pos, spline_vel, spline_accel, spline_jerk);
 
     // aircraft velocity and acceleration along the spline will be defined based on the aircraft kinimatic limits
     // aircraft velocity along the spline should be reduced to ensure normal accelerations do not exceed kinimatic limits
@@ -124,46 +148,33 @@ void spline_curve::advance_target_along_track(float dt, Vector3f &target_pos, Ve
         } else {
             // all spline acceleration is in the direction of travel
             spline_vel_unit = spline_accel.normalized();
-            spline_accel_tangent_length = spline_accel.length();
-            spline_dt = safe_sqrt(2.0f * distance_delta / spline_accel_tangent_length);
+            spline_dt = safe_sqrt(2.0f * distance_delta / spline_accel.length());
         }
+        spline_accel_norm_length = 0.0f;
     } else {
         spline_vel_unit = spline_vel.normalized();
-        spline_accel_tangent_length = spline_accel.dot(spline_vel_unit);
-        spline_accel_norm = spline_accel - (spline_vel_unit * spline_accel_tangent_length);
-        float spline_accel_norm_length = spline_accel_norm.length();
         spline_dt = distance_delta / spline_vel_length;
-        if (2.0*spline_accel_norm_length/_accel_xy_cmss > sq(spline_vel_length / _speed_xy_cms)) {
-            speed_xy_cms = constrain_float(spline_vel_length / safe_sqrt(2.0*spline_accel_norm_length/_accel_xy_cmss), speed_xy_cms - _accel_xy_cmss * dt, speed_xy_cms + _accel_xy_cmss * dt);
-        }
-        target_accel = spline_accel_norm * sq(speed_xy_cms/spline_vel_length);
+        float spline_accel_tangent_length = spline_accel.dot(spline_vel_unit);
+        Vector3f spline_accel_norm = spline_accel - (spline_vel_unit * spline_accel_tangent_length);
+        spline_accel_norm_length = spline_accel_norm.length();
     }
-    target_vel = spline_vel_unit * speed_xy_cms;
-
-    _time += spline_dt; // ToDo: advance time based on scaling of accelerations vs vehicle maximum
-
-    // we will reach the destination in the next step so set reached_destination flag
-    // To-Do: is this one step too early?
-    if (_time >= 1.0f) {
-        _time = 1.0f;
-        _reached_destination = true;
+    // limit maximum speed the speed that will reach normal acceleration of 0.5 * _accel_xy_cmss
+    // todo: acceleration and velocity limits should account for both xy and z limits.
+    if (spline_accel_norm_length/(0.5f * _accel_xy_cmss) > sq(spline_vel_length / _speed_xy_cms)) {
+        speed_xy_max = spline_vel_length / safe_sqrt(2.0*spline_accel_norm_length/_accel_xy_cmss);
+    } else {
+        speed_xy_max = _speed_xy_cms;
     }
-    AP::logger().Write("PSS",
-                       "TimeUS,DT,SDT,PX,PY,VX,VY,AX,AY,VM",
-                       "sssmmnnoon",
-                       "F000000000",
-                       "Qfffffffff",
-                       AP_HAL::micros64(),
-                       double(dt),
-                       double(spline_dt),
-                       double(target_pos.x*0.01f),
-                       double(target_pos.y*0.01f),
-                       double(target_vel.x*0.01f),
-                       double(target_vel.y*0.01f),
-                       double(target_accel.x*0.01f),
-                       double(target_accel.y*0.01f),
-                       double(speed_xy_cms*0.01f));
-    target_accel.zero();
+}
+
+// recalculate hermite_solution grid
+//     relies on _origin_vel, _destination_vel and _origin and _destination
+void spline_curve::update_solution(const Vector3f &origin, const Vector3f &dest, const Vector3f &origin_vel, const Vector3f &dest_vel)
+{
+    _hermite_solution[0] = origin;
+    _hermite_solution[1] = origin_vel;
+    _hermite_solution[2] = -origin*3.0f -origin_vel*2.0f + dest*3.0f - dest_vel;
+    _hermite_solution[3] = origin*2.0f + origin_vel -dest*2.0f + dest_vel;
 }
 
 // calculate target position and velocity from given spline time

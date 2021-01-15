@@ -22,7 +22,7 @@ public:
     // move target location along track from origin to destination
     // target_pos is updated with the target position in cm from EKF origin in NEU frame
     // target_vel is updated with the target velocity in cm/s in NEU frame
-    void advance_target_along_track(float dt, Vector3f &target_pos, Vector3f &target_vel, Vector3f &target_accel);
+    void advance_target_along_track(float dt, Vector3f &target_pos, Vector3f &target_vel);
 
     // returns true if vehicle has reached destination
     bool reached_destination() const { return _reached_destination; }
@@ -31,6 +31,8 @@ public:
     const Vector3f& get_destination_vel() { return _destination_vel; }
 
 private:
+
+    void calc_dt_speed_max(float time, float distance_delta, float &spline_dt, Vector3f &target_pos, Vector3f &spline_vel_unit, float &speed_xy_max);
 
     // recalculate hermite_spline_solution grid
     void update_solution(const Vector3f &origin, const Vector3f &dest, const Vector3f &origin_vel, const Vector3f &dest_vel);
@@ -54,5 +56,7 @@ private:
     float       _speed_down_cms;    // maximum speed upwards in cm/s
     float       _accel_xy_cmss;     // maximum horizontal acceleration in cm/s/s in NEU frame
     float       _accel_z_cmss;      // maximum vertical acceleration in cm/s/s in NEU frame
+    float       _vel_max_start;     // maximum horizontal speed in cm/s
+    float       _vel_max_end;       // maximum horizontal speed in cm/s
     bool        _reached_destination;   // true once vehicle has reached destination
 };
