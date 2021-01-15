@@ -115,6 +115,8 @@ private:
     // generate time segments to generate large curved corners
     void add_segments_curved(float Pp, float Pm);
     // calculate duration of time segments for basic acceleration and deceleration curve from and to stationary.
+    void cal_pos(float tj, float V0, float Jp, float Ap, float Vp, float Pp, float &Jp_out, float &t2_out, float &t4_out, float &t6_out) const;
+    // calculate duration of time segments for basic acceleration and deceleration curve from and to stationary.
     void cal_posfast(float tj, float Jp, float Ap, float Vp, float Pp, float &Jp_out, float &t2_out, float &t4_out, float &t6_out) const;
 
     // increment the internal time pointer by
