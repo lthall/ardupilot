@@ -460,7 +460,7 @@ void scurves::add_segments_straight(float Pp)
     float Vp = vel_max;
 
     float t2, t4, t6;
-    cal_posfast(tj, Jp, Ap, Vp, Pp / 2.0, Jp, t2, t4, t6);
+    cal_pos(tj, 0.0f, Jp, Ap, Vp, Pp / 2.0, Jp, t2, t4, t6);
 
     add_segments_incr_const_decr_jerk(tj, Jp, t2);
     add_segment_const_jerk(t4, 0.0);
@@ -499,7 +499,7 @@ void scurves::add_segments_curved(float Pp, float Pm)
     Vs = MIN(Vp, MIN(MIN(safe_sqrt(Ap * Pc), powf(0.5 * Jp * sq(Pc), 1.0 / 3.0)), Pc / (2 * tj)));
 
     float t2, t4, t6;
-    cal_posfast(tj, Jp, Ap, Vs, Ps, Js, t2, t4, t6);
+    cal_pos(tj, 0.0f, Jp, Ap, Vs, Ps, Js, t2, t4, t6);
     add_segments_incr_const_decr_jerk(tj, Js, t2);
     add_segment_const_jerk(t4, 0.0);
     add_segments_incr_const_decr_jerk(tj, -Js, t6);
