@@ -30,6 +30,11 @@ public:
     // returns the unscaled destination velocity vector
     const Vector3f& get_destination_vel() { return _destination_vel; }
 
+    float get_vel_max_start() { return _vel_max_start; }
+
+    float get_vel_max_end() { return _vel_max_end; }
+    void set_vel_max_end(float vel_max_end) { _vel_max_end = MIN(_vel_max_end, vel_max_end); }
+
 private:
 
     void calc_dt_speed_max(float time, float distance_delta, float &spline_dt, Vector3f &target_pos, Vector3f &spline_vel_unit, float &speed_xy_max);

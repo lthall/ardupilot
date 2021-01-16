@@ -74,6 +74,15 @@ void spline_curve::set_origin_and_destination(const Vector3f &origin, const Vect
         // update spline calculator
         update_solution(_origin, _destination, _origin_vel, _destination_vel);
     }
+    Vector3f target_pos;
+    Vector3f spline_vel_unit;
+    float spline_dt;
+    calc_dt_speed_max(0.0f, 0.0f, spline_dt, target_pos, spline_vel_unit, _vel_max_start);
+    if (is_zero(_destination_vel.length())) {
+        _vel_max_end = 0.0f;
+    } else {
+        calc_dt_speed_max(1.0f, 0.0f, spline_dt, target_pos, spline_vel_unit, _vel_max_end);
+    }
 }
 
 // move target location along track from origin to destination
@@ -101,20 +110,6 @@ void spline_curve::advance_target_along_track(float dt, Vector3f &target_pos, Ve
         _time = 1.0f;
         _reached_destination = true;
     }
-    AP::logger().Write("PSS",
-                       "TimeUS,DT,SDT,PX,PY,VX,VY,VM,V",
-                       "sssmmnnnn",
-                       "F00000000",
-                       "Qffffffff",
-                       AP_HAL::micros64(),
-                       double(dt),
-                       double(spline_dt),
-                       double(target_pos.x*0.01f),
-                       double(target_pos.y*0.01f),
-                       double(target_vel.x*0.01f),
-                       double(target_vel.y*0.01f),
-                       double(speed_xy_max*0.01f),
-                       double(speed_xy_cms*0.01f));
 }
 
 // recalculate hermite_solution grid
@@ -127,6 +122,7 @@ void spline_curve::calc_dt_speed_max(float time, float distance_delta, float &sp
     Vector3f spline_jerk;
     float spline_vel_length;
     float spline_accel_norm_length;
+    float accel_max = 0.5f * _accel_xy_cmss;
 
     calc_target_pos_vel(time, target_pos, spline_vel, spline_accel, spline_jerk);
 
@@ -160,11 +156,13 @@ void spline_curve::calc_dt_speed_max(float time, float distance_delta, float &sp
     }
     // limit maximum speed the speed that will reach normal acceleration of 0.5 * _accel_xy_cmss
     // todo: acceleration and velocity limits should account for both xy and z limits.
-    if (spline_accel_norm_length/(0.5f * _accel_xy_cmss) > sq(spline_vel_length / _speed_xy_cms)) {
-        speed_xy_max = spline_vel_length / safe_sqrt(2.0*spline_accel_norm_length/_accel_xy_cmss);
+    if (spline_accel_norm_length/accel_max > sq(spline_vel_length / _speed_xy_cms)) {
+        speed_xy_max = spline_vel_length / safe_sqrt(spline_accel_norm_length/accel_max);
     } else {
         speed_xy_max = _speed_xy_cms;
     }
+    float Dist = (_destination - target_pos).length();
+    speed_xy_max = MIN(speed_xy_max, safe_sqrt(2.0f * accel_max * (Dist + sq(_vel_max_end) / (2.0f*accel_max))));
 }
 
 // recalculate hermite_solution grid
