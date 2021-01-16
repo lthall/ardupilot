@@ -279,8 +279,12 @@ bool AC_WPNav::set_wp_destination(const Vector3f& destination, bool terrain_alt)
     _destination = destination;
     _terrain_alt = terrain_alt;
 
-    set_kinematic_limits(_scurve_this_leg, _origin, _destination);
-    _scurve_this_leg.calculate_straight_leg(_origin, _destination);
+    if (_flags.fast_waypoint) {
+        _scurve_this_leg = _scurve_next_leg;
+    } else {
+        set_kinematic_limits(_scurve_this_leg, _origin, _destination);
+        _scurve_this_leg.calculate_leg(_origin, _destination);
+    }
     _this_leg_is_spline = false;
     _scurve_next_leg.init();
     _flags.fast_waypoint = false;   // default waypoint back to slow
@@ -295,18 +299,16 @@ bool AC_WPNav::set_wp_destination(const Vector3f& destination, bool terrain_alt)
 ///     provide next_destination
 bool AC_WPNav::set_wp_destination_next(const Vector3f& destination, bool terrain_alt)
 {
-    // ToDo: use spline's destination vector to initialise next leg's starting velocity
-    if (_this_leg_is_spline) {
-        // do something
-    }
-
     // ToDo: improve handling of mismatching terrain alt
     if (terrain_alt != _terrain_alt) {
         return false;
     }
 
     set_kinematic_limits(_scurve_next_leg, _destination, destination);
-    _scurve_next_leg.calculate_straight_leg(_destination, destination);
+    _scurve_next_leg.calculate_leg(_destination, destination);
+    if (_this_leg_is_spline) {
+        _spline_this_leg.set_vel_max_end(_scurve_next_leg.set_start_vel(_spline_this_leg.get_vel_max_end()));
+    }
     _next_leg_is_spline = false;
 
     // next destination provided so fast waypoint
@@ -808,7 +810,9 @@ bool AC_WPNav::set_spline_destination_next(const Vector3f& next_destination, boo
 
     // ToDo: update "this leg" if it is a straight line waypoints so that it can adjust its final velocity based on next spline leg
     if (!_this_leg_is_spline) {
-        // do something
+        _scurve_this_leg.set_end_vel(_spline_next_leg.get_vel_max_start());
+    } else {
+        _spline_this_leg.set_vel_max_end(_spline_next_leg.get_vel_max_start());
     }
 
     return true;
