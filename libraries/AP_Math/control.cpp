@@ -23,6 +23,108 @@
 #include "vector2.h"
 #include "vector3.h"
 
+// control default definitions
+#define CONTROL_TIME_CONSTANT_RATIO 4.0f   // minimum horizontal acceleration in cm/s/s - used for sanity checking acceleration in leash length calculation
+
+// update_pos_vel_accel - single axis projection of position and velocity, pos and vel, forwards in time based on a time step of dt and acceleration of accel.
+void update_pos_vel_accel(float& pos, float& vel, float& accel, float dt)
+{
+    // move position and velocity forward by dt.
+    pos = pos + vel * dt + accel * 0.5f * sq(dt);
+    vel = vel + accel * dt;
+}
+
+/* shape_vel and shape_vel_xy calculate a jerk limited path from the current position, velocity and acceleration to an input velocity.
+ The function takes the current position, velocity, and acceleration and calculates the required jerk limited adjustment to the acceleration for the next time dt.
+ The kinimatic path is constrained by :
+     maximum velocity - vel_max,
+     maximum acceleration - accel_max,
+     time constant - tc.
+ The time constant defines the acceleration error decay in the kinimatic path as the system approaches constant acceleration.
+ The time constant also defines the time taken to achieve the maximum acceleration.
+ The time constant must be positive.
+ The function alters the input velocity to be the velocity that the system could reach zero acceleration in the minimum time.
+ The accel_max limit can be removed by setting it to zero.
+*/
+void shape_vel(float& vel_input, float vel, float& accel, float accel_max, float tc, float dt)
+{
+    // sanity check tc
+    if (is_positive(tc)) {
+        // Calculate time constants and limits to ensure stable operation
+        float KPa = 1.0 / tc;
+        float jerk_max = accel_max * KPa;
+
+        // velocity error to be corrected
+        float vel_error = vel_input - vel;
+
+        // acceleration to correct velocity
+        float accel_target = vel_error * KPa;
+
+        // jerk limit acceleration change
+        float accel_delta = accel_target - accel;
+        if (is_positive(accel_max)) {
+            accel_delta = constrain_float(accel_delta, -jerk_max * dt, jerk_max * dt);
+        }
+        accel = accel + accel_delta;
+
+        // limit acceleration to accel_max
+        if (is_positive(accel_max)) {
+            accel = constrain_float(accel, -accel_max, accel_max);
+        }
+
+        // Calculate maximum pos_input and vel_input based on limited system
+        vel_error = accel / KPa;
+        vel_input = vel_error + vel;
+    }
+}
+
+
+/* shape_pos_vel calculate a jerk limited path from the current position, velocity and acceleration to an input position and velocity.
+ The function takes the current position, velocity, and acceleration and calculates the required jerk limited adjustment to the acceleration for the next time dt.
+ The kinimatic path is constrained by :
+     maximum velocity - vel_max,
+     maximum acceleration - accel_max,
+     time constant - tc.
+ The time constant defines the acceleration error decay in the kinimatic path as the system approaches constant acceleration.
+ The time constant also defines the time taken to achieve the maximum acceleration.
+ The time constant must be positive.
+ The function alters the input position to be the closest position that the system could reach zero acceleration in the minimum time.
+ The vel_max, vel_correction_max, and accel_max limits can be removed by setting the desired limit to zero.
+*/
+void shape_pos_vel(float& pos_input, float vel_input, float pos, float vel, float& accel, float vel_max, float vel_correction_max, float accel_max, float tc, float dt)
+{
+    if (is_positive(tc)) {
+        // Calculate time constants and limits to ensure stable operation
+        float KPv = 1.0 / (CONTROL_TIME_CONSTANT_RATIO*tc);
+        float accel_tc_max = accel_max*(1-1.0f/CONTROL_TIME_CONSTANT_RATIO);
+
+        // position error to be corrected
+        float pos_error = pos_input - pos;
+
+        // velocity to correct position
+        float vel_target = sqrt_controller(pos_error, KPv, accel_tc_max, dt);
+
+        // limit velocity correction to vel_correction_max
+        if (is_positive(vel_correction_max)) {
+            vel_target = constrain_float(vel_target, -vel_correction_max, vel_correction_max);
+        }
+
+        // velocity correction with input velocity
+        vel_target = vel_target + vel_input;
+
+        // limit velocity to vel_max
+        if (is_positive(vel_max)) {
+            vel_target = constrain_float(vel_target, -vel_max, vel_max);
+        }
+
+        shape_vel(vel_target, vel, accel, accel_max, tc, dt);
+
+        vel_target = vel_target - vel_input;
+        pos_error = stopping_point(vel_target, KPv, accel_tc_max);
+        pos_input = pos_error + pos;
+    }
+}
+
 // Proportional controller with piecewise sqrt sections to constrain second derivative
 float sqrt_controller(float error, float p, float second_ord_lim, float dt)
 {
@@ -55,6 +157,34 @@ float sqrt_controller(float error, float p, float second_ord_lim, float dt)
         return constrain_float(correction_rate, -fabsf(error) / dt, fabsf(error) / dt);
     } else {
         return correction_rate;
+    }
+}
+
+// Inverse proportional controller with piecewise sqrt sections to constrain second derivative
+float stopping_point(float velocity, float p, float accel_max)
+{
+    if (is_positive(accel_max) && is_zero(p)) {
+        return (velocity * velocity) / (2.0f * accel_max);
+    } else if ((is_negative(accel_max) || is_zero(accel_max)) && !is_zero(p)) {
+        return velocity / p;
+    } else if ((is_negative(accel_max) || is_zero(accel_max)) && is_zero(p)) {
+        return 0.0f;
+    }
+
+    // calculate the velocity at which we switch from calculating the stopping point using a linear function to a sqrt function
+    const float linear_velocity = accel_max / p;
+
+    if (fabsf(velocity) < linear_velocity) {
+        // if our current velocity is below the cross-over point we use a linear function
+        return velocity / p;
+    } else {
+        const float linear_dist = accel_max / sq(p);
+        const float stopping_distance = (linear_dist * 0.5f) + sq(velocity) / (2.0f * accel_max);
+        if (is_positive(velocity)) {
+            return stopping_distance;
+        } else {
+            return -stopping_distance;
+        }
     }
 }
 
