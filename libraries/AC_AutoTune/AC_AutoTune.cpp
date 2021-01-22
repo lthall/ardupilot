@@ -57,7 +57,7 @@
 #define AUTOTUNE_RD_MAX                  0.200f     // maximum Rate D value
 #define AUTOTUNE_RLPF_MIN                  1.0f     // minimum Rate Yaw filter value
 #define AUTOTUNE_RLPF_MAX                  5.0f     // maximum Rate Yaw filter value
-#define AUTOTUNE_RP_MIN                   0.01f     // minimum Rate P value
+#define AUTOTUNE_RP_MIN                   0.001f     // minimum Rate P value
 #define AUTOTUNE_RP_MAX                    2.0f     // maximum Rate P value
 #define AUTOTUNE_SP_MAX                   20.0f     // maximum Stab P value
 #define AUTOTUNE_SP_MIN                    0.5f     // maximum Stab P value
