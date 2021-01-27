@@ -233,7 +233,7 @@ bool AC_WPNav::set_wp_destination_loc(const Location& destination)
 
 /// set next destination using location class
 ///     returns false if conversion from location to vector from ekf origin cannot be calculated
-bool AC_WPNav::set_wp_destination_loc_next(const Location& destination)
+bool AC_WPNav::set_wp_destination_next_loc(const Location& destination)
 {
     bool terr_alt;
     Vector3f dest_neu;
