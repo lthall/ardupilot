@@ -597,9 +597,9 @@ void AC_PosControl::run_z_controller()
 
     // Acceleration Controller
 
-    float z_accel_meas;         // actual acceleration
     // Calculate Earth Frame Z acceleration
-    z_accel_meas = -(_ahrs.get_accel_ef_blended().z + GRAVITY_MSS) * 100.0f;
+    const float z_accel_meas = get_z_accel_cmss();
+
     // ensure imax is always large enough to overpower hover throttle
     if (_motors.get_throttle_hover() * 1000.0f > _pid_accel_z.imax()) {
         _pid_accel_z.imax(_motors.get_throttle_hover() * 1000.0f);

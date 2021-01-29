@@ -342,6 +342,9 @@ protected:
     // get throttle using vibration resistant calculation (uses feed forward with manually calculated gain)
     float get_throttle_with_vibration_override();
 
+    // get earth-frame Z-axis acceleration with gravity removed in cm/s/s with +ve being up
+    float get_z_accel_cmss() const { return -(_ahrs.get_accel_ef_blended().z + GRAVITY_MSS) * 100.0f; }
+
     ///
     /// xy controller private methods
     ///
