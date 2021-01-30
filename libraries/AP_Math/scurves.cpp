@@ -54,6 +54,14 @@ void scurves::init()
     _delta_unit.zero();
 }
 
+// set maximum earth-frame speed and acceleration in cm/s and cm/s/s
+// path is re-calculated using these limits
+void scurves::set_speed_accel(float speed_xy_cms, float speed_up_cms, float speed_down_cms,
+                              float accel_xy_cmss, float accel_z_cmss)
+{
+    // re-calculate the s-curve path based on update speeds and accelerations
+}
+
 // generate an optimal jerk limited curve in 3D space that moves over a straight line between two points
 // origin and destination are offsets from EKF origin in cm
 // speed and acceleration parameters are limits in cm/s or cm/s/s
