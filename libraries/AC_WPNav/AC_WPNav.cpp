@@ -200,6 +200,8 @@ void AC_WPNav::set_speed_xy(float speed_cms)
     // range check target speed
     if (speed_cms >= WPNAV_WP_SPEED_MIN) {
         _wp_desired_speed_xy_cms = speed_cms;
+        _pos_control.set_max_speed_xy(_wp_desired_speed_xy_cms);
+        update_track_with_speed_accel_limits();
     }
 }
 
@@ -207,12 +209,14 @@ void AC_WPNav::set_speed_xy(float speed_cms)
 void AC_WPNav::set_speed_up(float speed_up_cms)
 {
     _pos_control.set_max_speed_z(_pos_control.get_max_speed_down(), speed_up_cms);
+    update_track_with_speed_accel_limits();
 }
 
 /// set current target descent rate during wp navigation
 void AC_WPNav::set_speed_down(float speed_down_cms)
 {
     _pos_control.set_max_speed_z(speed_down_cms, _pos_control.get_max_speed_up());
+    update_track_with_speed_accel_limits();
 }
 
 /// set_wp_destination waypoint using location class
@@ -574,6 +578,28 @@ bool AC_WPNav::advance_wp_target_along_track(float dt)
 
     // successfully advanced along track
     return true;
+}
+
+/// recalculate path with update speed and/or acceleration limits
+void AC_WPNav::update_track_with_speed_accel_limits()
+{
+    // update this leg
+    if (_this_leg_is_spline) {
+        _spline_this_leg.set_speed_accel(_pos_control.get_max_speed_xy(), _pos_control.get_max_speed_up(), _pos_control.get_max_speed_down(),
+                                         _wp_accel_cmss, _wp_accel_z_cmss);
+    } else {
+        _scurve_this_leg.set_speed_accel(_pos_control.get_max_speed_xy(), _pos_control.get_max_speed_up(), _pos_control.get_max_speed_down(),
+                                         _wp_accel_cmss, _wp_accel_z_cmss);
+    }
+
+    // update next leg
+    if (_next_leg_is_spline) {
+        _spline_next_leg.set_speed_accel(_pos_control.get_max_speed_xy(), _pos_control.get_max_speed_up(), _pos_control.get_max_speed_down(),
+                                         _wp_accel_cmss, _wp_accel_z_cmss);
+    } else {
+        _scurve_this_leg.set_speed_accel(_pos_control.get_max_speed_xy(), _pos_control.get_max_speed_up(), _pos_control.get_max_speed_down(),
+                                         _wp_accel_cmss, _wp_accel_z_cmss);
+    }
 }
 
 /// get_wp_distance_to_destination - get horizontal distance to destination in cm
