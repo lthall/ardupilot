@@ -18,6 +18,7 @@
 #include <AP_Math/AP_Math.h>
 #include <AP_HAL/AP_HAL.h>
 #include "scurves.h"
+#include <GCS_MAVLink/GCS.h>
 
 extern const AP_HAL::HAL &hal;
 
@@ -60,6 +61,11 @@ void scurves::set_speed_accel(float speed_xy_cms, float speed_up_cms, float spee
                               float accel_xy_cmss, float accel_z_cmss)
 {
     // re-calculate the s-curve path based on update speeds and accelerations
+
+    // debug
+    gcs().send_text(MAV_SEVERITY_CRITICAL, "scurve sxy:%4.2f su:%4.2f sd:%4.2f axy:%4.2f az:%4.2f",
+                    (double)speed_xy_cms, (double)speed_up_cms, (double)speed_down_cms,
+                    (double)accel_xy_cmss, (double)accel_z_cmss);
 }
 
 // generate an optimal jerk limited curve in 3D space that moves over a straight line between two points
