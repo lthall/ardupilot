@@ -16,6 +16,7 @@
 #include <AP_HAL/AP_HAL.h>
 #include <AP_Math/AP_Math.h>
 #include "spline_curve.h"
+#include <GCS_MAVLink/GCS.h>
 
 extern const AP_HAL::HAL &hal;
 
@@ -42,6 +43,11 @@ void spline_curve::set_speed_accel(float speed_xy_cms, float speed_up_cms, float
     _speed_down_cms = MAX(fabsf(speed_down_cms), SPEED_MIN);
     _accel_xy_cmss = MAX(accel_xy_cmss, ACCEL_MIN);
     _accel_z_cmss = MAX(accel_z_cmss, ACCEL_MIN);
+
+    // debug
+    gcs().send_text(MAV_SEVERITY_CRITICAL, "spline sxy:%4.2f su:%4.2f sd:%4.2f axy:%4.2f az:%4.2f",
+                    (double)speed_xy_cms, (double)speed_up_cms, (double)speed_down_cms,
+                    (double)accel_xy_cmss, (double)accel_z_cmss);
 }
 
 // set origin and destination using position vectors (offset from EKF origin in cm
