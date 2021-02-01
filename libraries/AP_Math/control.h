@@ -42,3 +42,7 @@ float stopping_point(float velocity, float p, float accel_max);
 
 // limit vector to a given length, returns true if vector was limited
 bool limit_vector_length(float &vector_x, float &vector_y, float max_length);
+
+// calculate the maximum acceleration or velocity in a given direction
+// based on horizontal and vertical limits.
+float kinematic_limit(Vector3f direction, float max_xy, float max_z_pos, float max_z_neg);

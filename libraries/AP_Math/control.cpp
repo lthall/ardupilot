@@ -199,3 +199,45 @@ bool limit_vector_length(float &vector_x, float &vector_y, float max_length)
     }
     return false;
 }
+
+// calculate the maximum acceleration or velocity in a given direction
+// based on horizontal and vertical limits.
+float kinematic_limit(Vector3f direction, float max_xy, float max_z_pos, float max_z_neg)
+{
+    max_xy = fabsf(max_xy);
+    max_z_pos = fabsf(max_z_pos);
+    max_z_neg = fabsf(max_z_neg);
+
+    if (is_zero(direction.length_squared())) {
+        return 0.0f;
+    }
+
+    direction.normalize();
+    const float xy_length = Vector2f(direction.x, direction.y).length();
+
+    if (is_zero(xy_length)) {
+        if (is_positive(direction.z)) {
+            return max_z_pos;
+        } else {
+            return max_z_neg;
+        }
+    } else if (is_zero(direction.z)) {
+        return max_xy;
+    } else {
+        const float slope = direction.z/xy_length;
+        if (is_positive(slope)) {
+            if (fabsf(slope) < max_z_pos/max_xy) {
+                return max_xy/xy_length;
+            } else {
+                return fabsf(max_z_pos/direction.z);
+            }
+        } else {
+            if (fabsf(slope) < max_z_neg/max_xy) {
+                return max_xy/xy_length;
+            } else {
+                return fabsf(max_z_neg/direction.z);
+            }
+        }
+    }
+    return 0.0f;
+}
