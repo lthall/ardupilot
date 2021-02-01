@@ -597,7 +597,7 @@ void AC_WPNav::update_track_with_speed_accel_limits()
         _spline_next_leg.set_speed_accel(_pos_control.get_max_speed_xy(), _pos_control.get_max_speed_up(), _pos_control.get_max_speed_down(),
                                          _wp_accel_cmss, _wp_accel_z_cmss);
     } else {
-        _scurve_this_leg.set_speed_accel(_pos_control.get_max_speed_xy(), _pos_control.get_max_speed_up(), _pos_control.get_max_speed_down(),
+        _scurve_next_leg.set_speed_accel(_pos_control.get_max_speed_xy(), _pos_control.get_max_speed_up(), _pos_control.get_max_speed_down(),
                                          _wp_accel_cmss, _wp_accel_z_cmss);
     }
 }
