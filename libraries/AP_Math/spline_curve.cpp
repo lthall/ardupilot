@@ -124,9 +124,9 @@ void spline_curve::calc_dt_speed_max(float time, float distance_delta, float &sp
     Vector3f spline_vel;
     Vector3f spline_accel;
     Vector3f spline_jerk;
+    Vector3f spline_accel_norm;
     float spline_vel_length;
     float spline_accel_norm_length;
-    float accel_max = 0.5f * _accel_xy_cmss;
 
     calc_target_pos_vel(time, target_pos, spline_vel, spline_accel, spline_jerk);
 
@@ -155,16 +155,18 @@ void spline_curve::calc_dt_speed_max(float time, float distance_delta, float &sp
         spline_vel_unit = spline_vel.normalized();
         spline_dt = distance_delta / spline_vel_length;
         float spline_accel_tangent_length = spline_accel.dot(spline_vel_unit);
-        Vector3f spline_accel_norm = spline_accel - (spline_vel_unit * spline_accel_tangent_length);
+        spline_accel_norm = spline_accel - (spline_vel_unit * spline_accel_tangent_length);
         spline_accel_norm_length = spline_accel_norm.length();
     }
     // limit maximum speed the speed that will reach normal acceleration of 0.5 * _accel_xy_cmss
-    // todo: acceleration and velocity limits should account for both xy and z limits.
-    if (spline_accel_norm_length/accel_max > sq(spline_vel_length / _speed_xy_cms)) {
-        speed_xy_max = spline_vel_length / safe_sqrt(spline_accel_norm_length/accel_max);
+    float speed_max = kinimatic_limit(spline_vel_unit, _speed_xy_cms, _speed_up_cms, _speed_down_cms);
+    float accel_norm_max = 0.5f * kinimatic_limit(spline_accel_norm, _accel_xy_cmss, _accel_z_cmss, _accel_z_cmss);
+    if (spline_accel_norm_length/accel_norm_max > sq(spline_vel_length / speed_max)) {
+        speed_xy_max = spline_vel_length / safe_sqrt(spline_accel_norm_length/accel_norm_max);
     } else {
-        speed_xy_max = _speed_xy_cms;
+        speed_xy_max = speed_max;
     }
+    float accel_max = 0.5f * kinimatic_limit(spline_vel_unit, _accel_xy_cmss, _accel_z_cmss, _accel_z_cmss);
     float Dist = (_destination - target_pos).length();
     speed_xy_max = MIN(speed_xy_max, safe_sqrt(2.0f * accel_max * (Dist + sq(_destination_speed_max) / (2.0f*accel_max))));
 }
