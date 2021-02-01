@@ -175,6 +175,7 @@ void AC_WPNav::wp_and_spline_init(float speed_cms)
     _scurve_next_leg = scurves(tc * 2.0, jerk * 100.0, _wp_accel_cmss, _wp_desired_speed_xy_cms);
     _scurve_prev_leg.init();
     _scurve_this_leg.init();
+    _scurve_next_leg.init();
     _track_scalar_dt = 1.0f;
 
     // reset input shaped terrain offsets
