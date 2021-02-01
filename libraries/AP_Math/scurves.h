@@ -97,8 +97,6 @@ private:
     void add_segments(float Pp);
     // calculate duration of time segments for basic acceleration and deceleration curve from and to stationary.
     void cal_pos(float tj, float V0, float Jp, float Ap, float Vp, float Pp, float &Jp_out, float &t2_out, float &t4_out, float &t6_out) const;
-    // calculate duration of time segments for basic acceleration and deceleration curve from and to stationary.
-    void cal_posfast(float tj, float Jp, float Ap, float Vp, float Pp, float &Jp_out, float &t2_out, float &t4_out, float &t6_out) const;
 
     // generate three time segment raised cosine jerk profile
     void add_segments_incr_const_decr_jerk(uint16_t &seg_pnt, float tj, float Jp, float Tcj);
@@ -133,7 +131,12 @@ private:
     float _t;           // time
 
     // arrays
-    const static uint16_t segments_max = 17;    // maximum number of time segments
+    const static uint16_t segments_max = 23;    // maximum number of time segments
+    // segment 0 is the initial segment
+    // segments 1 to 7 are the acceleration segments
+    // segments 8 to 14 are the speed adjust segments
+    // segment 15 is the constant velocity segment
+    // segment 16 to 22 is the deceleration segment
     uint16_t num_segs;    // number of time segments being used
     struct {
         float jerk_ref;   // jerk value for time segment
