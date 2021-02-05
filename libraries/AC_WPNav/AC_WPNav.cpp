@@ -316,12 +316,16 @@ bool AC_WPNav::set_wp_destination(const Vector3f& destination, bool terrain_alt)
     _destination = destination;
     _terrain_alt = terrain_alt;
 
-    _scurve_this_leg.calculate_leg(_origin, _destination,
+    if (_flags.fast_waypoint && !_next_leg_is_spline && !_scurve_next_leg.finished()) {
+        _scurve_this_leg = _scurve_next_leg;
+    } else {
+        _scurve_this_leg.calculate_leg(_origin, _destination,
                                    _pos_control.get_max_speed_xy(), _pos_control.get_max_speed_up(), _pos_control.get_max_speed_down(),
                                    _wp_accel_cmss, _wp_accel_z_cmss);
-    if (!is_zero(origin_speed)) {
-        // rebuild start of scurve if we have a non-zero origin speed
-        _scurve_this_leg.set_origin_speed_max(origin_speed);
+        if (!is_zero(origin_speed)) {
+            // rebuild start of scurve if we have a non-zero origin speed
+            _scurve_this_leg.set_origin_speed_max(origin_speed);
+        }
     }
 
     _this_leg_is_spline = false;
@@ -509,7 +513,7 @@ bool AC_WPNav::advance_wp_target_along_track(float dt)
         s_finish = _scurve_this_leg.finished();
 
         // check for change of leg on fast waypoint
-        if (_flags.fast_waypoint && _scurve_this_leg.braking()) {
+        if (_flags.fast_waypoint && _scurve_this_leg.braking() && is_zero(_scurve_next_leg.get_time_elapsed())) {
             float time_to_destination = _scurve_this_leg.get_time_remaining();
             Vector3f turn_pos, turn_vel, turn_accel;
             turn_pos = -_scurve_this_leg.get_track();
@@ -518,7 +522,14 @@ bool AC_WPNav::advance_wp_target_along_track(float dt)
             _scurve_next_leg.move_from_time_pos_vel_accel(time_to_destination / 2.0, turn_pos, turn_vel, turn_accel);
             const float speed_min = MIN(_scurve_this_leg.get_speed_max(), _scurve_next_leg.get_speed_max());
             const float accel_min = MIN(_scurve_this_leg.get_accel_max(), _scurve_next_leg.get_accel_max());
-            s_finish = s_finish || ((_scurve_this_leg.get_time_remaining() < _scurve_next_leg.time_end() / 2.0) && (turn_pos.length() < _wp_radius_cm) && (Vector2f(turn_vel.x, turn_vel.y).length() < speed_min) && (Vector2f(turn_accel.x, turn_accel.y).length() < 2*accel_min));
+            if((_scurve_this_leg.get_time_remaining() < _scurve_next_leg.time_end() / 2.0) && (turn_pos.length() < _wp_radius_cm) && (Vector2f(turn_vel.x, turn_vel.y).length() < speed_min) && (Vector2f(turn_accel.x, turn_accel.y).length() < 2*accel_min)) {
+                _scurve_next_leg.move_from_pos_vel_accel(_track_scalar_dt * dt, target_pos, target_vel, target_accel);
+            }
+        } else if(!is_zero(_scurve_next_leg.get_time_elapsed())) {
+            _scurve_next_leg.move_from_pos_vel_accel(_track_scalar_dt * dt, target_pos, target_vel, target_accel);
+            if (_scurve_next_leg.get_time_elapsed() >= _scurve_this_leg.get_time_remaining()) {
+                s_finish = true;
+            }
         }
     } else {
         // splinetarget_vel
