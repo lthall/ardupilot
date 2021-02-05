@@ -430,6 +430,9 @@ void scurves::move_from_time_pos_vel_accel(float time, Vector3f &pos, Vector3f &
 // time has reached the end of the sequence
 bool scurves::finished() const
 {
+    if (num_segs != segments_max) {
+        return true;
+    }
     return _t > time_end();
 }
 
