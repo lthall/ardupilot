@@ -69,9 +69,6 @@ void scurves::set_speed_accel(float speed_xy_cms, float speed_up_cms, float spee
 {
     // segment accelerations can not be changed after segment creation.
     float track_speed_max = kinimatic_limit(_delta_unit, speed_xy_cms, speed_up_cms, fabsf(speed_down_cms));
-//    hal.console->printf("scurve sxy:%4.2f su:%4.2f sd:%4.2f axy:%4.2f az:%4.2f sm:%4.2f\n",
-//    (double)speed_xy_cms, (double)speed_up_cms, (double)speed_down_cms,
-//    (double)accel_xy_cmss, (double)accel_z_cmss, (double)track_speed_max);
 
     if (is_equal(vel_max, track_speed_max)) {
         // New speed is equal to current speed maximum
@@ -289,17 +286,11 @@ void scurves::calculate_leg(const Vector3f &origin, const Vector3f &destination,
                    float accel_xy_cmss, float accel_z_cmss)
 {
     init();
-//    hal.console->printf("scurve ox:%4.2f oy:%4.2f oz:%4.2f dx:%4.2f dy:%4.2f dz:%4.2f\n",
-//    (double)origin.x, (double)origin.y, (double)origin.z,
-//    (double)destination.x, (double)destination.y, (double)destination.z);
 
     // update speed and acceleration limits along track
     set_kinematic_limits(origin, destination,
                          speed_xy_cms, speed_up_cms, speed_down_cms,
                          accel_xy_cmss, accel_z_cmss);
-//    hal.console->printf("scurve sxy:%4.2f su:%4.2f sd:%4.2f axy:%4.2f az:%4.2f am:%4.2f sm:%4.2f\n",
-//    (double)speed_xy_cms, (double)speed_up_cms, (double)speed_down_cms,
-//    (double)accel_xy_cmss, (double)accel_z_cmss, (double)accel_max, (double)vel_max);
 
     // avoid divide-by zeros.  Track will be left as a zero length track
     if (!is_positive(otj) || !is_positive(jerk_max) || !is_positive(accel_max) || !is_positive(vel_max)) {
@@ -439,6 +430,9 @@ void scurves::move_from_time_pos_vel_accel(float time, Vector3f &pos, Vector3f &
 // time has reached the end of the sequence
 bool scurves::finished() const
 {
+    if (num_segs != segments_max) {
+        return true;
+    }
     return _t > time_end();
 }
 
