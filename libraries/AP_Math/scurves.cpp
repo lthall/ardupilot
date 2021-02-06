@@ -399,6 +399,99 @@ void scurves::set_destination_speed_max(float speed_cms)
     }
 }
 
+// set the maximum vehicle speed at the destination in cm/s
+void scurves::set_min_length()
+{
+    // Check path has been defined
+    if (num_segs != segments_max) {
+        return;
+    }
+
+    if (is_zero(_t)) {
+        init();
+        return;
+    }
+
+    if (_t >= segment[SEG_CONST].end_time) {
+        return;
+    }
+
+    float Pend = segment[SEG_DECEL_END].end_pos;
+    uint16_t seg;
+
+    if (_t >= segment[SEG_ACCEL_END].end_time && _t <= segment[SEG_CHANGE_END].end_time) {
+        // In the change speed phase
+        // Move adjust phase to acceleration phase to provide room for further speed adjustments
+
+        // set initial segment to last acceleration segment
+        segment[SEG_INIT].jtype = jtype_t::CONSTANT;
+        segment[SEG_INIT].jerk_ref = 0.0f;
+        segment[SEG_INIT].end_time = segment[SEG_ACCEL_END].end_time;
+        segment[SEG_INIT].end_accel = segment[SEG_ACCEL_END].end_accel;
+        segment[SEG_INIT].end_vel = segment[SEG_ACCEL_END].end_vel;
+        segment[SEG_INIT].end_pos = segment[SEG_ACCEL_END].end_pos;
+
+        // move change segments to acceleration segments
+        for (uint8_t i = SEG_INIT+1; i <= SEG_ACCEL_END; i++) {
+            segment[i].jtype = segment[i+7].jtype;
+            segment[i].jerk_ref = segment[i+7].jerk_ref;
+            segment[i].end_time = segment[i+7].end_time;
+            segment[i].end_accel = segment[i+7].end_accel;
+            segment[i].end_vel = segment[i+7].end_vel;
+            segment[i].end_pos = segment[i+7].end_pos;
+        }
+    }
+
+    // Adjust the INIT and ACCEL segments for new speed
+    if ( (_t <= segment[SEG_ACCEL_MAX].end_time) && is_positive(segment[SEG_ACCEL_MAX].end_time - segment[SEG_ACCEL_MAX-1].end_time) && (vel_max < segment[SEG_ACCEL_END].end_vel) && is_positive(segment[SEG_ACCEL_MAX].end_accel) ) {
+        // Path has not finished constant positive acceleration segment
+        // Reduce velocity as close to target velocity as possible
+
+        float Vstart = segment[SEG_INIT].end_vel;
+
+        // minimum velocity that can be obtained by shortening SEG_ACCEL_MAX
+        float Vmin = segment[SEG_ACCEL_END].end_vel - segment[SEG_ACCEL_MAX].end_accel * (segment[SEG_ACCEL_MAX].end_time - MAX(_t, segment[SEG_ACCEL_MAX-1].end_time));
+
+        seg = SEG_INIT+1;
+
+        float Jp, t2, t4, t6;
+        cal_pos(otj, Vstart, jerk_max, accel_max, Vmin, Pend / 2.0, Jp, t2, t4, t6);
+
+        add_segments_incr_const_decr_jerk(seg, otj, Jp, t2);
+        add_segment_const_jerk(seg, t4, 0.0);
+        add_segments_incr_const_decr_jerk(seg, otj, -Jp, t6);
+
+        // add empty speed adjust segments
+        for (uint8_t i = SEG_ACCEL_END+1; i <= SEG_CONST; i++) {
+            segment[i].jtype = jtype_t::CONSTANT;
+            segment[i].jerk_ref = 0.0f;
+            segment[i].end_time = segment[SEG_ACCEL_END].end_time;
+            segment[i].end_accel = 0.0f;
+            segment[i].end_vel = segment[SEG_ACCEL_END].end_vel;
+            segment[i].end_pos = segment[SEG_ACCEL_END].end_pos;
+        }
+
+    } else if (_t >= segment[SEG_CHANGE_END].end_time && _t <= segment[SEG_CONST].end_time) {
+        // In the constant speed phase
+        // Move adjust phase to acceleration phase to provide room for further speed adjustments
+
+        // set constant speed section to end now
+
+        float Jt_out, At_out, Vt_out, Pt_out;
+        update(_t, Jt_out, At_out, Vt_out, Pt_out);
+        segment[SEG_CONST].end_time = _t;
+        segment[SEG_CONST].end_pos = Pt_out;
+    }
+
+    float Jp, t2, t4, t6;
+    cal_pos(otj, 0.0f, jerk_max, accel_max, segment[SEG_CONST].end_vel, Pend / 2.0, Jp, t2, t4, t6);
+
+    seg = SEG_CONST + 1;
+    add_segments_incr_const_decr_jerk(seg, otj, -Jp, t6);
+    add_segment_const_jerk(seg, t4, 0.0);
+    add_segments_incr_const_decr_jerk(seg, otj, Jp, t2);
+}
+
 // Straight implementations
 
 // increment time pointer and return the position, velocity and acceleration vectors relative to the origin

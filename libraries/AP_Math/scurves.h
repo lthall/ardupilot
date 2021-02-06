@@ -40,6 +40,9 @@ public:
     // set the maximum vehicle speed at the destination in cm/s
     void set_destination_speed_max(float speed_cms);
 
+    // set the track to the minimum length given the current position along the track
+    void set_min_length();
+
     // increment time pointer and return the position, velocity and acceleration vectors relative to the origin
     void move_from_pos_vel_accel(float dt, Vector3f &pos, Vector3f &vel, Vector3f &accel);
     // return the position, velocity and acceleration vectors relative to the destination
