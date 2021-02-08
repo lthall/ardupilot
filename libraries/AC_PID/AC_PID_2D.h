@@ -14,7 +14,7 @@ class AC_PID_2D {
 public:
 
     // Constructor for PID
-    AC_PID_2D(float initial_p, float initial_i, float initial_d, float initial_imax, float initial_filt_hz, float initial_filt_d_hz, float dt);
+    AC_PID_2D(float initial_p, float initial_i, float initial_d, float initial_ff, float initial_imax, float initial_filt_hz, float initial_filt_d_hz, float dt);
 
     // set_dt - set time step in seconds
     void        set_dt(float dt);
@@ -31,6 +31,7 @@ public:
     Vector2f    get_i();
     Vector2f    get_i_shrink();   // get_i but do not allow integrator to grow (it may shrink)
     Vector2f    get_d();
+    Vector2f    get_ff(Vector2f target);
 
     // reset_I - reset the integrator
     void        reset_I();
@@ -85,6 +86,7 @@ protected:
     AP_Float        _kp;
     AP_Float        _ki;
     AP_Float        _kd;
+    AP_Float        _kff;
     AP_Float        _imax;
     AP_Float        _filt_hz;                   // PID Input filter frequency in Hz
     AP_Float        _filt_d_hz;                 // D term filter frequency in Hz
