@@ -42,11 +42,16 @@ const AP_Param::GroupInfo AC_PID_2D::var_info[] = {
     // @Units: Hz
     AP_GROUPINFO("D_FILT", 5, AC_PID_2D, _filt_d_hz, AC_PID_2D_FILT_D_HZ_DEFAULT),
 
+    // @Param: FF
+    // @DisplayName: PID Derivative Gain
+    // @Description: FF Gain which produces an output that is proportional to target
+    AP_GROUPINFO("FF",    6, AC_PID_2D, _kff, 0),
+
     AP_GROUPEND
 };
 
 // Constructor
-AC_PID_2D::AC_PID_2D(float initial_p, float initial_i, float initial_d, float initial_imax, float initial_filt_hz, float initial_filt_d_hz, float dt) :
+AC_PID_2D::AC_PID_2D(float initial_p, float initial_i, float initial_d, float initial_ff, float initial_imax, float initial_filt_hz, float initial_filt_d_hz, float dt) :
     _dt(dt)
 {
     // load parameter values from eeprom
@@ -55,6 +60,7 @@ AC_PID_2D::AC_PID_2D(float initial_p, float initial_i, float initial_d, float in
     _kp = initial_p;
     _ki = initial_i;
     _kd = initial_d;
+    _kff = initial_ff;
     _imax = fabsf(initial_imax);
     filt_hz(initial_filt_hz);
     filt_d_hz(initial_filt_d_hz);
@@ -174,6 +180,12 @@ Vector2f AC_PID_2D::get_d()
 {
     // derivative component
     return Vector2f(_kd * _derivative.x, _kd * _derivative.y);
+}
+
+Vector2f AC_PID_2D::get_ff(Vector2f target)
+{
+    // derivative component
+    return Vector2f(_kff * target.x, _kff * target.y);
 }
 
 Vector2f AC_PID_2D::get_pid()
