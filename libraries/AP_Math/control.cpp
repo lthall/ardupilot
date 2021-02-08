@@ -213,30 +213,29 @@ float kinematic_limit(Vector3f direction, float max_xy, float max_z_pos, float m
     }
 
     direction.normalize();
-    const float z_length = direction.z;
     const float xy_length = Vector2f(direction.x, direction.y).length();
 
     if (is_zero(xy_length)) {
-        if (is_positive(z_length)) {
+        if (is_positive(direction.z)) {
             return max_z_pos;
         } else {
             return max_z_neg;
         }
-    } else if (is_zero(z_length)) {
+    } else if (is_zero(direction.z)) {
         return max_xy;
     } else {
-        const float slope = z_length/xy_length;
+        const float slope = direction.z/xy_length;
         if (is_positive(slope)) {
             if (fabsf(slope) < max_z_pos/max_xy) {
                 return max_xy/xy_length;
             } else {
-                return max_z_pos/z_length;
+                return fabsf(max_z_pos/direction.z);
             }
         } else {
             if (fabsf(slope) < max_z_neg/max_xy) {
                 return max_xy/xy_length;
             } else {
-                return max_z_neg/z_length;
+                return fabsf(max_z_neg/direction.z);
             }
         }
     }
