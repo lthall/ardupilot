@@ -231,7 +231,7 @@ AC_PosControl::AC_PosControl(AP_AHRS_View& ahrs, const AP_InertialNav& inav,
     _p_vel_z(POSCONTROL_VEL_Z_P),
     _pid_accel_z(POSCONTROL_ACC_Z_P, POSCONTROL_ACC_Z_I, POSCONTROL_ACC_Z_D, 0.0f, POSCONTROL_ACC_Z_IMAX, 0.0f, POSCONTROL_ACC_Z_FILT_HZ, 0.0f, POSCONTROL_ACC_Z_DT),
     _p_pos_xy(POSCONTROL_POS_XY_P),
-    _pid_vel_xy(POSCONTROL_VEL_XY_P, POSCONTROL_VEL_XY_I, POSCONTROL_VEL_XY_D, POSCONTROL_VEL_XY_IMAX, POSCONTROL_VEL_XY_FILT_HZ, POSCONTROL_VEL_XY_FILT_D_HZ, POSCONTROL_DT_50HZ),
+    _pid_vel_xy(POSCONTROL_VEL_XY_P, POSCONTROL_VEL_XY_I, POSCONTROL_VEL_XY_D, 0.0f, POSCONTROL_VEL_XY_IMAX, POSCONTROL_VEL_XY_FILT_HZ, POSCONTROL_VEL_XY_FILT_D_HZ, POSCONTROL_DT_50HZ),
     _dt(POSCONTROL_DT_400HZ),
     _speed_down_cms(POSCONTROL_SPEED_DOWN),
     _speed_up_cms(POSCONTROL_SPEED_UP),
@@ -1047,7 +1047,7 @@ void AC_PosControl::run_xy_controller(float dt)
 
     // the following section converts desired velocities in lat/lon directions to accelerations in lat/lon frame
 
-    Vector2f accel_target, vel_xy_p, vel_xy_i, vel_xy_d;
+    Vector2f accel_target, vel_xy_p, vel_xy_i, vel_xy_d, vel_xy_ff;
 
     // check if vehicle velocity is being overridden
     if (_flags.vehicle_horiz_vel_override) {
@@ -1079,9 +1079,12 @@ void AC_PosControl::run_xy_controller(float dt)
     // get d
     vel_xy_d = _pid_vel_xy.get_d();
 
+    // get d
+    vel_xy_ff = _pid_vel_xy.get_ff(Vector2f(_vel_target.x, _vel_target.y));
+
     // acceleration to correct for velocity error and scale PID output to compensate for optical flow measurement induced EKF noise
-    accel_target.x = (vel_xy_p.x + vel_xy_i.x + vel_xy_d.x) * ekfNavVelGainScaler;
-    accel_target.y = (vel_xy_p.y + vel_xy_i.y + vel_xy_d.y) * ekfNavVelGainScaler;
+    accel_target.x = (vel_xy_p.x + vel_xy_i.x + vel_xy_d.x + vel_xy_ff.x) * ekfNavVelGainScaler;
+    accel_target.y = (vel_xy_p.y + vel_xy_i.y + vel_xy_d.y + vel_xy_ff.y) * ekfNavVelGainScaler;
 
     // reset accel to current desired acceleration
     if (_flags.reset_accel_to_lean_xy) {
