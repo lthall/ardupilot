@@ -8,47 +8,46 @@ public:
 
     // constructors
     scurves();
-    scurves(float tj, float Jp, float Ap, float Vp);
+    scurves(float tj, float Jm, float Am, float Vm);
 
-    // initialise the S-curve track
+    // initialise the S-Curve path
     void init();
 
-    // get or set maximum speed along track in cm/s
+    // get or set maximum speed along path
     float get_speed_max() const { return vel_max; }
-    void set_speed_max(float speed_cms) { vel_max = speed_cms; }
+    void set_speed_max(float speed) { vel_max = speed; }
 
-    // get or set maximum acceleration along track in cm/s/s
+    // get or set maximum acceleration along path
     float get_accel_max() const { return accel_max; }
     void set_accel_max(float acceleration_max) { accel_max = acceleration_max; }
 
-    // set maximum earth-frame speed and acceleration in cm/s and cm/s/s
-    // path is re-calculated using these limits
-    void set_speed_accel(float speed_xy_cms, float speed_up_cms, float speed_down_cms,
-                         float accel_xy_cmss, float accel_z_cmss);
+    // set maximum velocity and re-calculate the path using these limits
+    void set_speed(float speed_xy, float speed_up, float speed_down);
 
-    // generate an optimal jerk limited curve in 3D space that moves over a straight line between two points
-    // origin and destination are offsets from EKF origin in cm
-    // speed and acceleration parameters are limits in cm/s or cm/s/s
+    // generate a trigonometric S-Curve path in 3D space that moves over a straight line
+    // between two points defined by the origin and destination.
     void calculate_leg(const Vector3f &origin, const Vector3f &destination,
-                       float speed_xy_cms, float speed_up_cms, float speed_down_cms,
-                       float accel_xy_cmss, float accel_z_cmss);
+                       float speed_xy, float speed_up, float speed_down,
+                       float accel_xy, float accel_z);
 
-    // set the maximum vehicle speed at the origin in cm/s
+    // set the maximum vehicle speed at the origin
     // returns the expected speed at the origin (will always be equal or lower to speed_cm)
-    float set_origin_speed_max(float speed_cms);
+    float set_origin_speed_max(float speed);
 
-    // set the maximum vehicle speed at the destination in cm/s
-    void set_destination_speed_max(float speed_cms);
+    // set the maximum vehicle speed at the destination
+    void set_destination_speed_max(float speed);
 
     // increment time pointer and return the position, velocity and acceleration vectors relative to the origin
     void move_from_pos_vel_accel(float dt, Vector3f &pos, Vector3f &vel, Vector3f &accel);
-    // return the position, velocity and acceleration vectors relative to the destination
+
+    // increment time pointer and return the position, velocity and acceleration vectors relative to the destination
     void move_to_pos_vel_accel(float dt, Vector3f &pos, Vector3f &vel, Vector3f &accel);
-    // return the position, velocity and acceleration vectors relative to the origin
+
+    // return the position, velocity and acceleration vectors relative to the origin at a specified time along the path
     void move_from_time_pos_vel_accel(float time, Vector3f &pos, Vector3f &vel, Vector3f &accel);
 
     // return the change in position from origin to destination
-    const Vector3f& get_track() const { return _track; };
+    const Vector3f get_track() const { return _delta_unit * segment[num_segs].end_pos; };
 
     // return the current time pointer
     float get_time_elapsed() const { return _t; }
@@ -65,7 +64,7 @@ public:
     // time left before sequence will complete
     float get_time_remaining() const;
 
-    // time left before sequence will complete
+    // time when acceleration section of the sequence will complete
     float get_accel_finished_time() const;
 
     // return true if the sequence is braking to a stop
@@ -78,6 +77,7 @@ private:
 
     // calculate the jerk, acceleration, velocity and position at time t
     void update(float t, float &Jt_out, float &At_out, float &Vt_out, float &Pt_out);
+
     // calculate the jerk, acceleration, velocity and position at time _t
     void update(float &Jt_out, float &At_out, float &Vt_out, float &Pt_out) {
         return update(_t, Jt_out, At_out, Vt_out, Pt_out);
@@ -85,68 +85,86 @@ private:
 
     // calculate the jerk, acceleration, velocity and position at time t when running the constant jerk time segment
     void calc_javp_for_segment_const_jerk(float t, float J0, float A0, float V0, float P0, float &Jt, float &At, float &Vt, float &Pt) const;
+
     // Calculate the jerk, acceleration, velocity and position at time t when running the increasing jerk magnitude time segment based on a raised cosine profile
-    void calc_javp_for_segment_incr_jerk(float t, float tj, float Jp, float A0, float V0, float P0, float &Jt, float &At, float &Vt, float &Pt) const;
+    void calc_javp_for_segment_incr_jerk(float t, float tj, float Jm, float A0, float V0, float P0, float &Jt, float &At, float &Vt, float &Pt) const;
+
     // Calculate the jerk, acceleration, velocity and position at time t when running the decreasing jerk magnitude time segment based on a raised cosine profile
-    void calc_javp_for_segment_decr_jerk(float t, float tj, float Jp, float A0, float V0, float P0, float &Jt, float &At, float &Vt, float &Pt) const;
+    void calc_javp_for_segment_decr_jerk(float t, float tj, float Jm, float A0, float V0, float P0, float &Jt, float &At, float &Vt, float &Pt) const;
 
     // debugging messages
     void debug();
 
-    // generate time segments for straight segment
-    void add_segments(float Pp);
-    // calculate duration of time segments for basic acceleration and deceleration curve from and to stationary.
-    void cal_pos(float tj, float V0, float Jp, float Ap, float Vp, float Pp, float &Jp_out, float &t2_out, float &t4_out, float &t6_out) const;
+    // generate the segments for a path of length L
+    // the path consists of 23 segments
+    // 1 initial segment
+    // 7 segments forming the acceleration S-Curve
+    // 7 segments forming the velocity change S-Curve
+    // 1 constant velocity S-Curve
+    // 7 segments forming the deceleration S-Curve
+    void add_segments(float L);
 
-    // generate three time segment raised cosine jerk profile
-    void add_segments_incr_const_decr_jerk(uint16_t &seg_pnt, float tj, float Jp, float Tcj);
+    // calculate the segment times for the trigonometric S-Curve path defined by:
+    // V0 - initial velocity magnitude
+    // tj - duration of the raised cosine jerk profile
+    // Jm - maximum value of the raised cosine jerk profile
+    // Am - maximum constant acceleration
+    // Vm - maximum constant velocity
+    // L - Length of the path
+    void calculate_path(float V0, float tj, float Jm, float Am, float Vm, float L, float &Jm_out, float &t2_out, float &t4_out, float &t6_out) const;
+
+    // generate three time segments forming the jerk profile
+    void add_segments_jerk(uint16_t &seg_pnt, float tj, float Jm, float Tcj);
+
     // generate constant jerk time segment
     void add_segment_const_jerk(uint16_t &seg_pnt, float tin, float J0);
+
     // generate increasing jerk magnitude time segment based on a raised cosine profile
-    void add_segment_incr_jerk(uint16_t &seg_pnt, float tj, float Jp);
+    void add_segment_increasing_jerk(uint16_t &seg_pnt, float tj, float Jm);
+
     // generate decreasing jerk magnitude time segment based on a raised cosine profile
-    void add_segment_decr_jerk(uint16_t &seg_pnt, float tj, float Jp);
+    void add_segment_decrease_jerk(uint16_t &seg_pnt, float tj, float Jm);
 
-    // update speed and acceleration limits along track
-    // origin and destination are offsets from EKF origin in cm
-    // speed and acceleration parameters are limits in cm/s or cm/s/s
+    // set speed and acceleration limits for the path
+    // origin and destination are offsets from EKF origin
+    // speed and acceleration parameters are given in horizontal, up and down.
     void set_kinematic_limits(const Vector3f &origin, const Vector3f &destination,
-                              float speed_xy_cms, float speed_up_cms, float speed_down_cms,
-                              float accel_xy_cmss, float accel_z_cmss);
+                              float speed_xy, float speed_up, float speed_down,
+                              float accel_xy, float accel_z);
 
-    // scurve segment types
+    // S-Curve segment types
     enum class jtype_t {
         CONSTANT,
         POSITIVE,
         NEGATIVE
     };
 
+    // add single S-Curve segment
     void add_segment(uint16_t &seg_pnt, float end_time, jtype_t jtype, float jerk_ref, float end_accel, float end_vel, float end_pos);
 
     // members
     float otj;          // duration of jerk raised cosine time segment
     float jerk_max;     // maximum jerk magnitude
-    float accel_max;    // maximum acceleration along track
-    float vel_max;      // maximum velocity along track
-    float _t;           // time
+    float accel_max;    // maximum acceleration magnitude
+    float vel_max;      // maximum velocity magnitude
+    float _t;           // time pointer to define position on the path
 
     // arrays
     const static uint16_t segments_max = 23;    // maximum number of time segments
     // segment 0 is the initial segment
     // segments 1 to 7 are the acceleration segments
-    // segments 8 to 14 are the speed adjust segments
+    // segments 8 to 14 are the speed change segments
     // segment 15 is the constant velocity segment
     // segment 16 to 22 is the deceleration segment
     uint16_t num_segs;    // number of time segments being used
     struct {
-        float jerk_ref;   // jerk value for time segment
+        float jerk_ref;   // jerk reference value for time segment
         jtype_t jtype;    // segment type (jerk is constant, increasing or decreasing)
-        float end_time;   // initial time value for time segment
-        float end_accel;  // initial acceleration value for time segment
-        float end_vel;    // initial velocity value for time segment
-        float end_pos;    // initial position value for time segment
+        float end_time;   // final time value for segment
+        float end_accel;  // final acceleration value for segment
+        float end_vel;    // final velocity value for segment
+        float end_pos;    // final position value for segment
     } segment[segments_max];
 
-    Vector3f _track;      // total change in position from origin to destination
-    Vector3f _delta_unit; // reference direction vector for track
+    Vector3f _delta_unit; // reference direction vector for path
 };
