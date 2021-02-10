@@ -513,8 +513,8 @@ bool AC_WPNav::advance_wp_target_along_track(float dt)
         s_finish = _scurve_this_leg.finished();
 
         // check for change of leg on fast waypoint
-        if (_flags.fast_waypoint && _scurve_this_leg.braking() && is_zero(_scurve_next_leg.get_time_elapsed())) {
-            float time_to_destination = _scurve_this_leg.get_time_remaining();
+        float time_to_destination = _scurve_this_leg.get_time_remaining();
+        if (_flags.fast_waypoint && _scurve_this_leg.braking() && is_zero(_scurve_next_leg.get_time_elapsed()) && (time_to_destination <= _scurve_next_leg.get_accel_finished_time())) {
             Vector3f turn_pos, turn_vel, turn_accel;
             turn_pos = -_scurve_this_leg.get_track();
             _scurve_this_leg.move_from_time_pos_vel_accel(_scurve_this_leg.get_time_elapsed() + time_to_destination / 2.0, turn_pos, turn_vel, turn_accel);
@@ -600,8 +600,7 @@ void AC_WPNav::update_track_with_speed_accel_limits()
         _spline_this_leg.set_speed_accel(_pos_control.get_max_speed_xy(), _pos_control.get_max_speed_up(), _pos_control.get_max_speed_down(),
                                          _wp_accel_cmss, _wp_accel_z_cmss);
     } else {
-        _scurve_this_leg.set_speed_accel(_pos_control.get_max_speed_xy(), _pos_control.get_max_speed_up(), _pos_control.get_max_speed_down(),
-                                         _wp_accel_cmss, _wp_accel_z_cmss);
+        _scurve_this_leg.set_speed(_pos_control.get_max_speed_xy(), _pos_control.get_max_speed_up(), _pos_control.get_max_speed_down());
     }
 
     // update next leg
@@ -609,8 +608,7 @@ void AC_WPNav::update_track_with_speed_accel_limits()
         _spline_next_leg.set_speed_accel(_pos_control.get_max_speed_xy(), _pos_control.get_max_speed_up(), _pos_control.get_max_speed_down(),
                                          _wp_accel_cmss, _wp_accel_z_cmss);
     } else {
-        _scurve_next_leg.set_speed_accel(_pos_control.get_max_speed_xy(), _pos_control.get_max_speed_up(), _pos_control.get_max_speed_down(),
-                                         _wp_accel_cmss, _wp_accel_z_cmss);
+        _scurve_next_leg.set_speed(_pos_control.get_max_speed_xy(), _pos_control.get_max_speed_up(), _pos_control.get_max_speed_down());
     }
 }
 
