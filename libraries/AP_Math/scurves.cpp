@@ -22,11 +22,6 @@
 
 extern const AP_HAL::HAL &hal;
 
-#define SPEED_XY_MIN        50.0f   // minimum horizontal speed in cm/s
-#define SPEED_Z_MIN         20.0f   // minimum vertical speed in cm/s
-#define ACCEL_XY_MIN        50.0f   // minimum horizontal acceleration in cm/s/s
-#define ACCEL_Z_MIN         20.0f   // minimum vertical acceleration in cm/s/s
-
 #define SEG_INIT        0
 #define SEG_ACCEL_MAX   4
 #define SEG_ACCEL_END   7
@@ -45,14 +40,14 @@ scurves::scurves()
     num_segs = SEG_INIT;
 }
 
-scurves::scurves(float tj, float Jp, float Ap, float Vp) :
-    otj(tj), jerk_max(Jp), accel_max(Ap), vel_max(Vp)
+scurves::scurves(float tj, float Jm, float Am, float Vm) :
+    otj(tj), jerk_max(Jm), accel_max(Am), vel_max(Vm)
 {
     _t = 0.0;
     num_segs = SEG_INIT;
 }
 
-// initialise the S-curve track
+// initialise the S-Curve path
 void scurves::init()
 {
     _t = 0.0f;
@@ -62,13 +57,12 @@ void scurves::init()
     _delta_unit.zero();
 }
 
-// set maximum earth-frame speed and acceleration in cm/s and cm/s/s
-// path is re-calculated using these limits
-void scurves::set_speed_accel(float speed_xy_cms, float speed_up_cms, float speed_down_cms,
-                              float accel_xy_cmss, float accel_z_cmss)
+// set maximum velocity and re-calculate the path using these limits
+void scurves::set_speed_accel(float speed_xy, float speed_up, float speed_down,
+                              float accel_xy, float accel_z)
 {
     // segment accelerations can not be changed after segment creation.
-    float track_speed_max = kinematic_limit(_delta_unit, speed_xy_cms, speed_up_cms, fabsf(speed_down_cms));
+    float track_speed_max = kinematic_limit(_delta_unit, speed_xy, speed_up, fabsf(speed_down));
 
     if (is_equal(vel_max, track_speed_max)) {
         // New speed is equal to current speed maximum
@@ -176,12 +170,12 @@ void scurves::set_speed_accel(float speed_xy_cms, float speed_up_cms, float spee
 
         seg = SEG_INIT+1;
 
-        float Jp, t2, t4, t6;
-        cal_pos(otj, Vstart, jerk_max, accel_max, MAX(Vmin, vel_max), Pend / 2.0, Jp, t2, t4, t6);
+        float Jm, t2, t4, t6;
+        calculate_path(otj, jerk_max, Vstart, accel_max, MAX(Vmin, vel_max), Pend / 2.0, Jm, t2, t4, t6);
 
-        add_segments_incr_const_decr_jerk(seg, otj, Jp, t2);
+        add_segments_jerk(seg, otj, Jm, t2);
         add_segment_const_jerk(seg, t4, 0.0);
-        add_segments_incr_const_decr_jerk(seg, otj, -Jp, t6);
+        add_segments_jerk(seg, otj, -Jm, t6);
 
         // add empty speed adjust segments
         for (uint8_t i = SEG_ACCEL_END+1; i <= SEG_CONST; i++) {
@@ -193,12 +187,12 @@ void scurves::set_speed_accel(float speed_xy_cms, float speed_up_cms, float spee
             segment[i].end_pos = segment[SEG_ACCEL_END].end_pos;
         }
 
-        cal_pos(otj, 0.0f, jerk_max, accel_max, MAX(Vmin, vel_max), Pend / 2.0, Jp, t2, t4, t6);
+        calculate_path(otj, jerk_max, 0.0f, accel_max, MAX(Vmin, vel_max), Pend / 2.0, Jm, t2, t4, t6);
 
         seg = SEG_CONST +1;
-        add_segments_incr_const_decr_jerk(seg, otj, -Jp, t6);
+        add_segments_jerk(seg, otj, -Jm, t6);
         add_segment_const_jerk(seg, t4, 0.0);
-        add_segments_incr_const_decr_jerk(seg, otj, Jp, t2);
+        add_segments_jerk(seg, otj, Jm, t2);
 
         // add to constant velocity segment to end at the correct position
         float dP = (Pend - segment[SEG_DECEL_END].end_pos);
@@ -223,26 +217,26 @@ void scurves::set_speed_accel(float speed_xy_cms, float speed_up_cms, float spee
         // add velocity adjustment
         // check there is enough time to make velocity change
         // we use the approximation that the time will be distance/max_vel and 8 jerk segments
-        float Pp = segment[SEG_CONST].end_pos - segment[SEG_ACCEL_END].end_pos;
-        float Jp = 0;
+        float L = segment[SEG_CONST].end_pos - segment[SEG_ACCEL_END].end_pos;
+        float Jm = 0;
         float t2 = 0;
         float t4 = 0;
         float t6 = 0;
-        if ((vel_max < segment[SEG_ACCEL_END].end_vel) && (otj*12.0f < Pp/segment[SEG_ACCEL_END].end_vel)) {
+        if ((vel_max < segment[SEG_ACCEL_END].end_vel) && (otj*12.0f < L/segment[SEG_ACCEL_END].end_vel)) {
             // we have a problem here with small segments.
-            cal_pos(otj, vel_max, jerk_max, accel_max, segment[SEG_ACCEL_END].end_vel, Pp / 2.0, Jp, t6, t4, t2);
-            Jp = -Jp;
+            calculate_path(otj, jerk_max, vel_max, accel_max, segment[SEG_ACCEL_END].end_vel, L / 2.0, Jm, t6, t4, t2);
+            Jm = -Jm;
 
-        } else if ((vel_max > segment[SEG_ACCEL_END].end_vel) && (Pp/(otj*12.0f) > segment[SEG_ACCEL_END].end_vel)) {
-            float Vp = MIN(vel_max, Pp/(otj*12.0f));
-            cal_pos(otj, segment[SEG_ACCEL_END].end_vel, jerk_max, accel_max, Vp, Pp / 2.0, Jp, t2, t4, t6);
+        } else if ((vel_max > segment[SEG_ACCEL_END].end_vel) && (L/(otj*12.0f) > segment[SEG_ACCEL_END].end_vel)) {
+            float Vm = MIN(vel_max, L/(otj*12.0f));
+            calculate_path(otj, jerk_max, segment[SEG_ACCEL_END].end_vel, accel_max, Vm, L / 2.0, Jm, t2, t4, t6);
         }
 
         seg = SEG_ACCEL_END + 1;
-        if (!is_zero(Jp) && !is_negative(t2) && !is_negative(t4) && !is_negative(t6)) {
-            add_segments_incr_const_decr_jerk(seg, otj, Jp, t2);
+        if (!is_zero(Jm) && !is_negative(t2) && !is_negative(t4) && !is_negative(t6)) {
+            add_segments_jerk(seg, otj, Jm, t2);
             add_segment_const_jerk(seg, t4, 0.0);
-            add_segments_incr_const_decr_jerk(seg, otj, -Jp, t6);
+            add_segments_jerk(seg, otj, -Jm, t6);
         }
     }
 
@@ -252,11 +246,11 @@ void scurves::set_speed_accel(float speed_xy_cms, float speed_up_cms, float spee
     Vend = MIN(Vend, segment[SEG_CHANGE_END].end_vel);
     add_segment_const_jerk(seg, 0.0, 0.0);
     if (Vend < segment[SEG_CHANGE_END].end_vel) {
-        float Jp, t2, t4, t6;
-        cal_pos(otj, Vend, jerk_max, accel_max, segment[SEG_CONST].end_vel, Pend - segment[SEG_CONST].end_pos, Jp, t2, t4, t6);
-        add_segments_incr_const_decr_jerk(seg, otj, -Jp, t6);
+        float Jm, t2, t4, t6;
+        calculate_path(otj, jerk_max, Vend, accel_max, segment[SEG_CONST].end_vel, Pend - segment[SEG_CONST].end_pos, Jm, t2, t4, t6);
+        add_segments_jerk(seg, otj, -Jm, t6);
         add_segment_const_jerk(seg, t4, 0.0);
-        add_segments_incr_const_decr_jerk(seg, otj, Jp, t2);
+        add_segments_jerk(seg, otj, Jm, t2);
     } else {
         // No deceleration is required
         for (uint8_t i = SEG_CONST+1; i <= SEG_DECEL_END; i++) {
@@ -278,21 +272,20 @@ void scurves::set_speed_accel(float speed_xy_cms, float speed_up_cms, float spee
     }
 }
 
-// generate an optimal jerk limited curve in 3D space that moves over a straight line between two points
-// origin and destination are offsets from EKF origin in cm
-// speed and acceleration parameters are limits in cm/s or cm/s/s
+// generate a trigonometric S-Curve path in 3D space that moves over a straight line
+// between two points defined by the origin and destination.
 void scurves::calculate_leg(const Vector3f &origin, const Vector3f &destination,
-                   float speed_xy_cms, float speed_up_cms, float speed_down_cms,
-                   float accel_xy_cmss, float accel_z_cmss)
+                   float speed_xy, float speed_up, float speed_down,
+                   float accel_xy, float accel_z)
 {
     init();
 
-    // update speed and acceleration limits along track
+    // update speed and acceleration limits along path
     set_kinematic_limits(origin, destination,
-                         speed_xy_cms, speed_up_cms, speed_down_cms,
-                         accel_xy_cmss, accel_z_cmss);
+                         speed_xy, speed_up, speed_down,
+                         accel_xy, accel_z);
 
-    // avoid divide-by zeros.  Track will be left as a zero length track
+    // avoid divide-by zeros. Path will be left as a zero length path
     if (!is_positive(otj) || !is_positive(jerk_max) || !is_positive(accel_max) || !is_positive(vel_max)) {
         return;
     }
@@ -308,31 +301,33 @@ void scurves::calculate_leg(const Vector3f &origin, const Vector3f &destination,
     }
 }
 
-// set the maximum vehicle speed at the origin in cm/s
-float scurves::set_origin_speed_max(float speed_cms)
+// set the maximum vehicle speed at the origin
+// returns the expected speed at the origin (will always be equal or lower to speed_cm)
+float scurves::set_origin_speed_max(float speed)
 {
-    // if track is zero length then start speed must be zero
+    // if path is zero length then start speed must be zero
     if (num_segs != segments_max) {
         return 0.0f;
     }
 
+    // check speed is zero or positive
     // avoid re-calculating if unnecessary
-    if (is_equal(segment[SEG_INIT].end_vel, speed_cms)) {
-        return speed_cms;
+    if (is_equal(segment[SEG_INIT].end_vel, speed)) {
+        return speed;
     }
 
-    float Vp = segment[SEG_ACCEL_END].end_vel;
-    float Pp = segment[SEG_DECEL_END].end_pos;
-    speed_cms = MIN(speed_cms, Vp);
+    float Vm = segment[SEG_ACCEL_END].end_vel;
+    float L = segment[SEG_DECEL_END].end_pos;
+    speed = MIN(speed, Vm);
 
-    float Jp, t2, t4, t6;
-    cal_pos(otj, speed_cms, jerk_max, accel_max, Vp, Pp / 2.0, Jp, t2, t4, t6);
+    float Jm, t2, t4, t6;
+    calculate_path(otj, jerk_max, speed, accel_max, Vm, L / 2.0, Jm, t2, t4, t6);
 
     uint16_t seg = SEG_INIT;
-    add_segment(seg, 0.0f, jtype_t::CONSTANT, 0.0f, 0.0f, speed_cms, 0.0f);
-    add_segments_incr_const_decr_jerk(seg, otj, Jp, t2);
+    add_segment(seg, 0.0f, jtype_t::CONSTANT, 0.0f, 0.0f, speed, 0.0f);
+    add_segments_jerk(seg, otj, Jm, t2);
     add_segment_const_jerk(seg, t4, 0.0);
-    add_segments_incr_const_decr_jerk(seg, otj, -Jp, t6);
+    add_segments_jerk(seg, otj, -Jm, t6);
 
     // add empty speed change segments and constant speed segment
     for (uint8_t i = SEG_ACCEL_END+1; i <= SEG_CHANGE_END; i++) {
@@ -344,62 +339,60 @@ float scurves::set_origin_speed_max(float speed_cms)
         segment[i].end_pos = segment[SEG_ACCEL_END].end_pos;
     }
 
-    cal_pos(otj, 0.0f, jerk_max, accel_max, Vp, Pp - segment[SEG_CONST].end_pos, Jp, t2, t4, t6);
+    calculate_path(otj, jerk_max, 0.0f, accel_max, Vm, L - segment[SEG_CONST].end_pos, Jm, t2, t4, t6);
 
     seg = SEG_CONST;
     add_segment_const_jerk(seg, 0.0, 0.0);
 
-    add_segments_incr_const_decr_jerk(seg, otj, -Jp, t6);
+    add_segments_jerk(seg, otj, -Jm, t6);
     add_segment_const_jerk(seg, t4, 0.0);
-    add_segments_incr_const_decr_jerk(seg, otj, Jp, t2);
+    add_segments_jerk(seg, otj, Jm, t2);
 
     // add to constant velocity segment to end at the correct position
-    float dP = (Pp - segment[SEG_DECEL_END].end_pos);
+    float dP = (L - segment[SEG_DECEL_END].end_pos);
     float t15 =  dP / segment[SEG_CONST].end_vel;
     for (uint8_t i = SEG_CONST; i <= SEG_DECEL_END; i++) {
         segment[i].end_time += t15;
         segment[i].end_pos += dP;
     }
-    return speed_cms;
+    return speed;
 }
 
-// set the maximum vehicle speed at the destination in cm/s
-void scurves::set_destination_speed_max(float speed_cms)
+// set the maximum vehicle speed at the destination
+void scurves::set_destination_speed_max(float speed)
 {
-    // if track is zero length then start speed must be zero
+    // if path is zero length then start speed must be zero
     if (num_segs != segments_max) {
         return;
     }
 
     // avoid re-calculating if unnecessary
-    if (is_equal(segment[segments_max-1].end_vel, speed_cms)) {
+    if (is_equal(segment[segments_max-1].end_vel, speed)) {
         return;
     }
 
-    float Vp = segment[SEG_CONST].end_vel;
-    float Pp = segment[SEG_DECEL_END].end_pos;
-    speed_cms = MIN(speed_cms, Vp);
+    float Vm = segment[SEG_CONST].end_vel;
+    float L = segment[SEG_DECEL_END].end_pos;
+    speed = MIN(speed, Vm);
 
-    float Jp, t2, t4, t6;
-    cal_pos(otj, speed_cms, jerk_max, accel_max, Vp, Pp / 2.0, Jp, t2, t4, t6);
+    float Jm, t2, t4, t6;
+    calculate_path(otj, jerk_max, speed, accel_max, Vm, L / 2.0, Jm, t2, t4, t6);
 
     uint16_t seg = SEG_CONST;
     add_segment_const_jerk(seg, 0.0, 0.0);
 
-    add_segments_incr_const_decr_jerk(seg, otj, -Jp, t6);
+    add_segments_jerk(seg, otj, -Jm, t6);
     add_segment_const_jerk(seg, t4, 0.0);
-    add_segments_incr_const_decr_jerk(seg, otj, Jp, t2);
+    add_segments_jerk(seg, otj, Jm, t2);
 
     // add to constant velocity segment to end at the correct position
-    float dP = (Pp - segment[SEG_DECEL_END].end_pos);
+    float dP = (L - segment[SEG_DECEL_END].end_pos);
     float t15 =  dP / segment[SEG_CONST].end_vel;
     for (uint8_t i = SEG_CONST; i <= SEG_DECEL_END; i++) {
         segment[i].end_time += t15;
         segment[i].end_pos += dP;
     }
 }
-
-// Straight implementations
 
 // increment time pointer and return the position, velocity and acceleration vectors relative to the origin
 void scurves::move_from_pos_vel_accel(float dt, Vector3f &pos, Vector3f &vel, Vector3f &accel)
@@ -408,7 +401,7 @@ void scurves::move_from_pos_vel_accel(float dt, Vector3f &pos, Vector3f &vel, Ve
     move_from_time_pos_vel_accel(_t, pos, vel, accel);
 }
 
-// return the position, velocity and acceleration vectors relative to the origin
+// increment time pointer and return the position, velocity and acceleration vectors relative to the destination
 void scurves::move_to_pos_vel_accel(float dt, Vector3f &pos, Vector3f &vel, Vector3f &accel)
 {
     advance_time(dt);
@@ -416,7 +409,7 @@ void scurves::move_to_pos_vel_accel(float dt, Vector3f &pos, Vector3f &vel, Vect
     pos -= _track;
 }
 
-// return the position, velocity and acceleration vectors relative to the origin
+// return the position, velocity and acceleration vectors relative to the origin at a specified time along the path
 void scurves::move_from_time_pos_vel_accel(float time, Vector3f &pos, Vector3f &vel, Vector3f &accel)
 {
     float scurve_P1 = 0.0f;
@@ -436,7 +429,7 @@ bool scurves::finished() const
     return _t > time_end();
 }
 
-// straight segment implementations of pos_end, time_end, time_to_end and braking
+// magnitude of the position vector at the end of the sequence
 float scurves::pos_end() const
 {
     if (num_segs != segments_max) {
@@ -445,6 +438,7 @@ float scurves::pos_end() const
     return segment[SEG_DECEL_END].end_pos;
 }
 
+// time at the end of the sequence
 float scurves::time_end() const
 {
     if (num_segs != segments_max) {
@@ -453,6 +447,7 @@ float scurves::time_end() const
     return segment[SEG_DECEL_END].end_time;
 }
 
+// time left before sequence will complete
 float scurves::get_time_remaining() const
 {
     if (num_segs != segments_max) {
@@ -461,6 +456,7 @@ float scurves::get_time_remaining() const
     return segment[SEG_DECEL_END].end_time - _t;
 }
 
+// time when acceleration section of the sequence will complete
 float scurves::get_accel_finished_time() const
 {
     if (num_segs != segments_max) {
@@ -469,6 +465,7 @@ float scurves::get_accel_finished_time() const
     return segment[SEG_ACCEL_END].end_time;
 }
 
+// return true if the sequence is braking to a stop
 bool scurves::braking() const
 {
     if (num_segs != segments_max) {
@@ -477,13 +474,13 @@ bool scurves::braking() const
     return _t >= segment[SEG_CONST].end_time;
 }
 
-// calculate the jerk, acceleration, velocity and position at time t
+// calculate the jerk, acceleration, velocity and position at the provided time
 void scurves::update(float time, float &Jt_out, float &At_out, float &Vt_out, float &Pt_out)
 {
     jtype_t Jtype;
     int8_t pnt = num_segs;
     float tj;
-    float Jp, T0, A0, V0, P0;
+    float Jm, T0, A0, V0, P0;
 
     for (uint8_t i = 0; i < num_segs; i++) {
         if (time < segment[num_segs - 1 - i].end_time) {
@@ -492,21 +489,21 @@ void scurves::update(float time, float &Jt_out, float &At_out, float &Vt_out, fl
     }
     if (pnt == 0) {
         Jtype = jtype_t::CONSTANT;
-        Jp = 0.0f;
+        Jm = 0.0f;
         T0 = segment[pnt].end_time;
         A0 = segment[pnt].end_accel;
         V0 = segment[pnt].end_vel;
         P0 = segment[pnt].end_pos;
     } else if (pnt == num_segs) {
         Jtype = jtype_t::CONSTANT;
-        Jp = 0.0;
+        Jm = 0.0;
         T0 = segment[pnt - 1].end_time;
         A0 = segment[pnt - 1].end_accel;
         V0 = segment[pnt - 1].end_vel;
         P0 = segment[pnt - 1].end_pos;
     } else {
         Jtype = segment[pnt].jtype;
-        Jp = segment[pnt].jerk_ref;
+        Jm = segment[pnt].jerk_ref;
         tj = segment[pnt].end_time - segment[pnt - 1].end_time;
         T0 = segment[pnt - 1].end_time;
         A0 = segment[pnt - 1].end_accel;
@@ -516,18 +513,18 @@ void scurves::update(float time, float &Jt_out, float &At_out, float &Vt_out, fl
 
     switch (Jtype) {
     case jtype_t::CONSTANT:
-        calc_javp_for_segment_const_jerk(time - T0, Jp, A0, V0, P0, Jt_out, At_out, Vt_out, Pt_out);
+        calc_javp_for_segment_const_jerk(time - T0, Jm, A0, V0, P0, Jt_out, At_out, Vt_out, Pt_out);
         break;
     case jtype_t::POSITIVE:
-        calc_javp_for_segment_incr_jerk(time - T0, tj, Jp, A0, V0, P0, Jt_out, At_out, Vt_out, Pt_out);
+        calc_javp_for_segment_incr_jerk(time - T0, tj, Jm, A0, V0, P0, Jt_out, At_out, Vt_out, Pt_out);
         break;
     case jtype_t::NEGATIVE:
-        calc_javp_for_segment_decr_jerk(time - T0, tj, Jp, A0, V0, P0, Jt_out, At_out, Vt_out, Pt_out);
+        calc_javp_for_segment_decr_jerk(time - T0, tj, Jm, A0, V0, P0, Jt_out, At_out, Vt_out, Pt_out);
         break;
     }
 }
 
-// calculate the jerk, acceleration, velocity and position at time "time" when running the constant jerk time segment
+// calculate the jerk, acceleration, velocity and position at time t when running the constant jerk time segment
 void scurves::calc_javp_for_segment_const_jerk(float time, float J0, float A0, float V0, float P0, float &Jt, float &At, float &Vt, float &Pt) const
 {
     Jt = J0;
@@ -536,10 +533,10 @@ void scurves::calc_javp_for_segment_const_jerk(float time, float J0, float A0, f
     Pt = P0 + V0 * time + 0.5 * A0 * (time * time) + (1 / 6.0) * J0 * (time * time * time);
 }
 
-// Calculate the jerk, acceleration, velocity and position at time "time" when running the increasing jerk magnitude time segment based on a raised cosine profile
-void scurves::calc_javp_for_segment_incr_jerk(float time, float tj, float Jp, float A0, float V0, float P0, float &Jt, float &At, float &Vt, float &Pt) const
+// Calculate the jerk, acceleration, velocity and position at time t when running the increasing jerk magnitude time segment based on a raised cosine profile
+void scurves::calc_javp_for_segment_incr_jerk(float time, float tj, float Jm, float A0, float V0, float P0, float &Jt, float &At, float &Vt, float &Pt) const
 {
-    float Alpha = Jp / 2.0;
+    float Alpha = Jm / 2.0;
     float Beta = M_PI / tj;
     Jt = Alpha * (1.0 - cosf(Beta * time));
     At = A0 + Alpha * time - (Alpha / Beta) * sinf(Beta * time);
@@ -547,10 +544,10 @@ void scurves::calc_javp_for_segment_incr_jerk(float time, float tj, float Jp, fl
     Pt = P0 + V0 * time + 0.5 * A0 * (time * time) + (-Alpha / (Beta * Beta)) * time + Alpha * (time * time * time) / 6.0 + (Alpha / (Beta * Beta * Beta)) * sinf(Beta * time);
 }
 
-// Calculate the jerk, acceleration, velocity and position at time "time" when running the  decreasing jerk magnitude time segment based on a raised cosine profile
-void scurves::calc_javp_for_segment_decr_jerk(float time, float tj, float Jp, float A0, float V0, float P0, float &Jt, float &At, float &Vt, float &Pt) const
+// Calculate the jerk, acceleration, velocity and position at time t when running the decreasing jerk magnitude time segment based on a raised cosine profile
+void scurves::calc_javp_for_segment_decr_jerk(float time, float tj, float Jm, float A0, float V0, float P0, float &Jt, float &At, float &Vt, float &Pt) const
 {
-    float Alpha = Jp / 2.0;
+    float Alpha = Jm / 2.0;
     float Beta = M_PI / tj;
     float AT = Alpha * tj;
     float VT = Alpha * ((tj * tj) / 2.0 - 2.0 / (Beta * Beta));
@@ -578,19 +575,25 @@ void scurves::debug()
     hal.console->printf("\n");
 }
 
-// generate time segments for straight segment
-void scurves::add_segments(float Pp)
+// generate the segments for a path of length L
+// the path consists of 23 segments
+// 1 initial segment
+// 7 segments forming the acceleration S-Curve
+// 7 segments forming the velocity change S-Curve
+// 1 constant velocity S-Curve
+// 7 segments forming the deceleration S-Curve
+void scurves::add_segments(float L)
 {
-    if (is_zero(Pp)) {
+    if (is_zero(L)) {
         return;
     }
 
-    float Jp, t2, t4, t6;
-    cal_pos(otj, 0.0f, jerk_max, accel_max, vel_max, Pp / 2.0, Jp, t2, t4, t6);
+    float Jm, t2, t4, t6;
+    calculate_path(otj, jerk_max, 0.0f, accel_max, vel_max, L / 2.0, Jm, t2, t4, t6);
 
-    add_segments_incr_const_decr_jerk(num_segs, otj, Jp, t2);
+    add_segments_jerk(num_segs, otj, Jm, t2);
     add_segment_const_jerk(num_segs, t4, 0.0);
-    add_segments_incr_const_decr_jerk(num_segs, otj, -Jp, t6);
+    add_segments_jerk(num_segs, otj, -Jm, t6);
 
     // add empty speed adjust segments
     add_segment_const_jerk(num_segs, 0.0, 0.0);
@@ -601,38 +604,44 @@ void scurves::add_segments(float Pp)
     add_segment_const_jerk(num_segs, 0.0, 0.0);
     add_segment_const_jerk(num_segs, 0.0, 0.0);
 
-    float t15 = 2.0 * (Pp / 2.0 - segment[SEG_CHANGE_END].end_pos) / segment[SEG_CHANGE_END].end_vel;
+    float t15 = 2.0 * (L / 2.0 - segment[SEG_CHANGE_END].end_pos) / segment[SEG_CHANGE_END].end_vel;
     add_segment_const_jerk(num_segs, t15, 0.0);
 
-    add_segments_incr_const_decr_jerk(num_segs, otj, -Jp, t6);
+    add_segments_jerk(num_segs, otj, -Jm, t6);
     add_segment_const_jerk(num_segs, t4, 0.0);
-    add_segments_incr_const_decr_jerk(num_segs, otj, Jp, t2);
+    add_segments_jerk(num_segs, otj, Jm, t2);
 }
 
-// calculate duration of time segments for basic acceleration and deceleration curve from constant velocity to stationary.
-void scurves::cal_pos(float tj, float V0, float Jp, float Ap, float Vp, float Pp, float &Jp_out, float &t2_out, float &t4_out, float &t6_out) const
+// calculate the segment times for the trigonometric S-Curve path defined by:
+// tj - duration of the raised cosine jerk profile
+// Jm - maximum value of the raised cosine jerk profile
+// V0 - initial velocity magnitude
+// Am - maximum constant acceleration
+// Vm - maximum constant velocity
+// L - Length of the path
+void scurves::calculate_path(float tj, float Jm, float V0, float Am, float Vm, float L, float &Jm_out, float &t2_out, float &t4_out, float &t6_out) const
 {
     // init outputs
-    Jp_out = 0.0f;
+    Jm_out = 0.0f;
     t2_out = 0.0f;
     t4_out = 0.0f;
     t6_out = 0.0f;
 
     // check for invalid arguments
-    if (!is_positive(tj) || !is_positive(Jp) || !is_positive(Ap) || !is_positive(Vp) || !is_positive(Pp)) {
+    if (!is_positive(tj) || !is_positive(Jm) || !is_positive(Am) || !is_positive(Vm) || !is_positive(L)) {
         INTERNAL_ERROR(AP_InternalError::error_t::invalid_arguments);
         return;
     }
 
-    if (V0 >= Vp) {
+    if (V0 >= Vm) {
         // no velocity change so all segments as zero length
         return;
     }
 
-    Ap = MIN(MIN(Ap, (Vp - V0) / (2.0 * tj)), (Pp + 4.0 * V0 * tj) / (4.0 * sq(tj)));
-    if (fabsf(Ap) < Jp * tj) {
-        Jp = Ap / tj;
-        if ((Vp <= V0 + 2.0 * Ap * tj) || (Pp <= 4.0 * V0 * tj + 4.0 * Ap * sq(tj))) {
+    Am = MIN(MIN(Am, (Vm - V0) / (2.0 * tj)), (L + 4.0 * V0 * tj) / (4.0 * sq(tj)));
+    if (fabsf(Am) < Jm * tj) {
+        Jm = Am / tj;
+        if ((Vm <= V0 + 2.0 * Am * tj) || (L <= 4.0 * V0 * tj + 4.0 * Am * sq(tj))) {
             // solution = 0 - t6 t4 t2 = 0 0 0
             t2_out = 0.0;
             t4_out = 0.0;
@@ -640,32 +649,32 @@ void scurves::cal_pos(float tj, float V0, float Jp, float Ap, float Vp, float Pp
         } else {
             // solution = 2 - t6 t4 t2 = 0 1 0
             t2_out = 0.0;
-            t4_out = MIN(-(V0 - Vp + Ap * tj + (Ap * Ap) / Jp) / Ap, MAX(((Ap * Ap) * (-3.0 / 2.0) + safe_sqrt((Ap * Ap * Ap * Ap) * (1.0 / 4.0) + (Jp * Jp) * (V0 * V0) + (Ap * Ap) * (Jp * Jp) * (tj * tj) * (1.0 / 4.0) + Ap * (Jp * Jp) * Pp * 2.0 - (Ap * Ap) * Jp * V0 + (Ap * Ap * Ap) * Jp * tj * (1.0 / 2.0) - Ap * (Jp * Jp) * V0 * tj) - Jp * V0 - Ap * Jp * tj * (3.0 / 2.0)) / (Ap * Jp), ((Ap * Ap) * (-3.0 / 2.0) - safe_sqrt((Ap * Ap * Ap * Ap) * (1.0 / 4.0) + (Jp * Jp) * (V0 * V0) + (Ap * Ap) * (Jp * Jp) * (tj * tj) * (1.0 / 4.0) + Ap * (Jp * Jp) * Pp * 2.0 - (Ap * Ap) * Jp * V0 + (Ap * Ap * Ap) * Jp * tj * (1.0 / 2.0) - Ap * (Jp * Jp) * V0 * tj) - Jp * V0 - Ap * Jp * tj * (3.0 / 2.0)) / (Ap * Jp)));
+            t4_out = MIN(-(V0 - Vm + Am * tj + (Am * Am) / Jm) / Am, MAX(((Am * Am) * (-3.0 / 2.0) + safe_sqrt((Am * Am * Am * Am) * (1.0 / 4.0) + (Jm * Jm) * (V0 * V0) + (Am * Am) * (Jm * Jm) * (tj * tj) * (1.0 / 4.0) + Am * (Jm * Jm) * L * 2.0 - (Am * Am) * Jm * V0 + (Am * Am * Am) * Jm * tj * (1.0 / 2.0) - Am * (Jm * Jm) * V0 * tj) - Jm * V0 - Am * Jm * tj * (3.0 / 2.0)) / (Am * Jm), ((Am * Am) * (-3.0 / 2.0) - safe_sqrt((Am * Am * Am * Am) * (1.0 / 4.0) + (Jm * Jm) * (V0 * V0) + (Am * Am) * (Jm * Jm) * (tj * tj) * (1.0 / 4.0) + Am * (Jm * Jm) * L * 2.0 - (Am * Am) * Jm * V0 + (Am * Am * Am) * Jm * tj * (1.0 / 2.0) - Am * (Jm * Jm) * V0 * tj) - Jm * V0 - Am * Jm * tj * (3.0 / 2.0)) / (Am * Jm)));
             t6_out = 0.0;
         }
     } else {
-        if ((Vp < V0 + Ap * tj + (Ap * Ap) / Jp) || (Pp < 1.0 / (Jp * Jp) * (Ap * Ap * Ap + Ap * Jp * (V0 * 2.0 + Ap * tj * 2.0)) + V0 * tj * 2.0 + Ap * (tj * tj))) {
+        if ((Vm < V0 + Am * tj + (Am * Am) / Jm) || (L < 1.0 / (Jm * Jm) * (Am * Am * Am + Am * Jm * (V0 * 2.0 + Am * tj * 2.0)) + V0 * tj * 2.0 + Am * (tj * tj))) {
             // solution = 5 - t6 t4 t2 = 1 0 1
-            Ap = MIN(MIN(Ap, MAX(Jp * (tj + safe_sqrt((V0 * -4.0 + Vp * 4.0 + Jp * (tj * tj)) / Jp)) * (-1.0 / 2.0), Jp * (tj - safe_sqrt((V0 * -4.0 + Vp * 4.0 + Jp * (tj * tj)) / Jp)) * (-1.0 / 2.0))), Jp * tj * (-2.0 / 3.0) + ((Jp * Jp) * (tj * tj) * (1.0 / 9.0) - Jp * V0 * (2.0 / 3.0)) * 1.0 / powf(safe_sqrt(powf(- (Jp * Jp) * Pp * (1.0 / 2.0) + (Jp * Jp * Jp) * (tj * tj * tj) * (8.0 / 2.7E1) - Jp * tj * ((Jp * Jp) * (tj * tj) + Jp * V0 * 2.0) * (1.0 / 3.0) + (Jp * Jp) * V0 * tj, 2.0) - powf((Jp * Jp) * (tj * tj) * (1.0 / 9.0) - Jp * V0 * (2.0 / 3.0), 3.0)) + (Jp * Jp) * Pp * (1.0 / 2.0) - (Jp * Jp * Jp) * (tj * tj * tj) * (8.0 / 2.7E1) + Jp * tj * ((Jp * Jp) * (tj * tj) + Jp * V0 * 2.0) * (1.0 / 3.0) - (Jp * Jp) * V0 * tj, 1.0 / 3.0) + powf(safe_sqrt(powf(- (Jp * Jp) * Pp * (1.0 / 2.0) + (Jp * Jp * Jp) * (tj * tj * tj) * (8.0 / 2.7E1) - Jp * tj * ((Jp * Jp) * (tj * tj) + Jp * V0 * 2.0) * (1.0 / 3.0) + (Jp * Jp) * V0 * tj, 2.0) - powf((Jp * Jp) * (tj * tj) * (1.0 / 9.0) - Jp * V0 * (2.0 / 3.0), 3.0)) + (Jp * Jp) * Pp * (1.0 / 2.0) - (Jp * Jp * Jp) * (tj * tj * tj) * (8.0 / 2.7E1) + Jp * tj * ((Jp * Jp) * (tj * tj) + Jp * V0 * 2.0) * (1.0 / 3.0) - (Jp * Jp) * V0 * tj, 1.0 / 3.0));
-            t2_out = Ap / Jp - tj;
+            Am = MIN(MIN(Am, MAX(Jm * (tj + safe_sqrt((V0 * -4.0 + Vm * 4.0 + Jm * (tj * tj)) / Jm)) * (-1.0 / 2.0), Jm * (tj - safe_sqrt((V0 * -4.0 + Vm * 4.0 + Jm * (tj * tj)) / Jm)) * (-1.0 / 2.0))), Jm * tj * (-2.0 / 3.0) + ((Jm * Jm) * (tj * tj) * (1.0 / 9.0) - Jm * V0 * (2.0 / 3.0)) * 1.0 / powf(safe_sqrt(powf(- (Jm * Jm) * L * (1.0 / 2.0) + (Jm * Jm * Jm) * (tj * tj * tj) * (8.0 / 2.7E1) - Jm * tj * ((Jm * Jm) * (tj * tj) + Jm * V0 * 2.0) * (1.0 / 3.0) + (Jm * Jm) * V0 * tj, 2.0) - powf((Jm * Jm) * (tj * tj) * (1.0 / 9.0) - Jm * V0 * (2.0 / 3.0), 3.0)) + (Jm * Jm) * L * (1.0 / 2.0) - (Jm * Jm * Jm) * (tj * tj * tj) * (8.0 / 2.7E1) + Jm * tj * ((Jm * Jm) * (tj * tj) + Jm * V0 * 2.0) * (1.0 / 3.0) - (Jm * Jm) * V0 * tj, 1.0 / 3.0) + powf(safe_sqrt(powf(- (Jm * Jm) * L * (1.0 / 2.0) + (Jm * Jm * Jm) * (tj * tj * tj) * (8.0 / 2.7E1) - Jm * tj * ((Jm * Jm) * (tj * tj) + Jm * V0 * 2.0) * (1.0 / 3.0) + (Jm * Jm) * V0 * tj, 2.0) - powf((Jm * Jm) * (tj * tj) * (1.0 / 9.0) - Jm * V0 * (2.0 / 3.0), 3.0)) + (Jm * Jm) * L * (1.0 / 2.0) - (Jm * Jm * Jm) * (tj * tj * tj) * (8.0 / 2.7E1) + Jm * tj * ((Jm * Jm) * (tj * tj) + Jm * V0 * 2.0) * (1.0 / 3.0) - (Jm * Jm) * V0 * tj, 1.0 / 3.0));
+            t2_out = Am / Jm - tj;
             t4_out = 0;
             t6_out = t2_out;
         } else {
             // solution = 7 - t6 t4 t2 = 1 1 1
-            t2_out = Ap / Jp - tj;
-            t4_out = MIN(-(V0 - Vp + Ap * tj + (Ap * Ap) / Jp) / Ap, MAX(((Ap * Ap) * (-3.0 / 2.0) + safe_sqrt((Ap * Ap * Ap * Ap) * (1.0 / 4.0) + (Jp * Jp) * (V0 * V0) + (Ap * Ap) * (Jp * Jp) * (tj * tj) * (1.0 / 4.0) + Ap * (Jp * Jp) * Pp * 2.0 - (Ap * Ap) * Jp * V0 + (Ap * Ap * Ap) * Jp * tj * (1.0 / 2.0) - Ap * (Jp * Jp) * V0 * tj) - Jp * V0 - Ap * Jp * tj * (3.0 / 2.0)) / (Ap * Jp), ((Ap * Ap) * (-3.0 / 2.0) - safe_sqrt((Ap * Ap * Ap * Ap) * (1.0 / 4.0) + (Jp * Jp) * (V0 * V0) + (Ap * Ap) * (Jp * Jp) * (tj * tj) * (1.0 / 4.0) + Ap * (Jp * Jp) * Pp * 2.0 - (Ap * Ap) * Jp * V0 + (Ap * Ap * Ap) * Jp * tj * (1.0 / 2.0) - Ap * (Jp * Jp) * V0 * tj) - Jp * V0 - Ap * Jp * tj * (3.0 / 2.0)) / (Ap * Jp)));
+            t2_out = Am / Jm - tj;
+            t4_out = MIN(-(V0 - Vm + Am * tj + (Am * Am) / Jm) / Am, MAX(((Am * Am) * (-3.0 / 2.0) + safe_sqrt((Am * Am * Am * Am) * (1.0 / 4.0) + (Jm * Jm) * (V0 * V0) + (Am * Am) * (Jm * Jm) * (tj * tj) * (1.0 / 4.0) + Am * (Jm * Jm) * L * 2.0 - (Am * Am) * Jm * V0 + (Am * Am * Am) * Jm * tj * (1.0 / 2.0) - Am * (Jm * Jm) * V0 * tj) - Jm * V0 - Am * Jm * tj * (3.0 / 2.0)) / (Am * Jm), ((Am * Am) * (-3.0 / 2.0) - safe_sqrt((Am * Am * Am * Am) * (1.0 / 4.0) + (Jm * Jm) * (V0 * V0) + (Am * Am) * (Jm * Jm) * (tj * tj) * (1.0 / 4.0) + Am * (Jm * Jm) * L * 2.0 - (Am * Am) * Jm * V0 + (Am * Am * Am) * Jm * tj * (1.0 / 2.0) - Am * (Jm * Jm) * V0 * tj) - Jm * V0 - Am * Jm * tj * (3.0 / 2.0)) / (Am * Jm)));
             t6_out = t2_out;
         }
     }
-    Jp_out = Jp;
+    Jm_out = Jm;
 }
 
-// generate three time segment raised cosine jerk profile
-void scurves::add_segments_incr_const_decr_jerk(uint16_t &seg_pnt, float tj, float Jp, float Tcj)
+// generate three time segments forming the jerk profile
+void scurves::add_segments_jerk(uint16_t &seg_pnt, float tj, float Jm, float Tcj)
 {
-    add_segment_incr_jerk(seg_pnt, tj, Jp);
-    add_segment_const_jerk(seg_pnt, Tcj, Jp);
-    add_segment_decr_jerk(seg_pnt, tj, Jp);
+    add_segment_incr_jerk(seg_pnt, tj, Jm);
+    add_segment_const_jerk(seg_pnt, Tcj, Jm);
+    add_segment_decr_jerk(seg_pnt, tj, Jm);
 }
 
 // generate constant jerk time segment
@@ -681,16 +690,16 @@ void scurves::add_segment_const_jerk(uint16_t &seg_pnt, float tin, float J0)
 }
 
 // generate increasing jerk magnitude time segment based on a raised cosine profile
-void scurves::add_segment_incr_jerk(uint16_t &seg_pnt, float tj, float Jp)
+void scurves::add_segment_incr_jerk(uint16_t &seg_pnt, float tj, float Jm)
 {
     float Beta = M_PI / tj;
-    float Alpha = Jp / 2.0;
+    float Alpha = Jm / 2.0;
     float AT = Alpha * tj;
     float VT = Alpha * (sq(tj) / 2.0 - 2.0 / sq(Beta));
     float PT = Alpha * ((-1.0 / sq(Beta)) * tj + (1 / 6.0) * powf(tj, 3.0));
 
     jtype_t Jtype = jtype_t::POSITIVE;
-    float J = Jp;
+    float J = Jm;
     float T = segment[seg_pnt - 1].end_time + tj;
     float A = segment[seg_pnt - 1].end_accel + AT;
     float V = segment[seg_pnt - 1].end_vel + segment[seg_pnt - 1].end_accel * tj + VT;
@@ -699,19 +708,19 @@ void scurves::add_segment_incr_jerk(uint16_t &seg_pnt, float tj, float Jp)
 }
 
 // generate decreasing jerk magnitude time segment based on a raised cosine profile
-void scurves::add_segment_decr_jerk(uint16_t &seg_pnt, float tj, float Jp)
+void scurves::add_segment_decr_jerk(uint16_t &seg_pnt, float tj, float Jm)
 {
     float Beta = M_PI / tj;
-    float Alpha = Jp / 2.0;
+    float Alpha = Jm / 2.0;
     float AT = Alpha * tj;
     float VT = Alpha * (sq(tj) / 2.0 - 2.0 / sq(Beta));
     float PT = Alpha * ((-1.0 / sq(Beta)) * tj + (1 / 6.0) * powf(tj, 3.0));
-    float A2T = Jp * tj;
-    float V2T = Jp * sq(tj);
+    float A2T = Jm * tj;
+    float V2T = Jm * sq(tj);
     float P2T = Alpha * ((-1.0 / sq(Beta)) * 2.0 * tj + (4.0 / 3.0) * powf(tj, 3.0));
 
     jtype_t Jtype = jtype_t::NEGATIVE;
-    float J = Jp;
+    float J = Jm;
     float T = segment[seg_pnt - 1].end_time + tj;
     float A = (segment[seg_pnt - 1].end_accel - AT) + A2T;
     float V = (segment[seg_pnt - 1].end_vel - VT) + (segment[seg_pnt - 1].end_accel - AT) * tj + V2T;
@@ -719,6 +728,7 @@ void scurves::add_segment_decr_jerk(uint16_t &seg_pnt, float tj, float Jp)
     add_segment(seg_pnt, T, Jtype, J, A, V, P);
 }
 
+// add single S-Curve segment
 void scurves::add_segment(uint16_t &seg_pnt, float end_time, jtype_t jtype, float jerk_ref, float end_accel, float end_vel, float end_pos)
 {
     segment[seg_pnt].end_time = end_time;
@@ -730,23 +740,23 @@ void scurves::add_segment(uint16_t &seg_pnt, float end_time, jtype_t jtype, floa
     seg_pnt++;
 }
 
-// update speed and acceleration limits along track
-// origin and destination are offsets from EKF origin in cm
-// speed and acceleration parameters are limits in cm/s or cm/s/s
+// set speed and acceleration limits for the path
+// origin and destination are offsets from EKF origin
+// speed and acceleration parameters are given in horizontal, up and down.
 void scurves::set_kinematic_limits(const Vector3f &origin, const Vector3f &destination,
-                                   float speed_xy_cms, float speed_up_cms, float speed_down_cms,
-                                   float accel_xy_cmss, float accel_z_cmss)
+                                   float speed_xy, float speed_up, float speed_down,
+                                   float accel_xy, float accel_z)
 {
-    // sanity check arguments
-    speed_xy_cms = MAX(speed_xy_cms, SPEED_XY_MIN);
-    speed_up_cms = MAX(speed_up_cms, SPEED_Z_MIN);
-    speed_down_cms = MAX(fabsf(speed_down_cms), SPEED_Z_MIN);
-    accel_xy_cmss = MAX(accel_xy_cmss, ACCEL_XY_MIN);
-    accel_z_cmss = MAX(accel_z_cmss, ACCEL_Z_MIN);
+    // ensure arguments are positive
+    speed_xy = fabsf(speed_xy);
+    speed_up = fabsf(speed_up);
+    speed_down = fabsf(speed_down);
+    accel_xy = fabsf(accel_xy);
+    accel_z = fabsf(accel_z);
 
     Vector3f direction = destination - origin;
-    float track_speed_max = kinematic_limit(direction, speed_xy_cms, speed_up_cms, speed_down_cms);
-    float track_accel_max = kinematic_limit(direction, accel_xy_cmss, accel_z_cmss, accel_z_cmss);
+    float track_speed_max = kinematic_limit(direction, speed_xy, speed_up, speed_down);
+    float track_accel_max = kinematic_limit(direction, accel_xy, accel_z, accel_z);
 
     set_speed_max(track_speed_max);
     set_accel_max(track_accel_max);
