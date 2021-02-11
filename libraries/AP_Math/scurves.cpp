@@ -52,7 +52,7 @@ scurves::scurves(float tj, float Jp, float Ap, float Vp) :
     num_segs = SEG_INIT;
 }
 
-// initialise the S-curve track
+// initialise the S-Curve path
 void scurves::init()
 {
     _t = 0.0f;
@@ -62,8 +62,7 @@ void scurves::init()
     _delta_unit.zero();
 }
 
-// set maximum earth-frame speed and acceleration in cm/s and cm/s/s
-// path is re-calculated using these limits
+// set maximum velocity and re-calculate the path using these limits
 void scurves::set_speed_accel(float speed_xy_cms, float speed_up_cms, float speed_down_cms,
                               float accel_xy_cmss, float accel_z_cmss)
 {
@@ -278,21 +277,20 @@ void scurves::set_speed_accel(float speed_xy_cms, float speed_up_cms, float spee
     }
 }
 
-// generate an optimal jerk limited curve in 3D space that moves over a straight line between two points
-// origin and destination are offsets from EKF origin in cm
-// speed and acceleration parameters are limits in cm/s or cm/s/s
+// generate a trigonometric S-Curve path in 3D space that moves over a straight line
+// between two points defined by the origin and destination.
 void scurves::calculate_leg(const Vector3f &origin, const Vector3f &destination,
                    float speed_xy_cms, float speed_up_cms, float speed_down_cms,
                    float accel_xy_cmss, float accel_z_cmss)
 {
     init();
 
-    // update speed and acceleration limits along track
+    // update speed and acceleration limits along path
     set_kinematic_limits(origin, destination,
                          speed_xy_cms, speed_up_cms, speed_down_cms,
                          accel_xy_cmss, accel_z_cmss);
 
-    // avoid divide-by zeros.  Track will be left as a zero length track
+    // avoid divide-by zeros. Path will be left as a zero length path
     if (!is_positive(otj) || !is_positive(jerk_max) || !is_positive(accel_max) || !is_positive(vel_max)) {
         return;
     }
@@ -308,14 +306,16 @@ void scurves::calculate_leg(const Vector3f &origin, const Vector3f &destination,
     }
 }
 
-// set the maximum vehicle speed at the origin in cm/s
+// set the maximum vehicle speed at the origin
+// returns the expected speed at the origin (will always be equal or lower to speed_cm)
 float scurves::set_origin_speed_max(float speed_cms)
 {
-    // if track is zero length then start speed must be zero
+    // if path is zero length then start speed must be zero
     if (num_segs != segments_max) {
         return 0.0f;
     }
 
+    // check speed is zero or positive
     // avoid re-calculating if unnecessary
     if (is_equal(segment[SEG_INIT].end_vel, speed_cms)) {
         return speed_cms;
@@ -363,10 +363,10 @@ float scurves::set_origin_speed_max(float speed_cms)
     return speed_cms;
 }
 
-// set the maximum vehicle speed at the destination in cm/s
+// set the maximum vehicle speed at the destination
 void scurves::set_destination_speed_max(float speed_cms)
 {
-    // if track is zero length then start speed must be zero
+    // if path is zero length then start speed must be zero
     if (num_segs != segments_max) {
         return;
     }
@@ -399,8 +399,6 @@ void scurves::set_destination_speed_max(float speed_cms)
     }
 }
 
-// Straight implementations
-
 // increment time pointer and return the position, velocity and acceleration vectors relative to the origin
 void scurves::move_from_pos_vel_accel(float dt, Vector3f &pos, Vector3f &vel, Vector3f &accel)
 {
@@ -408,7 +406,7 @@ void scurves::move_from_pos_vel_accel(float dt, Vector3f &pos, Vector3f &vel, Ve
     move_from_time_pos_vel_accel(_t, pos, vel, accel);
 }
 
-// return the position, velocity and acceleration vectors relative to the origin
+// increment time pointer and return the position, velocity and acceleration vectors relative to the destination
 void scurves::move_to_pos_vel_accel(float dt, Vector3f &pos, Vector3f &vel, Vector3f &accel)
 {
     advance_time(dt);
@@ -416,7 +414,7 @@ void scurves::move_to_pos_vel_accel(float dt, Vector3f &pos, Vector3f &vel, Vect
     pos -= _track;
 }
 
-// return the position, velocity and acceleration vectors relative to the origin
+// return the position, velocity and acceleration vectors relative to the origin at a specified time along the path
 void scurves::move_from_time_pos_vel_accel(float time, Vector3f &pos, Vector3f &vel, Vector3f &accel)
 {
     float scurve_P1 = 0.0f;
@@ -436,7 +434,7 @@ bool scurves::finished() const
     return _t > time_end();
 }
 
-// straight segment implementations of pos_end, time_end, time_to_end and braking
+// magnitude of the position vector at the end of the sequence
 float scurves::pos_end() const
 {
     if (num_segs != segments_max) {
@@ -445,6 +443,7 @@ float scurves::pos_end() const
     return segment[SEG_DECEL_END].end_pos;
 }
 
+// time at the end of the sequence
 float scurves::time_end() const
 {
     if (num_segs != segments_max) {
@@ -453,6 +452,7 @@ float scurves::time_end() const
     return segment[SEG_DECEL_END].end_time;
 }
 
+// time left before sequence will complete
 float scurves::get_time_remaining() const
 {
     if (num_segs != segments_max) {
@@ -461,6 +461,7 @@ float scurves::get_time_remaining() const
     return segment[SEG_DECEL_END].end_time - _t;
 }
 
+// time when acceleration section of the sequence will complete
 float scurves::get_accel_finished_time() const
 {
     if (num_segs != segments_max) {
@@ -469,6 +470,7 @@ float scurves::get_accel_finished_time() const
     return segment[SEG_ACCEL_END].end_time;
 }
 
+// return true if the sequence is braking to a stop
 bool scurves::braking() const
 {
     if (num_segs != segments_max) {
@@ -477,7 +479,7 @@ bool scurves::braking() const
     return _t >= segment[SEG_CONST].end_time;
 }
 
-// calculate the jerk, acceleration, velocity and position at time t
+// calculate the jerk, acceleration, velocity and position at the provided time
 void scurves::update(float time, float &Jt_out, float &At_out, float &Vt_out, float &Pt_out)
 {
     jtype_t Jtype;
@@ -527,7 +529,7 @@ void scurves::update(float time, float &Jt_out, float &At_out, float &Vt_out, fl
     }
 }
 
-// calculate the jerk, acceleration, velocity and position at time "time" when running the constant jerk time segment
+// calculate the jerk, acceleration, velocity and position at time t when running the constant jerk time segment
 void scurves::calc_javp_for_segment_const_jerk(float time, float J0, float A0, float V0, float P0, float &Jt, float &At, float &Vt, float &Pt) const
 {
     Jt = J0;
@@ -536,7 +538,7 @@ void scurves::calc_javp_for_segment_const_jerk(float time, float J0, float A0, f
     Pt = P0 + V0 * time + 0.5 * A0 * (time * time) + (1 / 6.0) * J0 * (time * time * time);
 }
 
-// Calculate the jerk, acceleration, velocity and position at time "time" when running the increasing jerk magnitude time segment based on a raised cosine profile
+// Calculate the jerk, acceleration, velocity and position at time t when running the increasing jerk magnitude time segment based on a raised cosine profile
 void scurves::calc_javp_for_segment_incr_jerk(float time, float tj, float Jp, float A0, float V0, float P0, float &Jt, float &At, float &Vt, float &Pt) const
 {
     float Alpha = Jp / 2.0;
@@ -547,7 +549,7 @@ void scurves::calc_javp_for_segment_incr_jerk(float time, float tj, float Jp, fl
     Pt = P0 + V0 * time + 0.5 * A0 * (time * time) + (-Alpha / (Beta * Beta)) * time + Alpha * (time * time * time) / 6.0 + (Alpha / (Beta * Beta * Beta)) * sinf(Beta * time);
 }
 
-// Calculate the jerk, acceleration, velocity and position at time "time" when running the  decreasing jerk magnitude time segment based on a raised cosine profile
+// Calculate the jerk, acceleration, velocity and position at time t when running the decreasing jerk magnitude time segment based on a raised cosine profile
 void scurves::calc_javp_for_segment_decr_jerk(float time, float tj, float Jp, float A0, float V0, float P0, float &Jt, float &At, float &Vt, float &Pt) const
 {
     float Alpha = Jp / 2.0;
@@ -578,7 +580,13 @@ void scurves::debug()
     hal.console->printf("\n");
 }
 
-// generate time segments for straight segment
+// generate the segments for a path of length L
+// the path consists of 23 segments
+// 1 initial segment
+// 7 segments forming the acceleration S-Curve
+// 7 segments forming the velocity change S-Curve
+// 1 constant velocity S-Curve
+// 7 segments forming the deceleration S-Curve
 void scurves::add_segments(float Pp)
 {
     if (is_zero(Pp)) {
@@ -609,7 +617,13 @@ void scurves::add_segments(float Pp)
     add_segments_incr_const_decr_jerk(num_segs, otj, Jp, t2);
 }
 
-// calculate duration of time segments for basic acceleration and deceleration curve from constant velocity to stationary.
+// calculate the segment times for the trigonometric S-Curve path defined by:
+// tj - duration of the raised cosine jerk profile
+// Jm - maximum value of the raised cosine jerk profile
+// V0 - initial velocity magnitude
+// Am - maximum constant acceleration
+// Vm - maximum constant velocity
+// L - Length of the path
 void scurves::cal_pos(float tj, float V0, float Jp, float Ap, float Vp, float Pp, float &Jp_out, float &t2_out, float &t4_out, float &t6_out) const
 {
     // init outputs
@@ -660,7 +674,7 @@ void scurves::cal_pos(float tj, float V0, float Jp, float Ap, float Vp, float Pp
     Jp_out = Jp;
 }
 
-// generate three time segment raised cosine jerk profile
+// generate three time segments forming the jerk profile
 void scurves::add_segments_incr_const_decr_jerk(uint16_t &seg_pnt, float tj, float Jp, float Tcj)
 {
     add_segment_incr_jerk(seg_pnt, tj, Jp);
@@ -719,6 +733,7 @@ void scurves::add_segment_decr_jerk(uint16_t &seg_pnt, float tj, float Jp)
     add_segment(seg_pnt, T, Jtype, J, A, V, P);
 }
 
+// add single S-Curve segment
 void scurves::add_segment(uint16_t &seg_pnt, float end_time, jtype_t jtype, float jerk_ref, float end_accel, float end_vel, float end_pos)
 {
     segment[seg_pnt].end_time = end_time;
@@ -730,9 +745,9 @@ void scurves::add_segment(uint16_t &seg_pnt, float end_time, jtype_t jtype, floa
     seg_pnt++;
 }
 
-// update speed and acceleration limits along track
-// origin and destination are offsets from EKF origin in cm
-// speed and acceleration parameters are limits in cm/s or cm/s/s
+// set speed and acceleration limits for the path
+// origin and destination are offsets from EKF origin
+// speed and acceleration parameters are given in horizontal, up and down.
 void scurves::set_kinematic_limits(const Vector3f &origin, const Vector3f &destination,
                                    float speed_xy_cms, float speed_up_cms, float speed_down_cms,
                                    float accel_xy_cmss, float accel_z_cmss)
@@ -743,6 +758,7 @@ void scurves::set_kinematic_limits(const Vector3f &origin, const Vector3f &desti
     speed_down_cms = MAX(fabsf(speed_down_cms), SPEED_Z_MIN);
     accel_xy_cmss = MAX(accel_xy_cmss, ACCEL_XY_MIN);
     accel_z_cmss = MAX(accel_z_cmss, ACCEL_Z_MIN);
+    // ensure arguments are positive
 
     Vector3f direction = destination - origin;
     float track_speed_max = kinematic_limit(direction, speed_xy_cms, speed_up_cms, speed_down_cms);
