@@ -106,7 +106,7 @@ private:
     // Am - maximum constant acceleration
     // Vm - maximum constant velocity
     // L - Length of the path
-    void cal_pos(float tj, float V0, float Jp, float Ap, float Vp, float Pp, float &Jp_out, float &t2_out, float &t4_out, float &t6_out) const;
+    void cal_pos(float tj, float Jp, float V0, float Ap, float Vp, float Pp, float &Jp_out, float &t2_out, float &t4_out, float &t6_out) const;
 
     // generate three time segments forming the jerk profile
     void add_segments_incr_const_decr_jerk(uint16_t &seg_pnt, float tj, float Jp, float Tcj);

@@ -176,7 +176,7 @@ void scurves::set_speed_accel(float speed_xy_cms, float speed_up_cms, float spee
         seg = SEG_INIT+1;
 
         float Jp, t2, t4, t6;
-        cal_pos(otj, Vstart, jerk_max, accel_max, MAX(Vmin, vel_max), Pend / 2.0, Jp, t2, t4, t6);
+        cal_pos(otj, jerk_max, Vstart, accel_max, MAX(Vmin, vel_max), Pend / 2.0, Jp, t2, t4, t6);
 
         add_segments_incr_const_decr_jerk(seg, otj, Jp, t2);
         add_segment_const_jerk(seg, t4, 0.0);
@@ -192,7 +192,7 @@ void scurves::set_speed_accel(float speed_xy_cms, float speed_up_cms, float spee
             segment[i].end_pos = segment[SEG_ACCEL_END].end_pos;
         }
 
-        cal_pos(otj, 0.0f, jerk_max, accel_max, MAX(Vmin, vel_max), Pend / 2.0, Jp, t2, t4, t6);
+        cal_pos(otj, jerk_max, 0.0f, accel_max, MAX(Vmin, vel_max), Pend / 2.0, Jp, t2, t4, t6);
 
         seg = SEG_CONST +1;
         add_segments_incr_const_decr_jerk(seg, otj, -Jp, t6);
@@ -229,12 +229,12 @@ void scurves::set_speed_accel(float speed_xy_cms, float speed_up_cms, float spee
         float t6 = 0;
         if ((vel_max < segment[SEG_ACCEL_END].end_vel) && (otj*12.0f < Pp/segment[SEG_ACCEL_END].end_vel)) {
             // we have a problem here with small segments.
-            cal_pos(otj, vel_max, jerk_max, accel_max, segment[SEG_ACCEL_END].end_vel, Pp / 2.0, Jp, t6, t4, t2);
+            cal_pos(otj, jerk_max, vel_max, accel_max, segment[SEG_ACCEL_END].end_vel, Pp / 2.0, Jp, t6, t4, t2);
             Jp = -Jp;
 
         } else if ((vel_max > segment[SEG_ACCEL_END].end_vel) && (Pp/(otj*12.0f) > segment[SEG_ACCEL_END].end_vel)) {
             float Vp = MIN(vel_max, Pp/(otj*12.0f));
-            cal_pos(otj, segment[SEG_ACCEL_END].end_vel, jerk_max, accel_max, Vp, Pp / 2.0, Jp, t2, t4, t6);
+            cal_pos(otj, jerk_max, segment[SEG_ACCEL_END].end_vel, accel_max, Vp, Pp / 2.0, Jp, t2, t4, t6);
         }
 
         seg = SEG_ACCEL_END + 1;
@@ -252,7 +252,7 @@ void scurves::set_speed_accel(float speed_xy_cms, float speed_up_cms, float spee
     add_segment_const_jerk(seg, 0.0, 0.0);
     if (Vend < segment[SEG_CHANGE_END].end_vel) {
         float Jp, t2, t4, t6;
-        cal_pos(otj, Vend, jerk_max, accel_max, segment[SEG_CONST].end_vel, Pend - segment[SEG_CONST].end_pos, Jp, t2, t4, t6);
+        cal_pos(otj, jerk_max, Vend, accel_max, segment[SEG_CONST].end_vel, Pend - segment[SEG_CONST].end_pos, Jp, t2, t4, t6);
         add_segments_incr_const_decr_jerk(seg, otj, -Jp, t6);
         add_segment_const_jerk(seg, t4, 0.0);
         add_segments_incr_const_decr_jerk(seg, otj, Jp, t2);
@@ -326,7 +326,7 @@ float scurves::set_origin_speed_max(float speed_cms)
     speed_cms = MIN(speed_cms, Vp);
 
     float Jp, t2, t4, t6;
-    cal_pos(otj, speed_cms, jerk_max, accel_max, Vp, Pp / 2.0, Jp, t2, t4, t6);
+    cal_pos(otj, jerk_max, speed_cms, accel_max, Vp, Pp / 2.0, Jp, t2, t4, t6);
 
     uint16_t seg = SEG_INIT;
     add_segment(seg, 0.0f, jtype_t::CONSTANT, 0.0f, 0.0f, speed_cms, 0.0f);
@@ -344,7 +344,7 @@ float scurves::set_origin_speed_max(float speed_cms)
         segment[i].end_pos = segment[SEG_ACCEL_END].end_pos;
     }
 
-    cal_pos(otj, 0.0f, jerk_max, accel_max, Vp, Pp - segment[SEG_CONST].end_pos, Jp, t2, t4, t6);
+    cal_pos(otj, jerk_max, 0.0f, accel_max, Vp, Pp - segment[SEG_CONST].end_pos, Jp, t2, t4, t6);
 
     seg = SEG_CONST;
     add_segment_const_jerk(seg, 0.0, 0.0);
@@ -381,7 +381,7 @@ void scurves::set_destination_speed_max(float speed_cms)
     speed_cms = MIN(speed_cms, Vp);
 
     float Jp, t2, t4, t6;
-    cal_pos(otj, speed_cms, jerk_max, accel_max, Vp, Pp / 2.0, Jp, t2, t4, t6);
+    cal_pos(otj, jerk_max, speed_cms, accel_max, Vp, Pp / 2.0, Jp, t2, t4, t6);
 
     uint16_t seg = SEG_CONST;
     add_segment_const_jerk(seg, 0.0, 0.0);
@@ -594,7 +594,7 @@ void scurves::add_segments(float Pp)
     }
 
     float Jp, t2, t4, t6;
-    cal_pos(otj, 0.0f, jerk_max, accel_max, vel_max, Pp / 2.0, Jp, t2, t4, t6);
+    cal_pos(otj, jerk_max, 0.0f, accel_max, vel_max, Pp / 2.0, Jp, t2, t4, t6);
 
     add_segments_incr_const_decr_jerk(num_segs, otj, Jp, t2);
     add_segment_const_jerk(num_segs, t4, 0.0);
@@ -624,7 +624,7 @@ void scurves::add_segments(float Pp)
 // Am - maximum constant acceleration
 // Vm - maximum constant velocity
 // L - Length of the path
-void scurves::cal_pos(float tj, float V0, float Jp, float Ap, float Vp, float Pp, float &Jp_out, float &t2_out, float &t4_out, float &t6_out) const
+void scurves::cal_pos(float tj, float Jp, float V0, float Ap, float Vp, float Pp, float &Jp_out, float &t2_out, float &t4_out, float &t6_out) const
 {
     // init outputs
     Jp_out = 0.0f;
