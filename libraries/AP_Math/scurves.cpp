@@ -165,7 +165,7 @@ void scurves::set_speed_accel(float speed_xy_cms, float speed_up_cms, float spee
     }
 
     // Adjust the INIT and ACCEL segments for new speed
-    if ( (_t <= segment[SEG_ACCEL_MAX].end_time) && is_positive(segment[SEG_ACCEL_MAX].end_time - segment[SEG_ACCEL_MAX-1].end_time) && (vel_max < segment[SEG_ACCEL_END].end_vel) && is_positive(segment[SEG_ACCEL_MAX].end_accel) ) {
+    if ((_t <= segment[SEG_ACCEL_MAX].end_time) && is_positive(segment[SEG_ACCEL_MAX].end_time - segment[SEG_ACCEL_MAX-1].end_time) && (vel_max < segment[SEG_ACCEL_END].end_vel) && is_positive(segment[SEG_ACCEL_MAX].end_accel) ) {
         // Path has not finished constant positive acceleration segment
         // Reduce velocity as close to target velocity as possible
 
@@ -612,14 +612,20 @@ void scurves::add_segments(float Pp)
 // calculate duration of time segments for basic acceleration and deceleration curve from constant velocity to stationary.
 void scurves::cal_pos(float tj, float V0, float Jp, float Ap, float Vp, float Pp, float &Jp_out, float &t2_out, float &t4_out, float &t6_out) const
 {
-    if (!is_positive(tj) || !is_positive(Jp) || !is_positive(Ap) || !is_positive(Vp) || !is_positive(Pp) || V0 >= Vp) {
-        // check for bad input parameters
-        // return zero time
-        Jp_out = 0.0f;
-        t2_out = 0.0f;
-        t4_out = 0.0f;
-        t6_out = 0.0f;
+    // init outputs
+    Jp_out = 0.0f;
+    t2_out = 0.0f;
+    t4_out = 0.0f;
+    t6_out = 0.0f;
+
+    // check for invalid arguments
+    if (!is_positive(tj) || !is_positive(Jp) || !is_positive(Ap) || !is_positive(Vp) || !is_positive(Pp)) {
         INTERNAL_ERROR(AP_InternalError::error_t::invalid_arguments);
+        return;
+    }
+
+    if (V0 >= Vp) {
+        // no velocity change so all segments as zero length
         return;
     }
 
