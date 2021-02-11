@@ -22,11 +22,6 @@
 
 extern const AP_HAL::HAL &hal;
 
-#define SPEED_XY_MIN        50.0f   // minimum horizontal speed in cm/s
-#define SPEED_Z_MIN         20.0f   // minimum vertical speed in cm/s
-#define ACCEL_XY_MIN        50.0f   // minimum horizontal acceleration in cm/s/s
-#define ACCEL_Z_MIN         20.0f   // minimum vertical acceleration in cm/s/s
-
 #define SEG_INIT        0
 #define SEG_ACCEL_MAX   4
 #define SEG_ACCEL_END   7
@@ -63,11 +58,11 @@ void scurves::init()
 }
 
 // set maximum velocity and re-calculate the path using these limits
-void scurves::set_speed_accel(float speed_xy_cms, float speed_up_cms, float speed_down_cms,
-                              float accel_xy_cmss, float accel_z_cmss)
+void scurves::set_speed_accel(float speed_xy, float speed_up, float speed_down,
+                              float accel_xy, float accel_z)
 {
     // segment accelerations can not be changed after segment creation.
-    float track_speed_max = kinematic_limit(_delta_unit, speed_xy_cms, speed_up_cms, fabsf(speed_down_cms));
+    float track_speed_max = kinematic_limit(_delta_unit, speed_xy, speed_up, fabsf(speed_down));
 
     if (is_equal(vel_max, track_speed_max)) {
         // New speed is equal to current speed maximum
@@ -280,15 +275,15 @@ void scurves::set_speed_accel(float speed_xy_cms, float speed_up_cms, float spee
 // generate a trigonometric S-Curve path in 3D space that moves over a straight line
 // between two points defined by the origin and destination.
 void scurves::calculate_leg(const Vector3f &origin, const Vector3f &destination,
-                   float speed_xy_cms, float speed_up_cms, float speed_down_cms,
-                   float accel_xy_cmss, float accel_z_cmss)
+                   float speed_xy, float speed_up, float speed_down,
+                   float accel_xy, float accel_z)
 {
     init();
 
     // update speed and acceleration limits along path
     set_kinematic_limits(origin, destination,
-                         speed_xy_cms, speed_up_cms, speed_down_cms,
-                         accel_xy_cmss, accel_z_cmss);
+                         speed_xy, speed_up, speed_down,
+                         accel_xy, accel_z);
 
     // avoid divide-by zeros. Path will be left as a zero length path
     if (!is_positive(otj) || !is_positive(jerk_max) || !is_positive(accel_max) || !is_positive(vel_max)) {
@@ -308,7 +303,7 @@ void scurves::calculate_leg(const Vector3f &origin, const Vector3f &destination,
 
 // set the maximum vehicle speed at the origin
 // returns the expected speed at the origin (will always be equal or lower to speed_cm)
-float scurves::set_origin_speed_max(float speed_cms)
+float scurves::set_origin_speed_max(float speed)
 {
     // if path is zero length then start speed must be zero
     if (num_segs != segments_max) {
@@ -317,19 +312,19 @@ float scurves::set_origin_speed_max(float speed_cms)
 
     // check speed is zero or positive
     // avoid re-calculating if unnecessary
-    if (is_equal(segment[SEG_INIT].end_vel, speed_cms)) {
-        return speed_cms;
+    if (is_equal(segment[SEG_INIT].end_vel, speed)) {
+        return speed;
     }
 
     float Vm = segment[SEG_ACCEL_END].end_vel;
     float L = segment[SEG_DECEL_END].end_pos;
-    speed_cms = MIN(speed_cms, Vm);
+    speed = MIN(speed, Vm);
 
     float Jm, t2, t4, t6;
-    calculate_path(otj, jerk_max, speed_cms, accel_max, Vm, L / 2.0, Jm, t2, t4, t6);
+    calculate_path(otj, jerk_max, speed, accel_max, Vm, L / 2.0, Jm, t2, t4, t6);
 
     uint16_t seg = SEG_INIT;
-    add_segment(seg, 0.0f, jtype_t::CONSTANT, 0.0f, 0.0f, speed_cms, 0.0f);
+    add_segment(seg, 0.0f, jtype_t::CONSTANT, 0.0f, 0.0f, speed, 0.0f);
     add_segments_jerk(seg, otj, Jm, t2);
     add_segment_const_jerk(seg, t4, 0.0);
     add_segments_jerk(seg, otj, -Jm, t6);
@@ -360,11 +355,11 @@ float scurves::set_origin_speed_max(float speed_cms)
         segment[i].end_time += t15;
         segment[i].end_pos += dP;
     }
-    return speed_cms;
+    return speed;
 }
 
 // set the maximum vehicle speed at the destination
-void scurves::set_destination_speed_max(float speed_cms)
+void scurves::set_destination_speed_max(float speed)
 {
     // if path is zero length then start speed must be zero
     if (num_segs != segments_max) {
@@ -372,16 +367,16 @@ void scurves::set_destination_speed_max(float speed_cms)
     }
 
     // avoid re-calculating if unnecessary
-    if (is_equal(segment[segments_max-1].end_vel, speed_cms)) {
+    if (is_equal(segment[segments_max-1].end_vel, speed)) {
         return;
     }
 
     float Vm = segment[SEG_CONST].end_vel;
     float L = segment[SEG_DECEL_END].end_pos;
-    speed_cms = MIN(speed_cms, Vm);
+    speed = MIN(speed, Vm);
 
     float Jm, t2, t4, t6;
-    calculate_path(otj, jerk_max, speed_cms, accel_max, Vm, L / 2.0, Jm, t2, t4, t6);
+    calculate_path(otj, jerk_max, speed, accel_max, Vm, L / 2.0, Jm, t2, t4, t6);
 
     uint16_t seg = SEG_CONST;
     add_segment_const_jerk(seg, 0.0, 0.0);
@@ -749,20 +744,19 @@ void scurves::add_segment(uint16_t &seg_pnt, float end_time, jtype_t jtype, floa
 // origin and destination are offsets from EKF origin
 // speed and acceleration parameters are given in horizontal, up and down.
 void scurves::set_kinematic_limits(const Vector3f &origin, const Vector3f &destination,
-                                   float speed_xy_cms, float speed_up_cms, float speed_down_cms,
-                                   float accel_xy_cmss, float accel_z_cmss)
+                                   float speed_xy, float speed_up, float speed_down,
+                                   float accel_xy, float accel_z)
 {
-    // sanity check arguments
-    speed_xy_cms = MAX(speed_xy_cms, SPEED_XY_MIN);
-    speed_up_cms = MAX(speed_up_cms, SPEED_Z_MIN);
-    speed_down_cms = MAX(fabsf(speed_down_cms), SPEED_Z_MIN);
-    accel_xy_cmss = MAX(accel_xy_cmss, ACCEL_XY_MIN);
-    accel_z_cmss = MAX(accel_z_cmss, ACCEL_Z_MIN);
     // ensure arguments are positive
+    speed_xy = fabsf(speed_xy);
+    speed_up = fabsf(speed_up);
+    speed_down = fabsf(speed_down);
+    accel_xy = fabsf(accel_xy);
+    accel_z = fabsf(accel_z);
 
     Vector3f direction = destination - origin;
-    float track_speed_max = kinematic_limit(direction, speed_xy_cms, speed_up_cms, speed_down_cms);
-    float track_accel_max = kinematic_limit(direction, accel_xy_cmss, accel_z_cmss, accel_z_cmss);
+    float track_speed_max = kinematic_limit(direction, speed_xy, speed_up, speed_down);
+    float track_accel_max = kinematic_limit(direction, accel_xy, accel_z, accel_z);
 
     set_speed_max(track_speed_max);
     set_accel_max(track_accel_max);

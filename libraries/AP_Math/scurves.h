@@ -15,28 +15,28 @@ public:
 
     // get or set maximum speed along path
     float get_speed_max() const { return vel_max; }
-    void set_speed_max(float speed_cms) { vel_max = speed_cms; }
+    void set_speed_max(float speed) { vel_max = speed; }
 
     // get or set maximum acceleration along path
     float get_accel_max() const { return accel_max; }
     void set_accel_max(float acceleration_max) { accel_max = acceleration_max; }
 
     // set maximum velocity and re-calculate the path using these limits
-    void set_speed_accel(float speed_xy_cms, float speed_up_cms, float speed_down_cms,
-                         float accel_xy_cmss, float accel_z_cmss);
+    void set_speed_accel(float speed_xy, float speed_up, float speed_down,
+                         float accel_xy, float accel_z);
 
     // generate a trigonometric S-Curve path in 3D space that moves over a straight line
     // between two points defined by the origin and destination.
     void calculate_leg(const Vector3f &origin, const Vector3f &destination,
-                       float speed_xy_cms, float speed_up_cms, float speed_down_cms,
-                       float accel_xy_cmss, float accel_z_cmss);
+                       float speed_xy, float speed_up, float speed_down,
+                       float accel_xy, float accel_z);
 
     // set the maximum vehicle speed at the origin
     // returns the expected speed at the origin (will always be equal or lower to speed_cm)
-    float set_origin_speed_max(float speed_cms);
+    float set_origin_speed_max(float speed);
 
     // set the maximum vehicle speed at the destination
-    void set_destination_speed_max(float speed_cms);
+    void set_destination_speed_max(float speed);
 
     // increment time pointer and return the position, velocity and acceleration vectors relative to the origin
     void move_from_pos_vel_accel(float dt, Vector3f &pos, Vector3f &vel, Vector3f &accel);
@@ -124,8 +124,8 @@ private:
     // origin and destination are offsets from EKF origin
     // speed and acceleration parameters are given in horizontal, up and down.
     void set_kinematic_limits(const Vector3f &origin, const Vector3f &destination,
-                              float speed_xy_cms, float speed_up_cms, float speed_down_cms,
-                              float accel_xy_cmss, float accel_z_cmss);
+                              float speed_xy, float speed_up, float speed_down,
+                              float accel_xy, float accel_z);
 
     // S-Curve segment types
     enum class jtype_t {
