@@ -97,7 +97,7 @@ private:
     void debug();
 
     // generate time segments for straight segment
-    void add_segments(float Pp);
+    void add_segments(float L);
 
     // calculate the segment times for the trigonometric S-Curve path defined by:
     // tj - duration of the raised cosine jerk profile
@@ -106,10 +106,10 @@ private:
     // Am - maximum constant acceleration
     // Vm - maximum constant velocity
     // L - Length of the path
-    void calculate_path(float tj, float Jm, float V0, float Am, float Vm, float Pp, float &Jm_out, float &t2_out, float &t4_out, float &t6_out) const;
+    void calculate_path(float tj, float Jm, float V0, float Am, float Vm, float L, float &Jm_out, float &t2_out, float &t4_out, float &t6_out) const;
 
     // generate three time segments forming the jerk profile
-    void add_segments_incr_const_decr_jerk(uint16_t &seg_pnt, float tj, float Jm, float Tcj);
+    void add_segments_jerk(uint16_t &seg_pnt, float tj, float Jm, float Tcj);
 
     // generate constant jerk time segment
     void add_segment_const_jerk(uint16_t &seg_pnt, float tin, float J0);
