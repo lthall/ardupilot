@@ -8,7 +8,7 @@ public:
 
     // constructors
     scurves();
-    scurves(float tj, float Jp, float Ap, float Vp);
+    scurves(float tj, float Jm, float Am, float Vm);
 
     // initialise the S-Curve path
     void init();
@@ -88,10 +88,10 @@ private:
     void calc_javp_for_segment_const_jerk(float t, float J0, float A0, float V0, float P0, float &Jt, float &At, float &Vt, float &Pt) const;
 
     // Calculate the jerk, acceleration, velocity and position at time t when running the increasing jerk magnitude time segment based on a raised cosine profile
-    void calc_javp_for_segment_incr_jerk(float t, float tj, float Jp, float A0, float V0, float P0, float &Jt, float &At, float &Vt, float &Pt) const;
+    void calc_javp_for_segment_incr_jerk(float t, float tj, float Jm, float A0, float V0, float P0, float &Jt, float &At, float &Vt, float &Pt) const;
 
     // Calculate the jerk, acceleration, velocity and position at time t when running the decreasing jerk magnitude time segment based on a raised cosine profile
-    void calc_javp_for_segment_decr_jerk(float t, float tj, float Jp, float A0, float V0, float P0, float &Jt, float &At, float &Vt, float &Pt) const;
+    void calc_javp_for_segment_decr_jerk(float t, float tj, float Jm, float A0, float V0, float P0, float &Jt, float &At, float &Vt, float &Pt) const;
 
     // debugging messages
     void debug();
@@ -100,25 +100,25 @@ private:
     void add_segments(float Pp);
 
     // calculate the segment times for the trigonometric S-Curve path defined by:
-    // V0 - initial velocity magnitude
     // tj - duration of the raised cosine jerk profile
     // Jm - maximum value of the raised cosine jerk profile
+    // V0 - initial velocity magnitude
     // Am - maximum constant acceleration
     // Vm - maximum constant velocity
     // L - Length of the path
-    void cal_pos(float tj, float Jp, float V0, float Ap, float Vp, float Pp, float &Jp_out, float &t2_out, float &t4_out, float &t6_out) const;
+    void calculate_path(float tj, float Jm, float V0, float Am, float Vm, float Pp, float &Jm_out, float &t2_out, float &t4_out, float &t6_out) const;
 
     // generate three time segments forming the jerk profile
-    void add_segments_incr_const_decr_jerk(uint16_t &seg_pnt, float tj, float Jp, float Tcj);
+    void add_segments_incr_const_decr_jerk(uint16_t &seg_pnt, float tj, float Jm, float Tcj);
 
     // generate constant jerk time segment
     void add_segment_const_jerk(uint16_t &seg_pnt, float tin, float J0);
 
     // generate increasing jerk magnitude time segment based on a raised cosine profile
-    void add_segment_incr_jerk(uint16_t &seg_pnt, float tj, float Jp);
+    void add_segment_incr_jerk(uint16_t &seg_pnt, float tj, float Jm);
 
     // generate decreasing jerk magnitude time segment based on a raised cosine profile
-    void add_segment_decr_jerk(uint16_t &seg_pnt, float tj, float Jp);
+    void add_segment_decr_jerk(uint16_t &seg_pnt, float tj, float Jm);
 
     // set speed and acceleration limits for the path
     // origin and destination are offsets from EKF origin
