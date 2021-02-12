@@ -42,6 +42,11 @@ const AP_Param::GroupInfo AC_PID_1D::var_info[] = {
     // @Units: Hz
     AP_GROUPINFO("FLTD", 5, AC_PID_1D, _filt_D_hz, AC_PID_1D_FILT_D_HZ_DEFAULT),
 
+    // @Param: FF
+    // @DisplayName: PID Feed Forward Gain
+    // @Description: FF Gain which produces an output that is proportional to the magnitude of the target
+    AP_GROUPINFO("FF",    6, AC_PID_1D, _kff, 0),
+
     AP_GROUPEND
 };
 

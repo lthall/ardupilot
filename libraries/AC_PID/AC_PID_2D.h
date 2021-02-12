@@ -38,10 +38,10 @@ public:
     Vector2f get_ff();
 
     // reset the integrator
-    void reset_I();
+    void reset_I() { _integrator.zero(); };
 
     // reset_filter - input and D term filter will be reset to the next value provided to set_input()
-    void reset_filter() { _flags._reset_filter = true; }
+    void reset_filter() { _reset_filter = true; }
 
     // save gain to eeprom
     void save_gains();
@@ -89,17 +89,13 @@ protected:
     AP_Float _filt_E_hz;         // PID error filter frequency in Hz
     AP_Float _filt_D_hz;         // PID derivative filter frequency in Hz
 
-    // flags
-    struct ac_pid_flags {
-        bool        _reset_filter : 1;    // true when input filter should be reset during next call to set_input
-    } _flags;
-
     // internal variables
-    float           _dt;            // timestep in seconds
-    Vector2f        _target;        // target value to enable filtering
-    Vector2f        _error;         // error value to enable filtering
-    Vector2f        _derivative;    // last derivative for low-pass filter
-    Vector2f        _integrator;    // integrator value
+    float       _dt;            // timestep in seconds
+    Vector2f    _target;        // target value to enable filtering
+    Vector2f    _error;         // error value to enable filtering
+    Vector2f    _derivative;    // last derivative for low-pass filter
+    Vector2f    _integrator;    // integrator value
+    bool        _reset_filter;  // true when input filter should be reset during next call to set_input
 
     AP_Logger::PID_Info _pid_info_x;
     AP_Logger::PID_Info _pid_info_y;

@@ -46,13 +46,12 @@ public:
 
     // get accessors
     AP_Float &kP() { return _kp; }
-    const AP_Float &kP() const { return _kp; }
-    float kI() const { return _ki; }
-    float kD() const { return _kd; }
-    float ff() const { return _kff;}
-    float imax() const { return _kimax; }
-    float filt_E_hz() const { return _filt_E_hz; }
-    float filt_D_hz() const { return _filt_D_hz; }
+    AP_Float &kI() { return _ki; }
+    AP_Float &kD() { return _kd; }
+    AP_Float &ff() { return _kff;}
+    AP_Float &filt_E_hz() { return _filt_E_hz; }
+    AP_Float &filt_D_hz() { return _filt_D_hz; }
+    float imax() const { return _kimax.get(); }
     float get_filt_E_alpha() const;
     float get_filt_D_alpha() const;
 
@@ -75,7 +74,7 @@ public:
     // parameter var table
     static const struct AP_Param::GroupInfo var_info[];
 
-private:
+protected:
 
     // parameters
     AP_Float _kp;

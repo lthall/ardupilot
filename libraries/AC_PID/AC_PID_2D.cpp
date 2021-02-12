@@ -66,7 +66,7 @@ AC_PID_2D::AC_PID_2D(float initial_p, float initial_i, float initial_d, float in
     filt_D_hz(initial_filt_D_hz);
 
     // reset input filter to first value received
-    _flags._reset_filter = true;
+    _reset_filter = true;
 }
 
 //  update_all - set target and measured inputs to PID controller and calculate outputs
@@ -86,8 +86,8 @@ Vector2f AC_PID_2D::update_all(float target_x, float target_y, const Vector2f &m
     _target = Vector2f(target_x, target_y);
 
     // reset input filter to value received
-    if (_flags._reset_filter) {
-        _flags._reset_filter = false;
+    if (_reset_filter) {
+        _reset_filter = false;
         _error = _target - measurement;
         _derivative.zero();
     } else {
@@ -141,31 +141,6 @@ void AC_PID_2D::update_i(bool limit)
     if (integrator_length_new > integrator_length_orig) {
         _integrator *= (integrator_length_orig / integrator_length_new);
     }
-}
-
-Vector2f AC_PID_2D::get_p() const
-{
-    return _error * _kp;
-}
-
-Vector2f AC_PID_2D::get_i() const
-{
-    return _integrator;
-}
-
-Vector2f AC_PID_2D::get_d() const
-{
-    return _derivative * _kd;
-}
-
-Vector2f AC_PID_2D::get_ff()
-{
-    return _target * _kff;
-}
-
-void AC_PID_2D::reset_I()
-{
-    _integrator.zero();
 }
 
 // save_gains - save gains to eeprom
