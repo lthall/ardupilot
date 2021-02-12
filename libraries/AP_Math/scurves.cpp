@@ -189,7 +189,7 @@ void scurves::set_speed_accel(float speed_xy, float speed_up, float speed_down,
 
         calculate_path(otj, jerk_max, 0.0f, accel_max, MAX(Vmin, vel_max), Pend / 2.0, Jm, t2, t4, t6);
 
-        seg = SEG_CONST +1;
+        seg = SEG_CONST + 1;
         add_segments_jerk(seg, otj, -Jm, t6);
         add_segment_const_jerk(seg, t4, 0.0);
         add_segments_jerk(seg, otj, Jm, t2);
@@ -619,6 +619,7 @@ void scurves::add_segments(float L)
 // Am - maximum constant acceleration
 // Vm - maximum constant velocity
 // L - Length of the path
+// t2_out, t4_out, t6_out are the segment durations needed to achieve the kinimatic path specified by the input variables
 void scurves::calculate_path(float tj, float Jm, float V0, float Am, float Vm, float L, float &Jm_out, float &t2_out, float &t4_out, float &t6_out) const
 {
     // init outputs
@@ -669,28 +670,34 @@ void scurves::calculate_path(float tj, float Jm, float V0, float Am, float Vm, f
     Jm_out = Jm;
 }
 
-// generate three time segments forming the jerk profile
-void scurves::add_segments_jerk(uint16_t &seg_pnt, float tj, float Jm, float Tcj)
+// generate three consecutive segments forming a jerk profile
+// the index variable is the position within the path array that this jerk profile should be added
+// the index is incremented to reference the next segment in the array after the jerk profile
+void scurves::add_segments_jerk(uint16_t &index, float tj, float Jm, float Tcj)
 {
-    add_segment_incr_jerk(seg_pnt, tj, Jm);
-    add_segment_const_jerk(seg_pnt, Tcj, Jm);
-    add_segment_decr_jerk(seg_pnt, tj, Jm);
+    add_segment_incr_jerk(index, tj, Jm);
+    add_segment_const_jerk(index, Tcj, Jm);
+    add_segment_decr_jerk(index, tj, Jm);
 }
 
 // generate constant jerk time segment
-void scurves::add_segment_const_jerk(uint16_t &seg_pnt, float tin, float J0)
+// calculate the information needed to populate the constant jerk segment from the segment duration tj and jerk J0
+// the index variable is the position of this segment in the path array and is incremented to reference the next segment in the array
+void scurves::add_segment_const_jerk(uint16_t &index, float tj, float J0)
 {
     jtype_t Jtype = jtype_t::CONSTANT;
     float J = J0;
-    float T = segment[seg_pnt - 1].end_time + tin;
-    float A = segment[seg_pnt - 1].end_accel + J0 * tin;
-    float V = segment[seg_pnt - 1].end_vel + segment[seg_pnt - 1].end_accel * tin + 0.5 * J0 * sq(tin);
-    float P = segment[seg_pnt - 1].end_pos + segment[seg_pnt - 1].end_vel * tin + 0.5 * segment[seg_pnt - 1].end_accel * sq(tin) + (1 / 6.0) * J0 * powf(tin, 3.0);
-    add_segment(seg_pnt, T, Jtype, J, A, V, P);
+    float T = segment[index - 1].end_time + tj;
+    float A = segment[index - 1].end_accel + J0 * tj;
+    float V = segment[index - 1].end_vel + segment[index - 1].end_accel * tj + 0.5 * J0 * sq(tj);
+    float P = segment[index - 1].end_pos + segment[index - 1].end_vel * tj + 0.5 * segment[index - 1].end_accel * sq(tj) + (1 / 6.0) * J0 * powf(tj, 3.0);
+    add_segment(index, T, Jtype, J, A, V, P);
 }
 
 // generate increasing jerk magnitude time segment based on a raised cosine profile
-void scurves::add_segment_incr_jerk(uint16_t &seg_pnt, float tj, float Jm)
+// calculate the information needed to populate the increasing jerk magnitude segment from the segment duration tj and jerk magnitude Jm
+// the index variable is the position of this segment in the path array and is incremented to reference the next segment in the array
+void scurves::add_segment_incr_jerk(uint16_t &index, float tj, float Jm)
 {
     float Beta = M_PI / tj;
     float Alpha = Jm / 2.0;
@@ -700,15 +707,17 @@ void scurves::add_segment_incr_jerk(uint16_t &seg_pnt, float tj, float Jm)
 
     jtype_t Jtype = jtype_t::POSITIVE;
     float J = Jm;
-    float T = segment[seg_pnt - 1].end_time + tj;
-    float A = segment[seg_pnt - 1].end_accel + AT;
-    float V = segment[seg_pnt - 1].end_vel + segment[seg_pnt - 1].end_accel * tj + VT;
-    float P = segment[seg_pnt - 1].end_pos + segment[seg_pnt - 1].end_vel * tj + 0.5 * segment[seg_pnt - 1].end_accel * sq(tj) + PT;
-    add_segment(seg_pnt, T, Jtype, J, A, V, P);
+    float T = segment[index - 1].end_time + tj;
+    float A = segment[index - 1].end_accel + AT;
+    float V = segment[index - 1].end_vel + segment[index - 1].end_accel * tj + VT;
+    float P = segment[index - 1].end_pos + segment[index - 1].end_vel * tj + 0.5 * segment[index - 1].end_accel * sq(tj) + PT;
+    add_segment(index, T, Jtype, J, A, V, P);
 }
 
 // generate decreasing jerk magnitude time segment based on a raised cosine profile
-void scurves::add_segment_decr_jerk(uint16_t &seg_pnt, float tj, float Jm)
+// calculate the information needed to populate the decreasing jerk magnitude segment from the segment duration tj and jerk magnitude Jm
+// the index variable is the position of this segment in the path and is incremented to reference the next segment in the array
+void scurves::add_segment_decr_jerk(uint16_t &index, float tj, float Jm)
 {
     float Beta = M_PI / tj;
     float Alpha = Jm / 2.0;
@@ -721,23 +730,25 @@ void scurves::add_segment_decr_jerk(uint16_t &seg_pnt, float tj, float Jm)
 
     jtype_t Jtype = jtype_t::NEGATIVE;
     float J = Jm;
-    float T = segment[seg_pnt - 1].end_time + tj;
-    float A = (segment[seg_pnt - 1].end_accel - AT) + A2T;
-    float V = (segment[seg_pnt - 1].end_vel - VT) + (segment[seg_pnt - 1].end_accel - AT) * tj + V2T;
-    float P = (segment[seg_pnt - 1].end_pos - PT) + (segment[seg_pnt - 1].end_vel - VT) * tj + 0.5 * (segment[seg_pnt - 1].end_accel - AT) * sq(tj) + P2T;
-    add_segment(seg_pnt, T, Jtype, J, A, V, P);
+    float T = segment[index - 1].end_time + tj;
+    float A = (segment[index - 1].end_accel - AT) + A2T;
+    float V = (segment[index - 1].end_vel - VT) + (segment[index - 1].end_accel - AT) * tj + V2T;
+    float P = (segment[index - 1].end_pos - PT) + (segment[index - 1].end_vel - VT) * tj + 0.5 * (segment[index - 1].end_accel - AT) * sq(tj) + P2T;
+    add_segment(index, T, Jtype, J, A, V, P);
 }
 
 // add single S-Curve segment
-void scurves::add_segment(uint16_t &seg_pnt, float end_time, jtype_t jtype, float jerk_ref, float end_accel, float end_vel, float end_pos)
+// populate the information for the segment specified in the path by the index variable.
+// the index variable is incremented to reference the next segment in the array
+void scurves::add_segment(uint16_t &index, float end_time, jtype_t jtype, float jerk_ref, float end_accel, float end_vel, float end_pos)
 {
-    segment[seg_pnt].end_time = end_time;
-    segment[seg_pnt].jtype = jtype;
-    segment[seg_pnt].jerk_ref = jerk_ref;
-    segment[seg_pnt].end_accel = end_accel;
-    segment[seg_pnt].end_vel = end_vel;
-    segment[seg_pnt].end_pos = end_pos;
-    seg_pnt++;
+    segment[index].end_time = end_time;
+    segment[index].jtype = jtype;
+    segment[index].jerk_ref = jerk_ref;
+    segment[index].end_accel = end_accel;
+    segment[index].end_vel = end_vel;
+    segment[index].end_pos = end_pos;
+    index++;
 }
 
 // set speed and acceleration limits for the path
