@@ -31,7 +31,7 @@ public:
     Vector2f    get_i();
     Vector2f    get_i_shrink();   // get_i but do not allow integrator to grow (it may shrink)
     Vector2f    get_d();
-    Vector2f    get_ff();
+    Vector2f    get_ff(Vector2f target);
 
     // reset_I - reset the integrator
     void        reset_I();

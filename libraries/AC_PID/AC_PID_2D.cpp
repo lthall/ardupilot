@@ -182,10 +182,10 @@ Vector2f AC_PID_2D::get_d()
     return Vector2f(_kd * _derivative.x, _kd * _derivative.y);
 }
 
-Vector2f AC_PID_2D::get_ff()
+Vector2f AC_PID_2D::get_ff(Vector2f target)
 {
     // derivative component
-    return Vector2f(_kff * _input.x, _kff * _input.y);
+    return Vector2f(_kff * target.x, _kff * target.y);
 }
 
 Vector2f AC_PID_2D::get_pid()
