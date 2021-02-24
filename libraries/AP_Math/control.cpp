@@ -34,6 +34,36 @@ void update_pos_vel_accel(float& pos, float& vel, float accel, float dt)
     vel = vel + accel * dt;
 }
 
+// update_pos_vel_accel_z - single axis projection of position and velocity, pos and vel, forwards in time based on a time step of dt and acceleration of accel.
+void update_pos_vel_accel_z(Vector3f& pos, Vector3f& vel, Vector3f& accel, float dt)
+{
+    update_pos_vel_accel(pos.z, vel.z, accel.z, dt);
+}
+
+// update_pos_vel_accel_xy - dual axis projection of position and velocity, pos and vel, forwards in time based on a time step of dt and acceleration of accel.
+void update_pos_vel_accel_xy(Vector2f& pos, Vector2f& vel, Vector2f& accel, float dt)
+{
+    // move position and velocity forward by dt.
+    pos = pos + vel * dt + accel * 0.5f * sq(dt);
+    vel = vel + accel * dt;
+}
+
+// update_pos_vel_accel_xy - dual axis projection of position and velocity, pos and vel, forwards in time based on a time step of dt and acceleration of accel.
+// This function only updates the x and y axis leaving the z axis unchanged.
+void update_pos_vel_accel_xy(Vector3f& pos, Vector3f& vel, Vector3f& accel, float dt)
+{
+    Vector2f pos_2f = Vector2f(pos.x, pos.y);
+    Vector2f vel_2f = Vector2f(vel.x, vel.y);
+    Vector2f accel_2f = Vector2f(accel.x, accel.y);
+    update_pos_vel_accel_xy(pos_2f, vel_2f, accel_2f, dt);
+    pos.x = pos_2f.x;
+    pos.y = pos_2f.y;
+    vel.x = vel_2f.x;
+    vel.y = vel_2f.y;
+    accel.x = accel_2f.x;
+    accel.y = accel_2f.y;
+}
+
 /* shape_vel and shape_vel_xy calculate a jerk limited path from the current position, velocity and acceleration to an input velocity.
  The function takes the current position, velocity, and acceleration and calculates the required jerk limited adjustment to the acceleration for the next time dt.
  The kinematic path is constrained by :
@@ -80,6 +110,79 @@ void shape_vel(float& vel_input, float vel, float& accel, float accel_max, float
     vel_input = vel_error + vel;
 }
 
+void shape_vel_z(Vector3f& vel_input, const Vector3f& vel, Vector3f& accel, float accel_max, float tc, float dt)
+{
+    shape_vel(vel_input.z, vel.z, accel.z, accel_max, tc, dt);
+}
+
+/* shape_vel_xy calculate a jerk limited path from the current position, velocity and acceleration to an input velocity.
+ The function takes the current position, velocity, and acceleration and calculates the required jerk limited adjustment to the acceleration for the next time dt.
+ The kinimatic path is constrained by :
+     maximum velocity - vel_max,
+     maximum acceleration - accel_max,
+     time constant - tc.
+ The time constant defines the acceleration error decay in the kinimatic path as the system approaches constant acceleration.
+ The time constant also defines the time taken to achieve the maximum acceleration.
+ The time constant must be positive.
+ The function alters the input velocity to be the velocity that the system could reach zero acceleration in the minimum time.
+ The accel_max limit can be removed by setting it to zero.
+*/
+void shape_vel_xy(Vector2f& vel_input, const Vector2f& vel, Vector2f& accel, float accel_max, float tc, float dt)
+{
+    if (is_positive(tc)) {
+        // Calculate time constants and limits to ensure stable operation
+        float KPa = 1.0 / tc;
+        float jerk_max = accel_max * KPa;
+
+        // velocity error to be corrected
+        Vector2f vel_error = vel_input - vel;
+
+        // acceleration to correct velocity
+        Vector2f accel_target = vel_error * KPa;
+
+        // jerk limit acceleration change
+        Vector2f accel_delta = accel_target - accel;
+        if (is_positive(accel_max)) {
+            accel_delta.limit_length(jerk_max * dt);
+        }
+        accel = accel + accel_delta;
+
+        // limit acceleration to accel_max
+        if (is_positive(accel_max)) {
+            accel_delta.limit_length(accel_max);
+        }
+
+        // Calculate maximum pos_input and vel_input based on limited system
+        vel_error = accel / KPa;
+        vel_input = vel_error + vel;
+    }
+}
+
+/* shape_vel_xy calculate a jerk limited path from the current position, velocity and acceleration to an input velocity.
+ The function takes the current position, velocity, and acceleration and calculates the required jerk limited adjustment to the acceleration for the next time dt.
+ The kinimatic path is constrained by :
+     maximum velocity - vel_max,
+     maximum acceleration - accel_max,
+     time constant - tc.
+ The time constant defines the acceleration error decay in the kinimatic path as the system approaches constant acceleration.
+ The time constant also defines the time taken to achieve the maximum acceleration.
+ The time constant must be positive.
+ The function alters the input velocity to be the velocity that the system could reach zero acceleration in the minimum time.
+ This function operates on the x and y axis of Vector3f inputs.
+ The accel_max limit can be removed by setting it to zero.
+*/
+void shape_vel_xy(Vector3f& vel_input, const Vector3f& vel, Vector3f& accel, float accel_max, float tc, float dt)
+{
+    Vector2f vel_input_2f = Vector2f(vel_input.x, vel_input.y);
+    Vector2f vel_2f = Vector2f(vel.x, vel.y);
+    Vector2f accel_2f = Vector2f(accel.x, accel.y);
+
+    shape_vel_xy(vel_input_2f, vel_2f, accel_2f, accel_max, tc, dt);
+    vel_input.x = vel_input_2f.x;
+    vel_input.y = vel_input_2f.y;
+    accel.x = accel_2f.x;
+    accel.y = accel_2f.y;
+}
 
 /* shape_pos_vel calculate a jerk limited path from the current position, velocity and acceleration to an input position and velocity.
  The function takes the current position, velocity, and acceleration and calculates the required jerk limited adjustment to the acceleration for the next time dt.
@@ -130,6 +233,89 @@ void shape_pos_vel(float& pos_input, float vel_input, float pos, float vel, floa
     pos_input = pos_error + pos;
 }
 
+void shape_pos_vel_z(Vector3f& pos_input, const Vector3f& vel_input, const Vector3f& pos, const Vector3f& vel, Vector3f& accel, float vel_max, float vel_correction_max, float accel_max, float tc, float dt)
+{
+    shape_pos_vel(pos_input.z, vel_input.z, pos.z, vel.z, accel.z, vel_max, vel_correction_max, accel_max, tc, dt);
+}
+
+/* shape_pos_vel_xy calculate a jerk limited path from the current position, velocity and acceleration to an input position and velocity.
+ The function takes the current position, velocity, and acceleration and calculates the required jerk limited adjustment to the acceleration for the next time dt.
+ The kinimatic path is constrained by :
+     maximum velocity - vel_max,
+     maximum acceleration - accel_max,
+     time constant - tc.
+ The time constant defines the acceleration error decay in the kinimatic path as the system approaches constant acceleration.
+ The time constant also defines the time taken to achieve the maximum acceleration.
+ The time constant must be positive.
+ The function alters the input position to be the closest position that the system could reach zero acceleration in the minimum time.
+ This function operates on the x and y axis of both Vector2f or Vector3f inputs.
+ The vel_max, vel_correction_max, and accel_max limits can be removed by setting the desired limit to zero.
+*/
+void shape_pos_vel_xy(Vector2f& pos_input, const Vector2f& vel_input, const Vector2f& pos, const Vector2f& vel, Vector2f& accel, float vel_max, float vel_correction_max, float accel_max, float tc, float dt)
+{
+    if (!is_positive(tc)) {
+        return;
+    }
+
+    // Calculate time constants and limits to ensure stable operation
+    const float KPv = 1.0f / (CONTROL_TIME_CONSTANT_RATIO*tc);
+    const float accel_tc_max = accel_max*(1.0f - 1.0f/CONTROL_TIME_CONSTANT_RATIO);
+
+    // position error to be corrected
+    Vector2f pos_error = pos_input - pos;
+
+    // velocity to correct position
+    Vector2f vel_target = sqrt_controller(pos_error, KPv, accel_tc_max, dt);
+
+    // limit velocity correction to vel_correction_max
+    if (is_positive(vel_correction_max)) {
+        vel_target.limit_length(vel_correction_max);
+    }
+
+    // velocity correction with input velocity
+    vel_target = vel_target + vel_input;
+
+    // limit velocity to vel_max
+    if (is_positive(vel_max)) {
+        vel_target.limit_length(vel_max);
+    }
+
+    shape_vel_xy(vel_target, vel, accel, accel_max, tc, dt);
+
+    vel_target = vel_target - vel_input;
+    pos_error = stopping_distance_xy(vel_target, KPv, accel_tc_max);
+    pos_input = pos_error + pos;
+}
+
+/* shape_pos_vel_xy calculate a jerk limited path from the current position, velocity and acceleration to an input position and velocity.
+ The function takes the current position, velocity, and acceleration and calculates the required jerk limited adjustment to the acceleration for the next time dt.
+ The kinimatic path is constrained by :
+     maximum velocity - vel_max,
+     maximum acceleration - accel_max,
+     time constant - tc.
+ The time constant defines the acceleration error decay in the kinimatic path as the system approaches constant acceleration.
+ The time constant also defines the time taken to achieve the maximum acceleration.
+ The time constant must be positive.
+ The function alters the input position to be the closest position that the system could reach zero acceleration in the minimum time.
+ This function operates on the x and y axis of both Vector2f or Vector3f inputs.
+ This function operates on the x and y axis of Vector3f inputs.
+ The vel_max, vel_correction_max, and accel_max limits can be removed by setting the desired limit to zero.
+*/
+void shape_pos_vel_xy(Vector3f& pos_input, const Vector3f& vel_input, const Vector3f& pos, const Vector3f& vel, Vector3f& accel, float vel_max, float vel_correction_max, float accel_max, float tc, float dt)
+{
+    Vector2f pos_input_2f = Vector2f(pos_input.x, pos_input.y);
+    Vector2f vel_input_2f = Vector2f(vel_input.x, vel_input.y);
+    Vector2f pos_2f = Vector2f(pos.x, pos.y);
+    Vector2f vel_2f = Vector2f(vel.x, vel.y);
+    Vector2f accel_2f = Vector2f(accel.x, accel.y);
+
+    shape_pos_vel_xy(pos_input_2f, vel_input_2f, pos_2f, vel_2f, accel_2f, vel_max, vel_correction_max, accel_max, tc, dt);
+    pos_input.x = pos_input_2f.x;
+    pos_input.y = pos_input_2f.y;
+    accel.x = accel_2f.x;
+    accel.y = accel_2f.y;
+}
+
 // proportional controller with piecewise sqrt sections to constrain second derivative
 float sqrt_controller(float error, float p, float second_ord_lim, float dt)
 {
@@ -175,6 +361,23 @@ Vector2f sqrt_controller(const Vector2f& error, float p, float second_ord_lim, f
 
     const float correction_length = sqrt_controller(error_length, p, second_ord_lim, dt);
     return error * (correction_length / error_length);
+}
+
+// proportional controller with piecewise sqrt sections to constrain second derivative
+Vector3f sqrt_controller_xy(const Vector3f& error, float p, float second_ord_lim)
+{
+    if (second_ord_lim < 0.0f || is_zero(second_ord_lim) || is_zero(p)) {
+        return Vector3f(error.x * p, error.y * p, error.z);
+    }
+
+    const float linear_dist = second_ord_lim / sq(p);
+    const float error_length = norm(error.x, error.y);
+    if (error_length > linear_dist) {
+        float first_order_scale = safe_sqrt(2.0f * second_ord_lim * (error_length - (linear_dist * 0.5f))) / error_length;
+        return Vector3f(error.x * first_order_scale, error.y * first_order_scale, error.z);
+    } else {
+        return Vector3f(error.x * p, error.y * p, error.z);
+    }
 }
 
 // inverse of the sqrt controller.  calculates the input (aka error) to the sqrt_controller required to achieve a given output
@@ -233,6 +436,18 @@ float stopping_distance(float velocity, float p, float accel_max)
     const float linear_dist = accel_max / sq(p);
     const float stopping_dist = (linear_dist * 0.5f) + sq(velocity) / (2.0f * accel_max);
     return is_positive(velocity) ? stopping_dist : -stopping_dist;
+}
+
+// calculate the stopping distance for the square root controller based deceleration path
+Vector2f stopping_distance_xy(const Vector2f &velocity, float p, float accel_max)
+{
+    // calculate current velocity
+    const float velocity_length = velocity.length();
+    if (is_zero(velocity_length)) {
+        return Vector2f{};
+    }
+    float stop_dist = stopping_distance(velocity_length, p, accel_max);
+    return velocity.normalized() * stop_dist;
 }
 
 // calculate the maximum acceleration or velocity in a given direction
