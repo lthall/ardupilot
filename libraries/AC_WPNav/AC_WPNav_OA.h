@@ -36,6 +36,10 @@ public:
 
 protected:
 
+    /// set position control target in NEU offset in cm from EKF origin
+    /// used to process results from BendyRuler
+    void set_pos_control_target_NEU(Vector3f &dest_neu);
+
     // oa path planning variables
     AP_OAPathPlanner::OA_RetState _oa_state;    // state of object avoidance, if OA_SUCCESS we use _oa_destination to avoid obstacles
     Vector3f    _origin_oabak;          // backup of _origin so it can be restored when oa completes
