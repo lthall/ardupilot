@@ -43,6 +43,9 @@ bool ModeAuto::init(bool ignore_checks)
         // set flag to start mission
         waiting_to_start = true;
 
+        // initialise mission change check (ignore results)
+        check_for_mission_change();
+
         // clear guided limits
         copter.mode_guided.limit_clear();
 
@@ -65,8 +68,24 @@ void ModeAuto::run()
                 // start/resume the mission (based on MIS_RESTART parameter)
                 mission.start_or_resume();
                 waiting_to_start = false;
+
+                // initialise mission change check (ignore results)
+                check_for_mission_change();
             }
         } else {
+            // check for mission changes
+            if (check_for_mission_change()) {
+                // if mission is running restart the current command if it is a waypoint or spline command
+                if ((copter.mode_auto.mission.state() == AP_Mission::MISSION_RUNNING) && (_mode == Auto_WP)) {
+                    if (mission.restart_current_nav_cmd()) {
+                        gcs().send_text(MAV_SEVERITY_CRITICAL, "Auto mission changed, restarting command");
+                    } else {
+                        // failed to restart mission for some reason
+                        gcs().send_text(MAV_SEVERITY_CRITICAL, "Auto mission changed but failed to restart command");
+                    }
+                }
+            }
+
             mission.update();
         }
     } else {
@@ -525,6 +544,55 @@ void ModeAuto::exit_mission()
         // if we've landed it's safe to disarm
         copter.arming.disarm(AP_Arming::Method::MISSIONEXIT);
     }
+}
+
+// detect and handle external changes to mission
+bool ModeAuto::check_for_mission_change()
+{
+    // check if mission has been updated
+    const uint32_t change_time_ms = mission.last_change_time_ms();
+    const bool update_time_changed = (change_time_ms != mis_detect.last_change_time_ms);;
+
+    // check if active command index has changed
+    const uint16_t curr_cmd_idx = mission.get_current_nav_index();
+    const bool cmd_idx_changed = (curr_cmd_idx != mis_detect.curr_cmd_index);
+
+    // no changes if neither mission update time nor active command index has changed
+    if (!update_time_changed && !cmd_idx_changed) {
+        return false;
+    }
+
+    // the mission has been updated (but maybe not changed) and/or the current command index has changed
+    // check the contents of the next three commands to ensure they have not changed
+    // and update storage so we can detect future changes
+
+    bool cmds_changed = false;  // true if upcoming command contents have changed
+
+    // retrieve cmds from mission and compare with mis_detect
+    uint8_t num_cmds = 0;
+    uint16_t cmd_idx = curr_cmd_idx;
+    AP_Mission::Mission_Command cmd[3];
+    while ((num_cmds < 3) && mission.get_next_nav_cmd(cmd_idx, cmd[num_cmds])) {
+        if ((num_cmds > mis_detect.cmd_count) || (cmd[num_cmds] != mis_detect.cmd[num_cmds])) {
+            cmds_changed = true;
+            mis_detect.cmd[num_cmds] = cmd[num_cmds];
+        }
+        cmd_idx = cmd[num_cmds].index+1;
+        num_cmds++;
+    }
+
+    // mission has changed if number of commands in mission does not match mis_detect
+    if (num_cmds != mis_detect.cmd_count) {
+        cmds_changed = true;
+    }
+
+    // update mis_detect with last change time, command index and number of commands
+    mis_detect.last_change_time_ms = change_time_ms;
+    mis_detect.curr_cmd_index = curr_cmd_idx;
+    mis_detect.cmd_count = num_cmds;
+
+    // mission has changed if command contents have changed without the current command index changing
+    return cmds_changed && !cmd_idx_changed;
 }
 
 // do_guided - start guided mode
