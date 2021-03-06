@@ -372,12 +372,14 @@ void AC_PosControl::set_alt_target_from_climb_rate_ff(float climb_rate_cms, floa
     if (_vel_desired.z > _speed_up_cms && !is_zero(_speed_up_cms)) {
         accel_z_cms *= POSCONTROL_OVERSPEED_GAIN_Z * _vel_desired.z / _speed_up_cms;
     }
-    accel_z_cms = constrain_float(accel_z_cms, 0.0f, 750.0f);
+    if (is_negative(climb_rate_cms - _vel_desired.z)) {
+        accel_z_cms = constrain_float(accel_z_cms, 0.0f, 750.0f);
+    }
 
     // jerk_z is calculated to reach full acceleration in 1000ms.
     float jerk_z = accel_z_cms * POSCONTROL_JERK_RATIO;
 
-    float accel_z_max = MIN(accel_z_cms, safe_sqrt(2.0f * fabsf(_vel_desired.z - climb_rate_cms) * jerk_z));
+    float accel_z_max = MIN(accel_z_cms, safe_sqrt(2.0f * fabsf(climb_rate_cms - _vel_desired.z) * jerk_z));
 
     _accel_last_z_cms += jerk_z * dt;
     _accel_last_z_cms = MIN(accel_z_max, _accel_last_z_cms);
