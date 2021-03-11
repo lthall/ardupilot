@@ -517,10 +517,10 @@ private:
     // variables to detect mission changes
     struct {
         uint32_t last_change_time_ms;       // local copy of last time mission was changed
-        uint16_t curr_cmd_index;            // local copy of the current command index
-        uint8_t cmd_count;                  // number of commands in the next_cmd array
+        uint16_t curr_cmd_index;            // local copy of AP_Mission's current command index
+        uint8_t cmd_count;                  // number of commands in the cmd array
         AP_Mission::Mission_Command cmd[3]; // local copy of the next three mission commands
-    } mis_detect;
+    } mis_change_detect;
 };
 
 #if AUTOTUNE_ENABLED == ENABLED
