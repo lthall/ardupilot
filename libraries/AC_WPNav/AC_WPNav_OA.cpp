@@ -87,7 +87,7 @@ bool AC_WPNav_OA::update_wpnav()
         case AP_OAPathPlanner::OA_NOT_REQUIRED:
             if (_oa_state != oa_retstate) {
                 // object avoidance has become inactive so reset target to original destination
-                set_wp_destination(_destination_oabak);
+                set_wp_destination(_destination_oabak, _terrain_alt);
                 _oa_state = oa_retstate;
             }
             break;
@@ -100,7 +100,7 @@ bool AC_WPNav_OA::update_wpnav()
                 Vector3f stopping_point;
                 get_wp_stopping_point(stopping_point);
                 _oa_destination = Location(stopping_point);
-                if (set_wp_destination(stopping_point)) {
+                if (set_wp_destination(stopping_point, false)) {
                     _oa_state = oa_retstate;
                 }
             }
@@ -118,7 +118,7 @@ bool AC_WPNav_OA::update_wpnav()
                         const float dist_along_path = constrain_float(oa_destination_new.line_path_proportion(origin_loc, destination_loc), 0.0f, 1.0f);
                         dest_NEU.z = linear_interpolate(_origin_oabak.z, _destination_oabak.z, dist_along_path, 0.0f, 1.0f);
                     }       
-                    if (set_wp_destination(dest_NEU)) {
+                    if (set_wp_destination(dest_NEU, _terrain_alt)) {
                         _oa_state = oa_retstate;
                     }
                 }
