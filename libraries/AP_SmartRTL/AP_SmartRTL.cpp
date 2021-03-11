@@ -178,14 +178,22 @@ bool AP_SmartRTL::peek_point(Vector3f& point)
         return false;
     }
 
+    // get semaphore
+    if (!_path_sem.take_nonblocking()) {
+        log_action(SRTL_PEEK_FAILED_NO_SEMAPHORE);
+        return false;
+    }
+
     // check we have another point
     if (_path_points_count == 0) {
+        _path_sem.give();
         return false;
     }
 
     // return last point
-    // ToDo: do we need to use a semaphore?
     point = _path[_path_points_count-1];
+
+    _path_sem.give();
     return true;
 }
 
