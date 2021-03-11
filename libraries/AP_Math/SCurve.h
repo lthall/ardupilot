@@ -15,7 +15,7 @@
  *        a) call next_leg.init()
  *        b) set the "fast_waypoint" boolean to false
  *  4. call this_leg.advance_target_along_track() with a small "dt" value and retrieve the resulting target position, velocity and acceleration
- *     Note: the position
+ *     Note: the target_pos should be set to the segments's earth frame origin before this function is called
  *  5. pass the target position, velocity and acceleration into the position controller
  *  6. repeat steps 4 and 5 until finished() returns true
  *  7. promote the legs:
@@ -69,7 +69,7 @@ public:
                          float jerk_time_sec, float jerk_maximum);
 
     // set the maximum vehicle speed at the origin
-    // returns the expected speed at the origin (will always be equal or lower to speed_cm)
+    // returns the expected speed at the origin which will always be equal or lower than speed
     float set_origin_speed_max(float speed);
 
     // set the maximum vehicle speed at the destination
@@ -192,13 +192,13 @@ private:
     float time;         // time that defines position on the path
     float position_sq;  // position (squared) on the path at the last time step (used to detect finish)
 
-    // arrays
-    const static uint8_t segments_max = 23; // maximum number of time segments
-    // segment 0 is the initial segment
+    // segment 0 is the initial segment and holds the vehicle's initial position and velocity
     // segments 1 to 7 are the acceleration segments
     // segments 8 to 14 are the speed change segments
     // segment 15 is the constant velocity segment
     // segment 16 to 22 is the deceleration segment
+    const static uint8_t segments_max = 23; // maximum number of time segments
+
     uint8_t num_segs;       // number of time segments being used
     struct {
         float jerk_ref;     // jerk reference value for time segment (the jerk at the beginning, middle or end depending upon the segment type)

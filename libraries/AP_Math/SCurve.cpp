@@ -109,12 +109,7 @@ void SCurve::set_speed_max(float speed_xy, float speed_up, float speed_down)
 
         // move change segments to acceleration segments
         for (uint8_t i = SEG_INIT+1; i <= SEG_ACCEL_END; i++) {
-            segment[i].seg_type = segment[i+7].seg_type;
-            segment[i].jerk_ref = segment[i+7].jerk_ref;
-            segment[i].end_time = segment[i+7].end_time;
-            segment[i].end_accel = segment[i+7].end_accel;
-            segment[i].end_vel = segment[i+7].end_vel;
-            segment[i].end_pos = segment[i+7].end_pos;
+            segment[i] = segment[i+7];
         }
 
         // set change segments to last acceleration speed
@@ -335,7 +330,7 @@ void SCurve::calculate_track(const Vector3f &origin, const Vector3f &destination
 }
 
 // set the maximum vehicle speed at the origin
-// returns the expected speed at the origin (will always be equal or lower to speed_cm)
+// returns the expected speed at the origin which will always be equal or lower than speed
 float SCurve::set_origin_speed_max(float speed)
 {
     // if path is zero length then start speed must be zero
