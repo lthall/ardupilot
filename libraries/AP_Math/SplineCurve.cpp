@@ -20,38 +20,27 @@
 
 extern const AP_HAL::HAL &hal;
 
-#define SPEED_MIN           50.0f   // minimum speed in cm/s
-#define ACCEL_MIN           50.0f   // minimum acceleration in cm/s/s
-#define LEASH_LENGTH_MIN    100.0f  // minimum leash length in cm
+#define SPLINE_FACTOR           4.0f    // defines shape of curves.  larger numbers result in longer spline curves, lower numbers take a direct path
 #define TANGENTIAL_ACCEL_SCALER 0.5f    // the proportion of the maximum accel that can be used for tangential acceleration (aka in the direction of travel along the track)
 #define LATERAL_ACCEL_SCALER    1.0f    // the proportion of the maximum accel that can be used for lateral acceleration (aka crosstrack acceleration)
 
 // limit the maximum speed along the track to that which will achieve a cornering (aka lateral) acceleration of LATERAL_SPEED_SCALER * acceleration limit
 
-// constructor
-SplineCurve::SplineCurve() :
-    _speed_xy_cms(SPEED_MIN),
-    _speed_up_cms(SPEED_MIN),
-    _speed_down_cms(SPEED_MIN),
-    _accel_xy_cmss(ACCEL_MIN),
-    _accel_z_cmss(ACCEL_MIN)
+// set maximum speed and acceleration
+void SplineCurve::set_speed_accel(float speed_xy, float speed_up, float speed_down,
+                                  float accel_xy, float accel_z)
 {
+    _speed_xy = fabsf(speed_xy);
+    _speed_up = fabsf(speed_up);
+    _speed_down = fabsf(speed_down);
+    _accel_xy = fabsf(accel_xy);
+    _accel_z = fabsf(accel_z);
 }
 
-// set maximum speed, acceleration and leash lengths
-void SplineCurve::set_speed_accel(float speed_xy_cms, float speed_up_cms, float speed_down_cms,
-                                   float accel_xy_cmss, float accel_z_cmss)
-{
-    _speed_xy_cms = MAX(speed_xy_cms, SPEED_MIN);
-    _speed_up_cms = MAX(speed_up_cms, SPEED_MIN);
-    _speed_down_cms = MAX(fabsf(speed_down_cms), SPEED_MIN);
-    _accel_xy_cmss = MAX(accel_xy_cmss, ACCEL_MIN);
-    _accel_z_cmss = MAX(accel_z_cmss, ACCEL_MIN);
-}
-
-// set origin and destination using position vectors (offset from EKF origin in cm
-// origin_vel is vehicle velocity at origin (in cm/s in NEU frame)
-// destination_vel is vehicle velocity at destination (in cm/s in NEU frame)
+// set origin and destination using position vectors (offset from EKF origin)
+// origin_vel is vehicle velocity at origin (in NEU frame)
+// destination_vel is vehicle velocity at destination (in NEU frame)
+// time is reset to zero
 void SplineCurve::set_origin_and_destination(const Vector3f &origin, const Vector3f &destination, const Vector3f &origin_vel, const Vector3f &destination_vel)
 {
     // store origin and destination locations
@@ -67,9 +56,9 @@ void SplineCurve::set_origin_and_destination(const Vector3f &origin, const Vecto
 
     // code below ensures we don't get too much overshoot when the next segment is short
     const float vel_len = _origin_vel.length() + _destination_vel.length();
-    const float pos_len = (_destination - _origin).length() * 4.0f;
+    const float pos_len = (_destination - _origin).length() * SPLINE_FACTOR;
     if (vel_len > pos_len) {
-        // if total start+stop velocity is more than twice position difference
+        // if total start+stop velocity is more than four times the position difference
         // use a scaled down start and stop velocity
         const float vel_scaling = pos_len / vel_len;
         // update spline calculator
@@ -91,8 +80,8 @@ void SplineCurve::set_origin_and_destination(const Vector3f &origin, const Vecto
 }
 
 // move target location along track from origin to destination
-// target_pos is updated with the target position in cm from EKF origin in NEU frame
-// target_vel is updated with the target velocity in cm/s in NEU frame
+// target_pos is updated with the target position from EKF origin in NEU frame
+// target_vel is updated with the target velocity in NEU frame
 void SplineCurve::advance_target_along_track(float dt, Vector3f &target_pos, Vector3f &target_vel)
 {
     // calculate target position and velocity using spline calculator
@@ -130,9 +119,6 @@ void SplineCurve::calc_dt_speed_max(float time, float distance_delta, float &spl
     Vector3f spline_vel;
     Vector3f spline_accel;
     Vector3f spline_jerk;
-    Vector3f spline_accel_norm;
-    float spline_vel_length;
-    float spline_accel_norm_length;
 
     calc_target_pos_vel(time, target_pos, spline_vel, spline_accel, spline_jerk);
 
@@ -145,7 +131,7 @@ void SplineCurve::calc_dt_speed_max(float time, float distance_delta, float &spl
 
     // aircraft velocity and acceleration along the spline will be defined based on the aircraft kinematic limits
     // aircraft velocity along the spline should be reduced to ensure normal accelerations do not exceed kinematic limits
-    spline_vel_length = spline_vel.length();
+    const float spline_vel_length = spline_vel.length();
     if (is_zero(spline_vel_length)) {
         // if spline velocity is zero then direction must be defined by acceleration or jerk
         if (is_zero(spline_accel.length_squared())) {
@@ -164,12 +150,12 @@ void SplineCurve::calc_dt_speed_max(float time, float distance_delta, float &spl
 
     // calculate acceleration normal to the direction of travel
     const float spline_accel_tangent_length = spline_accel.dot(spline_vel_unit);
-    spline_accel_norm = spline_accel - (spline_vel_unit * spline_accel_tangent_length);
-    spline_accel_norm_length = spline_accel_norm.length();
+    Vector3f spline_accel_norm = spline_accel - (spline_vel_unit * spline_accel_tangent_length);
+    const float spline_accel_norm_length = spline_accel_norm.length();
 
     // limit the maximum speed along the track to that which will achieve a cornering (aka lateral) acceleration of LATERAL_SPEED_SCALER * acceleration limit
-    const float tangential_speed_max = kinematic_limit(spline_vel_unit, _speed_xy_cms, _speed_up_cms, _speed_down_cms);
-    const float accel_norm_max = LATERAL_ACCEL_SCALER * kinematic_limit(spline_accel_norm, _accel_xy_cmss, _accel_z_cmss, _accel_z_cmss);
+    const float tangential_speed_max = kinematic_limit(spline_vel_unit, _speed_xy, _speed_up, _speed_down);
+    const float accel_norm_max = LATERAL_ACCEL_SCALER * kinematic_limit(spline_accel_norm, _accel_xy, _accel_z, _accel_z);
 
     // sanity check to avoid divide by zero
     if (is_zero(tangential_speed_max)) {
@@ -186,7 +172,7 @@ void SplineCurve::calc_dt_speed_max(float time, float distance_delta, float &spl
     }
 
     // calculate accel max and sanity check
-    accel_max = TANGENTIAL_ACCEL_SCALER * kinematic_limit(spline_vel_unit, _accel_xy_cmss, _accel_z_cmss, _accel_z_cmss);
+    accel_max = TANGENTIAL_ACCEL_SCALER * kinematic_limit(spline_vel_unit, _accel_xy, _accel_z, _accel_z);
     if (is_zero(accel_max)) {
         INTERNAL_ERROR(AP_InternalError::error_t::invalid_arg_or_result);
         _reached_destination = true;

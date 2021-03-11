@@ -6,22 +6,18 @@ class SplineCurve {
 
 public:
 
-    // constructor
-    SplineCurve();
+    // set maximum speed and acceleration
+    void set_speed_accel(float speed_xy, float speed_up, float speed_down,
+                         float accel_xy, float accel_z);
 
-    // set maximum speed and acceleration in cm/s and cm/s/s
-    void set_speed_accel(float speed_xy_cms, float speed_up_cms, float speed_down_cms,
-                         float accel_xy_cmss, float accel_z_cmss);
-
-    // set origin and destination using position vectors (offset from EKF origin in cm
-    // origin_vel is vehicle velocity at origin (in cm/s in NEU frame)
-    // destination_vel is vehicle velocity at destination (in cm/s in NEU frame)
-    // vel_target_length is latest position controller velocity target length (in cm/s)
+    // set origin and destination using position vectors (offset from EKF origin)
+    // origin_vel is vehicle velocity at origin (in NEU frame)
+    // destination_vel is vehicle velocity at destination (in NEU frame)
     void set_origin_and_destination(const Vector3f &origin, const Vector3f &destination, const Vector3f &origin_vel, const Vector3f &destination_vel);
 
     // move target location along track from origin to destination
-    // target_pos is updated with the target position in cm from EKF origin in NEU frame
-    // target_vel is updated with the target velocity in cm/s in NEU frame
+    // target_pos is updated with the target position from EKF origin in NEU frame
+    // target_vel is updated with the target velocity in NEU frame
     void advance_target_along_track(float dt, Vector3f &target_pos, Vector3f &target_vel);
 
     // returns true if vehicle has reached destination
@@ -54,18 +50,18 @@ private:
     void calc_target_pos_vel(float time, Vector3f &position, Vector3f &velocity, Vector3f &acceleration, Vector3f &jerk);
 
     // interval variables
-    Vector3f    _origin;            // origin offset in cm (in NEU frame) from EKF
-    Vector3f    _destination;       // destination offset in cm (in NEU frame) from EKF
-    Vector3f    _origin_vel;        // the target velocity vector in cm/s in NEU frame at the origin of the spline segment
-    Vector3f    _destination_vel;   // the target velocity vector in cm/s in NEU frame at the destination point of the spline segment
+    Vector3f    _origin;                // origin offset (in NEU frame) from EKF
+    Vector3f    _destination;           // destination offset (in NEU frame) from EKF
+    Vector3f    _origin_vel;            // the target velocity vector in NEU frame at the origin of the spline segment
+    Vector3f    _destination_vel;       // the target velocity vector in NEU frame at the destination point of the spline segment
     Vector3f    _hermite_solution[4];   // array describing path between origin and destination
-    float       _time;              // current spline time (between 0 and 1) between origin and destination
-    float       _speed_xy_cms;      // maximum horizontal speed in cm/s
-    float       _speed_up_cms;      // maximum speed upwards in cm/s
-    float       _speed_down_cms;    // maximum speed downwards in cm/s
-    float       _accel_xy_cmss;     // maximum horizontal acceleration in cm/s/s
-    float       _accel_z_cmss;      // maximum vertical acceleration in cm/s/s
-    float       _origin_speed_max;  // maximum speed in cm/s at origin
-    float       _destination_speed_max; // maximum speed in cm/s at destination
+    float       _time;                  // current spline time (between 0 and 1) between origin and destination
+    float       _speed_xy;              // maximum horizontal speed
+    float       _speed_up;              // maximum speed upwards
+    float       _speed_down;            // maximum speed downwards
+    float       _accel_xy;              // maximum horizontal acceleration
+    float       _accel_z;               // maximum vertical acceleration
+    float       _origin_speed_max;      // maximum speed at origin
+    float       _destination_speed_max; // maximum speed at destination
     bool        _reached_destination;   // true once vehicle has reached destination
 };
