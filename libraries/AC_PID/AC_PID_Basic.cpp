@@ -2,6 +2,7 @@
 /// @brief	Generic PID algorithm
 
 #include <AP_Math/AP_Math.h>
+#include <AP_InternalError/AP_InternalError.h>
 #include "AC_PID_Basic.h"
 
 #define AC_PID_Basic_FILT_E_HZ_DEFAULT 20.0f   // default input filter frequency
@@ -83,6 +84,7 @@ float AC_PID_Basic::update_all(float target, float measurement, bool limit_neg, 
     // don't process inf or NaN
     if (!isfinite(target) || isnan(target) ||
         !isfinite(measurement) || isnan(measurement)) {
+        INTERNAL_ERROR(AP_InternalError::error_t::invalid_arg_or_result);
         return 0.0f;
     }
 
@@ -98,7 +100,7 @@ float AC_PID_Basic::update_all(float target, float measurement, bool limit_neg, 
         _error += get_filt_E_alpha() * ((_target - measurement) - _error);
 
         // calculate and filter derivative
-        if (_dt > 0.0f) {
+        if (is_positive(_dt)) {
             float derivative = (_error - error_last) / _dt;
             _derivative += get_filt_D_alpha() * (derivative - _derivative);
         }
@@ -107,8 +109,8 @@ float AC_PID_Basic::update_all(float target, float measurement, bool limit_neg, 
     // update I term
     update_i(limit_neg, limit_pos);
 
-    float P_out = _error * _kp;
-    float D_out = _derivative * _kd;
+    const float P_out = _error * _kp;
+    const float D_out = _derivative * _kd;
 
     _pid_info.target = _target;
     _pid_info.actual = measurement;
@@ -122,10 +124,11 @@ float AC_PID_Basic::update_all(float target, float measurement, bool limit_neg, 
 }
 
 //  update_i - update the integral
-//  If the limit flag is set the integral is only allowed to shrink
+//  if limit_neg is true, the integral can only increase
+//  if limit_pos is true, the integral can only decrease
 void AC_PID_Basic::update_i(bool limit_neg, bool limit_pos)
 {
-    if (!is_zero(_ki) && is_positive(_dt)) {
+    if (!is_zero(_ki)) {
         // Ensure that integrator can only be reduced if the output is saturated
         if (!((limit_neg && is_negative(_error)) || (limit_pos && is_positive(_error)))) {
             _integrator += ((float)_error * _ki) * _dt;

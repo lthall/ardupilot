@@ -1,7 +1,7 @@
 #pragma once
 
 /// @file	AC_P_1D.h
-/// @brief	Generic PID algorithm, with EEPROM-backed storage of constants.
+/// @brief	Generic P controller, with EEPROM-backed storage of constants.
 
 #include <AP_Common/AP_Common.h>
 #include <AP_Param/AP_Param.h>
@@ -11,13 +11,13 @@
 class AC_P_1D {
 public:
 
-    // constructor for PID
+    // constructor
     AC_P_1D(float initial_p, float dt);
 
     // set time step in seconds
     void set_dt(float dt) { _dt = dt; }
 
-    // update_all - set target and measured inputs to PID controller and calculate outputs
+    // update_all - set target and measured inputs to P controller and calculate outputs
     // target and measurement are filtered
     // if measurement is further than error_min or error_max (see set_limits_error method)
     //   the target is moved closer to the measurement and limit_min or limit_max will be set true

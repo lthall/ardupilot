@@ -23,7 +23,7 @@ AC_P_1D::AC_P_1D(float initial_p, float dt) :
     _lim_D_Out = 10.0f;     // maximum first differential of output
 }
 
-// update_all - set target and measured inputs to PID controller and calculate outputs
+// update_all - set target and measured inputs to P controller and calculate outputs
 // target and measurement are filtered
 // if measurement is further than error_min or error_max (see set_limits_error method)
 //   the target is moved closer to the measurement and limit_min or limit_max will be set true
@@ -39,8 +39,7 @@ float AC_P_1D::update_all(float &target, float measurement, bool &limit_min, boo
         error = _lim_err_min;
         target = measurement + error;
         limit_min = true;
-    }
-    if (error > _lim_err_max) {
+    } else if (error > _lim_err_max) {
         error = _lim_err_max;
         target = measurement + error;
         limit_max = true;

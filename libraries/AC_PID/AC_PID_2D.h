@@ -15,7 +15,7 @@ class AC_PID_2D {
 public:
 
     // Constructor for PID
-    AC_PID_2D(float initial_p, float initial_i, float initial_d, float initial_ff, float initial_imax, float initial_filt_hz, float initial_filt_d_hz, float dt);
+    AC_PID_2D(float initial_kP, float initial_kI, float initial_kD, float initial_kFF, float initial_imax, float initial_filt_hz, float initial_filt_d_hz, float dt);
 
     // set time step in seconds
     void set_dt(float dt) { _dt = dt; }
@@ -93,9 +93,9 @@ protected:
     float       _dt;            // timestep in seconds
     Vector2f    _target;        // target value to enable filtering
     Vector2f    _error;         // error value to enable filtering
-    Vector2f    _derivative;    // last derivative for low-pass filter
+    Vector2f    _derivative;    // last derivative from low-pass filter
     Vector2f    _integrator;    // integrator value
-    bool        _reset_filter;  // true when input filter should be reset during next call to set_input
+    bool        _reset_filter;  // true when input filter should be reset during next call to update_all
 
     AP_Logger::PID_Info _pid_info_x;
     AP_Logger::PID_Info _pid_info_y;

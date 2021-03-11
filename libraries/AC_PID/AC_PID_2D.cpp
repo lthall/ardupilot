@@ -51,16 +51,16 @@ const AP_Param::GroupInfo AC_PID_2D::var_info[] = {
 };
 
 // Constructor
-AC_PID_2D::AC_PID_2D(float initial_p, float initial_i, float initial_d, float initial_ff, float initial_imax, float initial_filt_E_hz, float initial_filt_D_hz, float dt) :
+AC_PID_2D::AC_PID_2D(float initial_kP, float initial_kI, float initial_kD, float initial_kFF, float initial_imax, float initial_filt_E_hz, float initial_filt_D_hz, float dt) :
     _dt(dt)
 {
     // load parameter values from eeprom
     AP_Param::setup_object_defaults(this, var_info);
 
-    _kp = initial_p;
-    _ki = initial_i;
-    _kd = initial_d;
-    _kff = initial_ff;
+    _kp = initial_kP;
+    _ki = initial_kI;
+    _kd = initial_kD;
+    _kff = initial_kFF;
     _kimax = fabsf(initial_imax);
     filt_E_hz(initial_filt_E_hz);
     filt_D_hz(initial_filt_D_hz);
@@ -78,7 +78,7 @@ Vector2f AC_PID_2D::update_all(const Vector2f &target, const Vector2f &measureme
     // don't process inf or NaN
     if (target.is_nan() || target.is_inf() ||
         measurement.is_nan() || measurement.is_inf()) {
-        return Vector2f();
+        return Vector2f{};
     }
 
     _target = target;
@@ -89,12 +89,12 @@ Vector2f AC_PID_2D::update_all(const Vector2f &target, const Vector2f &measureme
         _error = _target - measurement;
         _derivative.zero();
     } else {
-        Vector2f error_last = _error;
+        Vector2f error_last{_error};
         _error += ((_target - measurement) - _error) * get_filt_E_alpha();
 
         // calculate and filter derivative
         if (_dt > 0.0f) {
-            Vector2f derivative = (_error - error_last) / _dt;
+            const Vector2f derivative{(_error - error_last) / _dt};
             _derivative += (derivative - _derivative) * get_filt_D_alpha();
         }
     }
@@ -123,7 +123,7 @@ Vector2f AC_PID_2D::update_all(const Vector2f &target, const Vector2f &measureme
 
 Vector2f AC_PID_2D::update_all(const Vector3f &target, const Vector3f &measurement, bool limit)
 {
-    return update_all(Vector2f(target.x, target.y), Vector2f(measurement.x, measurement.y), limit);
+    return update_all(Vector2f{target.x, target.y}, Vector2f{measurement.x, measurement.y}, limit);
 }
 
 //  update_i - update the integral
