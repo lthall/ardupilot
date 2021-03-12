@@ -52,12 +52,6 @@ public:
     // initialise and clear the path
     void init();
 
-    // get desired maximum speed along track
-    float get_speed_along_track() const WARN_IF_UNUSED { return vel_max; }
-
-    // get desired maximum acceleration along track
-    float get_accel_along_track() const WARN_IF_UNUSED { return accel_max; }
-
     // set maximum velocity and re-calculate the path using these limits
     void set_speed_max(float speed_xy, float speed_up, float speed_down);
 
@@ -85,6 +79,11 @@ public:
     // returns true if vehicle has passed the apex of the corner
     bool advance_target_along_track(SCurve &prev_leg, SCurve &next_leg, float wp_radius, bool fast_waypoint, float dt, Vector3f &target_pos, Vector3f &target_vel, Vector3f &target_accel) WARN_IF_UNUSED;
 
+    // time has reached the end of the sequence
+    bool finished() const WARN_IF_UNUSED;
+
+private:
+
     // increment time and return the position, velocity and acceleration vectors relative to the origin
     void move_from_pos_vel_accel(float dt, Vector3f &pos, Vector3f &vel, Vector3f &accel);
 
@@ -94,17 +93,17 @@ public:
     // return the position, velocity and acceleration vectors relative to the origin at a specified time along the path
     void move_from_time_pos_vel_accel(float t, Vector3f &pos, Vector3f &vel, Vector3f &accel);
 
+    // get desired maximum speed along track
+    float get_speed_along_track() const WARN_IF_UNUSED { return vel_max; }
+
+    // get desired maximum acceleration along track
+    float get_accel_along_track() const WARN_IF_UNUSED { return accel_max; }
+
     // return the change in position from origin to destination
     const Vector3f& get_track() const WARN_IF_UNUSED { return track; };
 
     // return the current time elapsed
     float get_time_elapsed() const WARN_IF_UNUSED { return time; }
-
-    // time has reached the end of the sequence
-    bool finished() const WARN_IF_UNUSED;
-
-    // magnitude of the position vector at the end of the sequence
-    float pos_end() const WARN_IF_UNUSED;
 
     // time at the end of the sequence
     float time_end() const WARN_IF_UNUSED;
@@ -117,8 +116,6 @@ public:
 
     // return true if the sequence is braking to a stop
     bool braking() const WARN_IF_UNUSED;
-
-private:
 
     // increment the internal time
     void advance_time(float dt);
