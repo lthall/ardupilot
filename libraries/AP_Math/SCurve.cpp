@@ -720,7 +720,7 @@ void SCurve::add_segments(float L)
     add_segment_const_jerk(num_segs, 0.0f, 0.0f);
     add_segment_const_jerk(num_segs, 0.0f, 0.0f);
 
-    const float t15 = MAX(0.0f, 2.0f * (L / 2.0f - segment[SEG_CHANGE_END].end_pos) / segment[SEG_CHANGE_END].end_vel);
+    const float t15 = MAX(0.0f, (L - 2.0f * segment[SEG_CHANGE_END].end_pos) / segment[SEG_CHANGE_END].end_vel);
     add_segment_const_jerk(num_segs, t15, 0.0f);
 
     add_segments_jerk(num_segs, jerk_time, -Jm, t6);
@@ -823,6 +823,17 @@ void SCurve::add_segments_jerk(uint8_t &index, float tj, float Jm, float Tcj)
 // the index variable is the position of this segment in the path array and is incremented to reference the next segment in the array
 void SCurve::add_segment_const_jerk(uint8_t &index, float tj, float J0)
 {
+    // if no time increase copy previous segment
+    if (is_zero(tj)) {
+        add_segment(index, segment[index - 1].end_time,
+                    SegmentType::CONSTANT_JERK,
+                    J0,
+                    segment[index - 1].end_accel,
+                    segment[index - 1].end_vel,
+                    segment[index - 1].end_pos);
+        return;
+    }
+
     const float J = J0;
     const float T = segment[index - 1].end_time + tj;
     const float A = segment[index - 1].end_accel + J0 * tj;
