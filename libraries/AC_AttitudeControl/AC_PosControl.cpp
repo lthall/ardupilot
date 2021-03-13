@@ -339,7 +339,10 @@ void AC_PosControl::set_alt_target_from_climb_rate(float climb_rate_cms, float d
 {
     // adjust desired alt if motors have not hit their limits
     // To-Do: add check of _limit.pos_down?
-    if ((climb_rate_cms < 0 && (!_motors.limit.throttle_lower || force_descend)) || (climb_rate_cms > 0 && !_motors.limit.throttle_upper && !_limit.pos_up)) {
+    if ((is_negative(climb_rate_cms) && (!_motors.limit.throttle_lower || force_descend)) ||
+        (is_positive(climb_rate_cms) && !_motors.limit.throttle_upper && !_limit.pos_up) ||
+        (is_negative(_pos_error.z) && is_positive(climb_rate_cms)) ||
+        (is_positive(_pos_error.z) && is_negative(climb_rate_cms)) ){
         _pos_target.z += climb_rate_cms * dt;
     }
 
@@ -382,7 +385,10 @@ void AC_PosControl::set_alt_target_from_climb_rate_ff(float climb_rate_cms, floa
 
     // adjust desired alt if motors have not hit their limits
     // To-Do: add check of _limit.pos_down?
-    if ((_vel_desired.z < 0 && (!_motors.limit.throttle_lower || force_descend)) || (_vel_desired.z > 0 && !_motors.limit.throttle_upper && !_limit.pos_up)) {
+    if ((is_negative(_vel_desired.z) && (!_motors.limit.throttle_lower || force_descend)) ||
+        (is_positive(_vel_desired.z) && !_motors.limit.throttle_upper && !_limit.pos_up) ||
+        (is_negative(_pos_error.z) && is_positive(_vel_desired.z)) ||
+        (is_positive(_pos_error.z) && is_negative(_vel_desired.z)) ){
         _pos_target.z += _vel_desired.z * dt;
     }
 }
