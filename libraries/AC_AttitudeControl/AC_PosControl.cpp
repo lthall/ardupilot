@@ -913,6 +913,26 @@ void AC_PosControl::write_log()
     AP::logger().Write_PSCZ(get_pos_target().z, _inav.get_position().z,
                             get_desired_velocity().z, get_vel_target().z, _inav.get_velocity().z,
                             _accel_desired.z, get_accel_target().z, get_z_accel_cmss(), _attitude_control.get_throttle_in());
+
+    Vector2f vel_xy_p, vel_xy_i, vel_xy_d, vel_xy_ff;
+    vel_xy_p = _pid_vel_xy.get_p();
+    vel_xy_i = _pid_vel_xy.get_integrator();
+    vel_xy_d = _pid_vel_xy.get_d();
+    vel_xy_ff = _pid_vel_xy.get_ff(Vector2f(_vel_target.x, _vel_target.y));
+
+    AP::logger().Write("PIV", "TimeUS,Px,Py,Ix,Iy,Dx,Dy,FFx,FFy",
+            "snnnnnnnn",
+            "F00000000",
+            "Qffffffff",
+            AP_HAL::micros64(),
+            (double)vel_xy_p.x,
+            (double)vel_xy_p.y,
+            (double)vel_xy_i.x,
+            (double)vel_xy_i.y,
+            (double)vel_xy_d.x,
+            (double)vel_xy_d.y,
+            (double)vel_xy_ff.x,
+            (double)vel_xy_ff.y);
 }
 
 /// init_vel_controller_xyz - initialise the velocity controller - should be called once before the caller attempts to use the controller
