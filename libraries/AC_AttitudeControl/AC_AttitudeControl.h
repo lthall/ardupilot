@@ -353,12 +353,15 @@ protected:
 
     // Maximum rotation acceleration for earth-frame roll axis
     AP_Float            _accel_roll_max;
+    AP_Float            _ang_a_roll_max;
 
     // Maximum rotation acceleration for earth-frame pitch axis
     AP_Float            _accel_pitch_max;
+    AP_Float            _ang_a_pitch_max;
 
     // Maximum rotation acceleration for earth-frame yaw axis
     AP_Float            _accel_yaw_max;
+    AP_Float            _ang_a_yaw_max;
 
     // Enable/Disable body frame rate feed forward
     AP_Int8             _rate_bf_ff_enabled;
