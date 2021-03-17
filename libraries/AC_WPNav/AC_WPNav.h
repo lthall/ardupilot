@@ -23,7 +23,6 @@
 #define WPNAV_WP_SPEED_DOWN             150.0f      // default maximum descent velocity
 
 #define WPNAV_WP_ACCEL_Z_DEFAULT        100.0f      // default vertical acceleration between waypoints in cm/s/s
-#define WPNAV_YAW_VEL_MIN                   10      // target velocity must be at least 10cm/s for vehicle's yaw to change
 
 class AC_WPNav
 {

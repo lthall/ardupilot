@@ -530,24 +530,11 @@ bool AC_WPNav::advance_wp_target_along_track(float dt)
         }
     }
 
-    // Calculate the turn rate
-    float turn_rate = 0.0f;
-    const float target_vel_xy_len = Vector2f(target_vel.x, target_vel.y).length();
-    if (is_positive(target_vel_xy_len)) {
-        const float accel_forward = (target_accel.x * target_vel.x + target_accel.y * target_vel.y + target_accel.z * target_vel.z)/target_vel.length();
-        const Vector3f accel_turn = target_accel - target_vel * accel_forward / target_vel.length();
-        const float accel_turn_xy_len = Vector2f(accel_turn.x, accel_turn.y).length();
-        turn_rate = accel_turn_xy_len / target_vel_xy_len;
-        if ((accel_turn.y * target_vel.x - accel_turn.x * target_vel.y) < 0.0) {
-            turn_rate = -turn_rate;
-        }
-    }
-
-    // update the target yaw if origin and destination are at least 2m apart horizontally
-    const Vector2f target_vel_xy(target_vel.x, target_vel.y);
-    if (target_vel_xy.length() > WPNAV_YAW_VEL_MIN) {
-        set_yaw_cd(degrees(target_vel_xy.angle()) * 100.0f);
-        set_yaw_rate_cds(turn_rate*degrees(100.0f));
+    // calculate the yaw angle and rate
+    float yaw_angle_rad, yaw_rate_rads;
+    if (_pos_control.get_yaw_angle_and_rate(yaw_angle_rad, yaw_rate_rads)) {
+        set_yaw_cd(degrees(yaw_angle_rad) * 100.0f);
+        set_yaw_rate_cds(degrees(yaw_rate_rads) * 100.0f);
     }
 
     // successfully advanced along track
