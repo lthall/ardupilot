@@ -67,6 +67,8 @@ extern const AP_HAL::HAL& hal;
  # define POSCONTROL_VEL_XY_FILT_D_HZ           5.0f    // horizontal velocity controller input filter for D
 #endif
 
+#define POSCONTROL_YAW_VEL_MIN                  10.0f   // target velocity must be at least 10cm/s for vehicle's yaw to be calculated
+
 // vibration compensation gains
 #define POSCONTROL_VIBE_COMP_P_GAIN 0.250f
 #define POSCONTROL_VIBE_COMP_I_GAIN 0.125f
@@ -1058,6 +1060,30 @@ void AC_PosControl::update_vel_controller_xyz()
 
     // run z-axis position controller
     update_z_controller();
+}
+
+/// get desired yaw angle (in radians) and turn rate (in radians/sec) for coordinated turns
+/// returns true if there is a high enough acceleration to calculate, false if angle and rate should not be updated
+bool AC_PosControl::get_yaw_angle_and_rate(float &angle_rad, float &rate_rads) const
+{
+    // return immediately if horizontal target velocity is too low
+    const Vector2f vel_desired_xy{_vel_desired.x, _vel_desired.y};
+    const float vel_desired_xy_len = vel_desired_xy.length();
+    if (vel_desired_xy_len < POSCONTROL_YAW_VEL_MIN) {
+        return false;
+    }
+
+    // calculate the turn rate
+    const float vel_desired_len = _vel_desired.length();
+    const float accel_forward = ((_accel_desired.x * _vel_desired.x) + (_accel_desired.y * _vel_desired.y) + (_accel_desired.z * _vel_desired.z)) / vel_desired_len;
+    const Vector3f accel_turn = _accel_desired - (_vel_desired * accel_forward / vel_desired_len);
+    const float accel_turn_xy_len = Vector2f{accel_turn.x, accel_turn.y}.length();
+    rate_rads = accel_turn_xy_len / vel_desired_xy_len;
+    if (((accel_turn.y * _vel_desired.x) - (accel_turn.x * _vel_desired.y)) < 0.0f) {
+        rate_rads = -rate_rads;
+    }
+    angle_rad = vel_desired_xy.angle();
+    return true;
 }
 
 ///

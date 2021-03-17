@@ -301,6 +301,10 @@ public:
     float get_roll() const { return _roll_target; }
     float get_pitch() const { return _pitch_target; }
 
+    /// get desired yaw angle (in radians) and turn rate (in radians/sec) for coordinated turns
+    /// returns true if there is a high enough acceleration to calculate, false if angle and rate should not be updated
+    bool get_yaw_angle_and_rate(float &angle_rad, float &rate_rads) const;
+
     // get_leash_xy - returns horizontal leash length in cm
     float get_leash_xy() const { return _leash; }
 
