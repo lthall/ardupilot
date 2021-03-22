@@ -147,6 +147,34 @@ public:
     // is_active - returns true if the z-axis position controller has been run very recently
     bool is_active_z() const;
 
+    /// init_pos_vel_z - initialise the position controller to the current position and velocity with zero acceleration.
+    ///     This function should be called before input_vel_z or input_pos_vel_z are used.
+    void init_pos_vel_z();
+
+    /// input_vel_z calculate a jerk limited path from the current position, velocity and acceleration to an input velocity.
+    ///     The function takes the current position, velocity, and acceleration and calculates the required jerk limited adjustment to the acceleration for the next time dt.
+    ///     The kinimatic path is constrained by :
+    ///         maximum velocity - vel_max,
+    ///         maximum acceleration - accel_max,
+    ///         time constant - tc.
+    ///     The time constant defines the acceleration error decay in the kinimatic path as the system approaches constant acceleration.
+    ///     The time constant also defines the time taken to achieve the maximum acceleration.
+    ///     The time constant must be positive.
+    ///     The function alters the input velocity to be the velocity that the system could reach zero acceleration in the minimum time.
+    void input_vel_z(Vector3f& vel, float accel_max, float tc);
+
+    /// input_pos_vel_z calculate a jerk limited path from the current position, velocity and acceleration to an input position and velocity.
+    ///     The function takes the current position, velocity, and acceleration and calculates the required jerk limited adjustment to the acceleration for the next time dt.
+    ///     The kinimatic path is constrained by :
+    ///         maximum velocity - vel_max,
+    ///         maximum acceleration - accel_max,
+    ///         time constant - tc.
+    ///     The time constant defines the acceleration error decay in the kinimatic path as the system approaches constant acceleration.
+    ///     The time constant also defines the time taken to achieve the maximum acceleration.
+    ///     The time constant must be positive.
+    ///     The function alters the input position to be the closest position that the system could reach zero acceleration in the minimum time.
+    void input_pos_vel_z(Vector3f& pos, const Vector3f& vel, float vel_max, float vel_correction_max, float accel_max, float tc);
+
     /// update_z_controller - fly to altitude in cm above home
     void update_z_controller();
 

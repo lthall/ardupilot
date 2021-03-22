@@ -588,6 +588,124 @@ void AC_PosControl::calc_leash_length_z()
     }
 }
 
+/// init_pos_vel_z - initialise the position controller to the current position and velocity with zero acceleration.
+///     This function should be called before input_vel_z or input_pos_vel_z are used.
+void AC_PosControl::init_pos_vel_z()
+{
+    // set roll, pitch lean angle targets to current attitude
+    // todo: this should probably be based on the desired attitude not the current attitude
+    _roll_target = _ahrs.roll_sensor;
+    _pitch_target = _ahrs.pitch_sensor;
+
+    Vector3f curr_pos = _inav.get_position();
+    _pos_target.x = curr_pos.x;
+    _pos_target.y = curr_pos.y;
+
+    const Vector3f &curr_vel = _inav.get_velocity();
+    _vel_desired.x = curr_vel.x;
+    _vel_desired.y = curr_vel.y;
+    _vel_target.x = curr_vel.x;
+    _vel_target.y = curr_vel.y;
+
+    const Vector3f &curr_accel = _ahrs.get_accel_ef_blended() * 100.0f;
+    _accel_desired.x = curr_accel.x;
+    _accel_desired.y = curr_accel.y;
+
+    // initialise I terms from lean angles
+    _pid_vel_xy.reset_filter();
+    lean_angles_to_accel(_accel_target.x, _accel_target.y);
+    _pid_vel_xy.set_integrator(_accel_target - _accel_desired);
+
+    // flag reset required in rate to accel step
+    _flags.reset_desired_vel_to_pos = true;
+    _flags.reset_accel_to_lean_xy = true;
+
+    // initialise ekf xy reset handler
+    init_ekf_xy_reset();
+}
+
+/// input_vel_z calculate a jerk limited path from the current position, velocity and acceleration to an input velocity.
+///     The function takes the current position, velocity, and acceleration and calculates the required jerk limited adjustment to the acceleration for the next time dt.
+///     The kinimatic path is constrained by :
+///         maximum velocity - vel_max,
+///         maximum acceleration - accel_max,
+///         time constant - tc.
+///     The time constant defines the acceleration error decay in the kinimatic path as the system approaches constant acceleration.
+///     The time constant also defines the time taken to achieve the maximum acceleration.
+///     The time constant must be positive.
+///     The function alters the input velocity to be the velocity that the system could reach zero acceleration in the minimum time.
+void AC_PosControl::input_vel_z(Vector3f& vel, float accel_max, float tc)
+{
+    // compute dt
+    const uint64_t now_us = AP_HAL::micros64();
+    float dt = (now_us - _last_update_z_us) * 1.0e-6f;
+
+    // sanity check dt
+    if (dt >= POSCONTROL_ACTIVE_TIMEOUT_US * 1.0e-6f) {
+        dt = 0.0f;
+    }
+
+    // check for ekf z position reset
+    check_for_ekf_z_reset();
+
+    // check if z leash needs to be recalculated
+    calc_leash_length_xy();
+
+    if (_flags.reset_desired_vel_to_pos) {
+        _flags.reset_desired_vel_to_pos = false;
+    } else {
+        update_pos_vel_accel_z(_pos_target, _vel_desired, _accel_desired, dt);
+    }
+    shape_vel_z(vel, _vel_desired, _accel_desired, accel_max, tc, dt);
+
+    // run horizontal position controller
+    run_z_controller();
+
+    // update xy update time
+    _last_update_z_us = now_us;
+}
+
+/// input_pos_vel_z calculate a jerk limited path from the current position, velocity and acceleration to an input position and velocity.
+///     The function takes the current position, velocity, and acceleration and calculates the required jerk limited adjustment to the acceleration for the next time dt.
+///     The kinimatic path is constrained by :
+///         maximum velocity - vel_max,
+///         maximum acceleration - accel_max,
+///         time constant - tc.
+///     The time constant defines the acceleration error decay in the kinimatic path as the system approaches constant acceleration.
+///     The time constant also defines the time taken to achieve the maximum acceleration.
+///     The time constant must be positive.
+///     The function alters the input position to be the closest position that the system could reach zero acceleration in the minimum time.
+void AC_PosControl::input_pos_vel_z(Vector3f& pos, const Vector3f& vel, float vel_max, float vel_correction_max, float accel_max, float tc)
+{
+    // compute dt
+    const uint64_t now_us = AP_HAL::micros64();
+    float dt = (now_us - _last_update_z_us) * 1.0e-6f;
+
+    // sanity check dt
+    if (dt >= POSCONTROL_ACTIVE_TIMEOUT_US * 1.0e-6f) {
+        dt = 0.0f;
+    }
+
+    // check for ekf xy position reset
+    check_for_ekf_z_reset();
+
+    // check if xy leash needs to be recalculated
+    calc_leash_length_xy();
+
+    if (_flags.reset_desired_vel_to_pos) {
+        _flags.reset_desired_vel_to_pos = false;
+    } else {
+        update_pos_vel_accel_z(_pos_target, _vel_desired, _accel_desired, dt);
+    }
+    shape_pos_vel_z(pos, vel, _pos_target, _vel_desired, _accel_desired, vel_max, vel_correction_max, accel_max, tc, dt);
+
+    // run horizontal position controller
+    run_z_controller();
+
+    // update xy update time
+    _last_update_z_us = now_us;
+}
+
 // run position control for Z axis
 // target altitude should be set with one of these functions: set_alt_target, set_target_to_stopping_point_z, init_takeoff
 // calculates desired rate in earth-frame z axis and passes to rate controller
