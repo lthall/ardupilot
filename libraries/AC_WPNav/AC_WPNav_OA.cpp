@@ -229,4 +229,49 @@ void AC_WPNav_OA::set_pos_control_target_NEU(Vector3f &dest_neu)
         set_yaw_cd(degrees(yaw_angle_rad) * 100.0f);
         set_yaw_rate_cds(degrees(yaw_rate_rads) * 100.0f);
     }
+
+    AP::logger().Write("BR", "TimeUS,TX,TY,TZ,SXY,AXY,SZ,AZ,tc",
+                             "Qffffffff",
+                             AP_HAL::micros64(),
+                             dest_neu.x * 0.01f,
+                             dest_neu.y * 0.01f,
+                             dest_neu.z * 0.01f,
+                             get_default_speed_xy() * 0.01f,
+                             get_wp_acceleration() * 0.01f,
+                             get_default_speed_up() * 0.01f,
+                             get_accel_z() * 0.01f,
+                             tc);
+
+    // @LoggerMessage: DPTH
+    // @Description: Depth messages on boats with downwards facing range finder
+    // @Field: TimeUS: Time since system startup
+    // @Field: Lat: Latitude
+    // @Field: Lng: Longitude
+    // @Field: Depth: Depth as detected by the sensor
+
+    /*logger.Write("DPTH", "TimeUS,Lat,Lng,Depth",
+                        "sDUm", "FGG0", "QLLf",
+                        AP_HAL::micros64(),
+                        loc.lat,
+                        loc.lng,
+                        (double)(rangefinder.distance_cm_orient(ROTATION_PITCH_270) * 0.01f));
+    struct log_PSC pkt{
+        LOG_PACKET_HEADER_INIT(LOG_PSC_MSG),
+        time_us         : AP_HAL::micros64(),
+        pos_target_x    : pos_target.x * 0.01f,
+        pos_target_Y    : pos_target.y * 0.01f,
+        position_x      : position.x * 0.01f,
+        position_y      : position.y * 0.01f,
+        vel_target_x    : vel_target.x * 0.01f,
+        vel_target_y    : vel_target.y * 0.01f,
+        velocity_x      : velocity.x * 0.01f,
+        velocity_y      : velocity.y * 0.01f,
+        accel_target_x  : accel_target.x * 0.01f,
+        accel_target_y  : accel_target.y * 0.01f,
+        accel_x         : accel_x * 0.01f,
+        accel_y         : accel_y * 0.01f
+    };
+    WriteBlock(&pkt, sizeof(pkt));
+    { LOG_PSCZ_MSG, sizeof(log_PSCZ), \
+      "PSCZ", "Qfffffffff", "TimeUS,TPZ,PZ,DVZ,TVZ,VZ,DAZ,TAZ,AZ,ThO", "smmnnnooo%", "F000000002" }*/
 }
