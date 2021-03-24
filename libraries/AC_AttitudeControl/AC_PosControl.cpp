@@ -1076,7 +1076,13 @@ void AC_PosControl::input_pos_vel_xy(Vector3f& pos, const Vector3f& vel, float v
     if (_flags.reset_desired_vel_to_pos) {
         _flags.reset_desired_vel_to_pos = false;
     } else {
-        update_pos_vel_accel_xy(_pos_target, _vel_desired, _accel_desired, dt);
+        update_pos_vel_accel_xy(_pos_target, _vel_desired, _accel_desired, dt); // log desired accel
+        AP::logger().Write("IPV", "TimeUS,DVX,DVY,DAX,DAY,", "Qffff",
+                                 AP_HAL::micros64(),
+                                 _vel_desired.x * 0.01f,
+                                 _vel_desired.y * 0.01f,
+                                 _accel_desired.x * 0.01f,
+                                 _accel_desired.y * 0.01f);
     }
     shape_pos_vel_xy(pos, vel, _pos_target, _vel_desired, _accel_desired, vel_max, vel_correction_max, accel_max, tc, dt);
 
