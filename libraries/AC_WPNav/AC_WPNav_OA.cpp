@@ -224,11 +224,11 @@ void AC_WPNav_OA::set_pos_control_target_NEU(Vector3f &dest_neu)
                                  get_accel_z(), tc);
 
     // calculate the yaw angle and rate
-    float yaw_angle_rad, yaw_rate_rads;
+    /*float yaw_angle_rad, yaw_rate_rads;
     if (_pos_control.get_yaw_angle_and_rate(yaw_angle_rad, yaw_rate_rads)) {
         set_yaw_cd(degrees(yaw_angle_rad) * 100.0f);
         set_yaw_rate_cds(degrees(yaw_rate_rads) * 100.0f);
-    }
+    }*/
 
     AP::logger().Write("BR", "TimeUS,TX,TY,TZ,SXY,AXY,SZ,AZ,tc",
                              "Qffffffff",
