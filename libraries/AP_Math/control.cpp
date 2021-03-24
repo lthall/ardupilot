@@ -149,7 +149,7 @@ void shape_vel_xy(Vector2f& vel_input, const Vector2f& vel, Vector2f& accel, flo
 
         // limit acceleration to accel_max
         if (is_positive(accel_max)) {
-            accel_delta.limit_length(accel_max);
+            accel.limit_length(accel_max);
         }
 
         // Calculate maximum pos_input and vel_input based on limited system
