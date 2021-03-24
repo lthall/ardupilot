@@ -1,7 +1,6 @@
 #include <AP_Math/control.h>
 #include <AP_InternalError/AP_InternalError.h>
 #include "AC_WPNav_OA.h"
-#include <stdio.h>
 
 AC_WPNav_OA::AC_WPNav_OA(const AP_InertialNav& inav, const AP_AHRS_View& ahrs, AC_PosControl& pos_control, const AC_AttitudeControl& attitude_control) :
     AC_WPNav(inav, ahrs, pos_control, attitude_control)
@@ -95,7 +94,6 @@ bool AC_WPNav_OA::update_wpnav()
                 // object avoidance has become inactive so reset target to original destination
                 set_wp_destination(_destination_oabak, _terrain_alt_oabak);
                 _oa_state = oa_retstate;
-                ::printf("OA not required\n");
             }
             break;
         case AP_OAPathPlanner::OA_PROCESSING:
@@ -110,7 +108,6 @@ bool AC_WPNav_OA::update_wpnav()
                 if (set_wp_destination(stopping_point, false)) {
                     _oa_state = oa_retstate;
                 }
-                ::printf("OA processing or error %d\n",(int)_oa_state);
             }
             break;
         case AP_OAPathPlanner::OA_SUCCESS:
@@ -120,7 +117,6 @@ bool AC_WPNav_OA::update_wpnav()
 
             case AP_OAPathPlanner::OAPathPlannerUsed::None:
                 // this should never happen.  this means the path planner has returned success but has failed to set the path planner used
-                ::printf("OA did not set path planner used\n");
                 INTERNAL_ERROR(AP_InternalError::error_t::flow_of_control);
                 return false;
 
@@ -142,7 +138,6 @@ bool AC_WPNav_OA::update_wpnav()
                     // if new target set successfully, update oa state and destination
                     _oa_state = oa_retstate;
                     _oa_destination = oa_destination_new;
-                    ::printf("Dijkstra's provided new destination\n");
                 }
                 break;
 
@@ -168,7 +163,6 @@ bool AC_WPNav_OA::update_wpnav()
                 // calculate final destination as an offset from EKF origin in NEU
                 Vector2f dest_NE;
                 if (!_oa_destination.get_vector_xy_from_origin_NE(dest_NE)) {
-                    ::printf("ACWPNav_OA: failed to convert BendyRuler Horizontal response\n");
                     // this should never happen because we can only get here if we have an EKF origin
                     INTERNAL_ERROR(AP_InternalError::error_t::flow_of_control);
                     return false;
@@ -177,13 +171,6 @@ bool AC_WPNav_OA::update_wpnav()
 
                 // pass the desired position directly to the position controller as an offset from EKF origin in NEU
                 set_pos_control_target_NEU(dest_NEU);
-
-                static uint32_t last_print_ms = 0;
-                uint32_t now_ms = AP_HAL::millis();
-                if (now_ms - last_print_ms > 1000) {
-                    last_print_ms = now_ms;
-                    ::printf("ACWPNAV_OA: target alt:%4.2f %d oz:%d dz:%d\n", (double)dest_NEU.z, (int)target_alt_loc.alt, (int)origin_loc.alt, (int)destination_loc.alt);
-                }
 
                 // return success without calling parent AC_WPNav
                 return true;
@@ -197,7 +184,6 @@ bool AC_WPNav_OA::update_wpnav()
                 // calculate final destination as an offset from EKF origin in NEU
                 Vector3f dest_NEU;
                 if (!_oa_destination.get_vector_from_origin_NEU(dest_NEU)) {
-                    ::printf("ACWPNav_OA: failed to convert BendyRuler Vertical response\n");
                     // this should never happen because we acan only get here if we have an EKF origin
                     INTERNAL_ERROR(AP_InternalError::error_t::flow_of_control);
                     return false;
@@ -205,13 +191,6 @@ bool AC_WPNav_OA::update_wpnav()
 
                 // pass the desired position directly to the position controller as an offset from EKF origin in NEU
                 set_pos_control_target_NEU(dest_NEU);
-
-                static uint32_t last_print_ms = 0;
-                uint32_t now_ms = AP_HAL::millis();
-                if (now_ms - last_print_ms > 1000) {
-                    last_print_ms = now_ms;
-                    ::printf("ACWPNAV_OA: target alt:%4.2f oz:%d dz:%d\n", (double)dest_NEU.z, (int)origin_loc.alt, (int)destination_loc.alt);
-                }
 
                 // return success without calling parent AC_WPNav
                 return true;
