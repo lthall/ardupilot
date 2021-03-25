@@ -102,7 +102,10 @@ void shape_vel(float& vel_input, float vel, float& accel, float accel_max, float
     accel += accel_delta;
 
     // limit acceleration to accel_max
-    if (is_positive(accel_max)) {
+    if (is_negative(accel_max)) {
+        // we may want to allow this for some applications but call error for now.
+        INTERNAL_ERROR(AP_InternalError::error_t::invalid_arg_or_result);
+    } else if (is_positive(accel_max)) {
         accel = constrain_float(accel, -accel_max, accel_max);
     }
 
@@ -149,7 +152,10 @@ void shape_vel_xy(Vector2f& vel_input, const Vector2f& vel, Vector2f& accel, flo
         accel = accel + accel_delta;
 
         // limit acceleration to accel_max
-        if (is_positive(accel_max)) {
+        if (is_negative(accel_max)) {
+            // we may want to allow this for some applications but call error for now.
+            INTERNAL_ERROR(AP_InternalError::error_t::invalid_arg_or_result);
+        } else if (is_positive(accel_max)) {
             accel.limit_length(accel_max);
         }
 
@@ -226,7 +232,7 @@ void shape_pos_vel(float& pos_input, float vel_input, float pos, float vel, floa
     if (is_positive(vel_min) || is_negative(vel_max)) {
         // we may want to allow this for some applications but call error for now.
         INTERNAL_ERROR(AP_InternalError::error_t::invalid_arg_or_result);
-    } else {
+    } else if (is_negative(vel_min) || is_positive(vel_max)) {
         vel_target = constrain_float(vel_target, vel_min, vel_max);
     }
 
@@ -280,7 +286,10 @@ void shape_pos_vel_xy(Vector2f& pos_input, const Vector2f& vel_input, const Vect
     vel_target = vel_target + vel_input;
 
     // limit velocity to vel_max
-    if (is_positive(vel_max)) {
+    if (is_negative(vel_max)) {
+        // we may want to allow this for some applications but call error for now.
+        INTERNAL_ERROR(AP_InternalError::error_t::invalid_arg_or_result);
+    } else if (is_positive(vel_max)) {
         vel_target.limit_length(vel_max);
     }
 
