@@ -675,7 +675,7 @@ void AC_PosControl::input_vel_z(Vector3f& vel, float accel_max, float tc)
 ///     The time constant also defines the time taken to achieve the maximum acceleration.
 ///     The time constant must be positive.
 ///     The function alters the input position to be the closest position that the system could reach zero acceleration in the minimum time.
-void AC_PosControl::input_pos_vel_z(Vector3f& pos, const Vector3f& vel, float vel_max, float vel_correction_max, float accel_max, float tc)
+void AC_PosControl::input_pos_vel_z(Vector3f& pos, const Vector3f& vel, float vel_up_max, float vel_down_max, float vel_correction_max, float accel_max, float tc)
 {
     // compute dt
     const uint64_t now_us = AP_HAL::micros64();
@@ -697,7 +697,7 @@ void AC_PosControl::input_pos_vel_z(Vector3f& pos, const Vector3f& vel, float ve
     } else {
         update_pos_vel_accel_z(_pos_target, _vel_desired, _accel_desired, dt);
     }
-    shape_pos_vel_z(pos, vel, _pos_target, _vel_desired, _accel_desired, vel_max, vel_correction_max, accel_max, tc, dt);
+    shape_pos_vel_z(pos, vel, _pos_target, _vel_desired, _accel_desired, -fabsf(vel_down_max), vel_up_max, vel_correction_max, accel_max, tc, dt);
 
     // run horizontal position controller
     run_z_controller();

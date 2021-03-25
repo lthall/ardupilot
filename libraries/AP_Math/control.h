@@ -48,7 +48,7 @@ void shape_vel_xy(Vector3f& vel_input, const Vector3f& vel, Vector3f& accel, flo
 /* shape_pos_vel calculate a jerk limited path from the current position, velocity and acceleration to an input position and velocity.
  The function takes the current position, velocity, and acceleration and calculates the required jerk limited adjustment to the acceleration for the next time dt.
  The kinematic path is constrained by :
-     maximum velocity - vel_max,
+     maximum velocity, positive and negative - vel_min, vel_max,
      maximum acceleration - accel_max,
      time constant - tc.
  The time constant defines the acceleration error decay in the kinematic path as the system approaches constant acceleration.
@@ -56,8 +56,8 @@ void shape_vel_xy(Vector3f& vel_input, const Vector3f& vel, Vector3f& accel, flo
  The time constant must be positive.
  The function alters the input position to be the closest position that the system could reach zero acceleration in the minimum time.
 */
-void shape_pos_vel(float& pos_input, float vel_input, float pos, float vel, float& accel, float vel_max, float vel_correction_max, float accel_max, float tc, float dt);
-void shape_pos_vel_z(Vector3f& pos_input, const Vector3f& vel_input, const Vector3f& pos, const Vector3f& vel, Vector3f& accel, float vel_max, float vel_correction_max, float accel_max, float tc, float dt);
+void shape_pos_vel(float& pos_input, float vel_input, float pos, float vel, float& accel, float vel_min, float vel_max, float vel_correction_max, float accel_max, float tc, float dt);
+void shape_pos_vel_z(Vector3f& pos_input, const Vector3f& vel_input, const Vector3f& pos, const Vector3f& vel, Vector3f& accel, float vel_min, float vel_max, float vel_correction_max, float accel_max, float tc, float dt);
 
 /* shape_pos_vel_xy calculate a jerk limited path from the current position, velocity and acceleration to an input position and velocity.
  The function takes the current position, velocity, and acceleration and calculates the required jerk limited adjustment to the acceleration for the next time dt.

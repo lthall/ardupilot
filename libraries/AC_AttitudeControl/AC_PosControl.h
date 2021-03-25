@@ -173,7 +173,7 @@ public:
     ///     The time constant also defines the time taken to achieve the maximum acceleration.
     ///     The time constant must be positive.
     ///     The function alters the input position to be the closest position that the system could reach zero acceleration in the minimum time.
-    void input_pos_vel_z(Vector3f& pos, const Vector3f& vel, float vel_max, float vel_correction_max, float accel_max, float tc);
+    void input_pos_vel_z(Vector3f& pos, const Vector3f& vel, float vel_up_max, float vel_down_max, float vel_correction_max, float accel_max, float tc);
 
     /// update_z_controller - fly to altitude in cm above home
     void update_z_controller();

@@ -22,6 +22,7 @@
 #include "AP_Math.h"
 #include "vector2.h"
 #include "vector3.h"
+#include <AP_InternalError/AP_InternalError.h>
 
 // control default definitions
 #define CONTROL_TIME_CONSTANT_RATIO 4.0f   // minimum horizontal acceleration in cm/s/s - used for sanity checking acceleration in leash length calculation
@@ -187,7 +188,7 @@ void shape_vel_xy(Vector3f& vel_input, const Vector3f& vel, Vector3f& accel, flo
 /* shape_pos_vel calculate a jerk limited path from the current position, velocity and acceleration to an input position and velocity.
  The function takes the current position, velocity, and acceleration and calculates the required jerk limited adjustment to the acceleration for the next time dt.
  The kinematic path is constrained by :
-     maximum velocity - vel_max,
+     maximum velocity, positive and negative - vel_min, vel_max,
      maximum acceleration - accel_max,
      time constant - tc.
  The time constant defines the acceleration error decay in the kinematic path as the system approaches constant acceleration.
@@ -196,7 +197,7 @@ void shape_vel_xy(Vector3f& vel_input, const Vector3f& vel, Vector3f& accel, flo
  The function alters the input position to be the closest position that the system could reach zero acceleration in the minimum time.
  The vel_max, vel_correction_max, and accel_max limits can be removed by setting the desired limit to zero.
 */
-void shape_pos_vel(float& pos_input, float vel_input, float pos, float vel, float& accel, float vel_max, float vel_correction_max, float accel_max, float tc, float dt)
+void shape_pos_vel(float& pos_input, float vel_input, float pos, float vel, float& accel, float vel_min, float vel_max, float vel_correction_max, float accel_max, float tc, float dt)
 {
     // sanity check tc
     if (!is_positive(tc)) {
@@ -222,8 +223,11 @@ void shape_pos_vel(float& pos_input, float vel_input, float pos, float vel, floa
     vel_target += vel_input;
 
     // limit velocity to vel_max
-    if (is_positive(vel_max)) {
-        vel_target = constrain_float(vel_target, -vel_max, vel_max);
+    if (is_positive(vel_min) || is_negative(vel_max)) {
+        // we may want to allow this for some applications but call error for now.
+        INTERNAL_ERROR(AP_InternalError::error_t::invalid_arg_or_result);
+    } else {
+        vel_target = constrain_float(vel_target, vel_min, vel_max);
     }
 
     shape_vel(vel_target, vel, accel, accel_max, tc, dt);
@@ -233,9 +237,9 @@ void shape_pos_vel(float& pos_input, float vel_input, float pos, float vel, floa
     pos_input = pos_error + pos;
 }
 
-void shape_pos_vel_z(Vector3f& pos_input, const Vector3f& vel_input, const Vector3f& pos, const Vector3f& vel, Vector3f& accel, float vel_max, float vel_correction_max, float accel_max, float tc, float dt)
+void shape_pos_vel_z(Vector3f& pos_input, const Vector3f& vel_input, const Vector3f& pos, const Vector3f& vel, Vector3f& accel, float vel_min, float vel_max, float vel_correction_max, float accel_max, float tc, float dt)
 {
-    shape_pos_vel(pos_input.z, vel_input.z, pos.z, vel.z, accel.z, vel_max, vel_correction_max, accel_max, tc, dt);
+    shape_pos_vel(pos_input.z, vel_input.z, pos.z, vel.z, accel.z, vel_min, vel_max, vel_correction_max, accel_max, tc, dt);
 }
 
 /* shape_pos_vel_xy calculate a jerk limited path from the current position, velocity and acceleration to an input position and velocity.

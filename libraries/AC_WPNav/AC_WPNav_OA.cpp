@@ -220,6 +220,7 @@ void AC_WPNav_OA::set_pos_control_target_NEU(Vector3f &dest_neu)
     // pass z-axis target to position controller
     _pos_control.input_pos_vel_z(dest_neu, Vector3f{},
                                  get_default_speed_up(),
+                                 get_default_speed_down(),
                                  get_default_speed_up(),
                                  get_accel_z(), tc);
 
