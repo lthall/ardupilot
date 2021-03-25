@@ -287,7 +287,6 @@ void shape_pos_vel_xy(Vector2f& pos_input, const Vector2f& vel_input, const Vect
 
     // limit velocity to vel_max
     if (is_negative(vel_max)) {
-        // we may want to allow this for some applications but call error for now.
         INTERNAL_ERROR(AP_InternalError::error_t::invalid_arg_or_result);
     } else if (is_positive(vel_max)) {
         vel_target.limit_length(vel_max);
