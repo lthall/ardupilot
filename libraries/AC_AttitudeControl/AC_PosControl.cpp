@@ -1140,8 +1140,8 @@ void AC_PosControl::lean_angles_to_accel(float& accel_x_cmss, float& accel_y_cms
     const float sin_yaw = _ahrs.sin_yaw();
     const float cos_yaw = _ahrs.cos_yaw();
 
-    accel_x_cmss = (GRAVITY_MSS * 100) * (-cos_yaw * sin_pitch * cos_roll - sin_yaw * sin_roll) / MAX(cos_roll * cos_pitch, 0.5f);
-    accel_y_cmss = (GRAVITY_MSS * 100) * (-sin_yaw * sin_pitch * cos_roll + cos_yaw * sin_roll) / MAX(cos_roll * cos_pitch, 0.5f);
+    accel_x_cmss = (GRAVITY_MSS * 100) * (-cos_yaw * sin_pitch * cos_roll - sin_yaw * sin_roll) / MAX(cos_roll * cos_pitch, 0.1f);
+    accel_y_cmss = (GRAVITY_MSS * 100) * (-sin_yaw * sin_pitch * cos_roll + cos_yaw * sin_roll) / MAX(cos_roll * cos_pitch, 0.1f);
 }
 
 /// calc_leash_length - calculates the horizontal leash length given a maximum speed, acceleration and position kP gain
