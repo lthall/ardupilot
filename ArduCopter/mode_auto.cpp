@@ -776,13 +776,16 @@ void ModeAuto::wp_run()
     // call z-axis position controller (wpnav should have already updated it's alt target)
     pos_control->update_z_controller();
 
+    Vector3f accel_target = pos_control->get_accel_target();
+    accel_target.z = -GRAVITY_MSS * 100.0f;
+
     // call attitude controller
     if (auto_yaw.mode() == AUTO_YAW_HOLD) {
         // roll & pitch from waypoint controller, yaw rate from pilot
-        attitude_control->input_euler_angle_roll_pitch_euler_rate_yaw(wp_nav->get_roll(), wp_nav->get_pitch(), target_yaw_rate);
+        attitude_control->input_thrust_vector_rate_heading(accel_target, target_yaw_rate);
     } else {
         // roll, pitch from waypoint controller, yaw heading from auto_heading()
-        attitude_control->input_euler_angle_roll_pitch_yaw(wp_nav->get_roll(), wp_nav->get_pitch(), auto_yaw.yaw(), true);
+        attitude_control->input_thrust_vector_heading(accel_target, auto_yaw.yaw());
     }
 }
 
@@ -816,13 +819,16 @@ void ModeAuto::spline_run()
     // call z-axis position controller (wpnav should have already updated it's alt target)
     pos_control->update_z_controller();
 
+    Vector3f accel_target = pos_control->get_accel_target();
+    accel_target.z = -GRAVITY_MSS * 100.0f;
+
     // call attitude controller
     if (auto_yaw.mode() == AUTO_YAW_HOLD) {
         // roll & pitch from waypoint controller, yaw rate from pilot
-        attitude_control->input_euler_angle_roll_pitch_euler_rate_yaw(wp_nav->get_roll(), wp_nav->get_pitch(), target_yaw_rate);
+        attitude_control->input_thrust_vector_rate_heading(accel_target, target_yaw_rate);
     } else {
         // roll, pitch from waypoint controller, yaw heading from auto_heading()
-        attitude_control->input_euler_angle_roll_pitch_yaw(wp_nav->get_roll(), wp_nav->get_pitch(), auto_yaw.yaw(), true);
+        attitude_control->input_thrust_vector_heading(accel_target, auto_yaw.yaw());
     }
 }
 
@@ -874,12 +880,16 @@ void ModeAuto::circle_run()
     // call z-axis position controller
     pos_control->update_z_controller();
 
+    Vector3f accel_target = pos_control->get_accel_target();
+    accel_target.z = -GRAVITY_MSS * 100.0f;
+
+    // call attitude controller
     if (auto_yaw.mode() == AUTO_YAW_HOLD) {
         // roll & pitch from waypoint controller, yaw rate from pilot
-        attitude_control->input_euler_angle_roll_pitch_euler_rate_yaw(copter.circle_nav->get_roll(), copter.circle_nav->get_pitch(), target_yaw_rate);
+        attitude_control->input_thrust_vector_rate_heading(accel_target, target_yaw_rate);
     } else {
         // roll, pitch from waypoint controller, yaw heading from auto_heading()
-        attitude_control->input_euler_angle_roll_pitch_yaw(copter.circle_nav->get_roll(), copter.circle_nav->get_pitch(), auto_yaw.yaw(), true);
+        attitude_control->input_thrust_vector_heading(accel_target, auto_yaw.yaw());
     }
 }
 
