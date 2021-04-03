@@ -98,7 +98,13 @@ void ModeAltHold::run()
     }
 
     // call attitude controller
-    attitude_control->input_euler_angle_roll_pitch_euler_rate_yaw(target_roll, target_pitch, target_yaw_rate);
+//    attitude_control->input_euler_angle_roll_pitch_euler_rate_yaw(target_roll, target_pitch, target_yaw_rate);
+
+    Vector3f att_target_euler_cd = attitude_control->get_att_target_euler_cd();
+    Matrix3f att_target_rot_matrix;
+    att_target_rot_matrix.from_euler(radians(target_roll * 0.01f), radians(target_pitch * 0.01f), radians(att_target_euler_cd.z * 0.01f));
+    Vector3f att_target_thrust_vec = att_target_rot_matrix * Vector3f(0.0f, 0.0f, -1.0f);
+    attitude_control->input_thrust_vector_rate_heading(att_target_thrust_vec, target_yaw_rate);
 
     // call z-axis position controller
     pos_control->update_z_controller();
