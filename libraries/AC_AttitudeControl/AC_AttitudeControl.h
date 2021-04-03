@@ -129,9 +129,6 @@ public:
     // Command a Quaternion attitude with feedforward and smoothing
     void input_quaternion(Quaternion attitude_desired_quat);
 
-    void input_thrust_vector_rate_heading(Vector3f thrust_vector, float euler_yaw_rate_cds);
-    void input_thrust_vector_heading(Vector3f thrust_vector, float heading);
-
     // Command an euler roll and pitch angle and an euler yaw rate with angular velocity feedforward and smoothing
     virtual void input_euler_angle_roll_pitch_euler_rate_yaw(float euler_roll_angle_cd, float euler_pitch_angle_cd, float euler_yaw_rate_cds);
 
@@ -294,7 +291,6 @@ public:
     // thrust_heading_rotation_angles - calculates two ordered rotations to move the att_from_quat quaternion to the att_to_quat quaternion.
     // The first rotation corrects the thrust vector and the second rotation corrects the heading vector.
     void thrust_heading_rotation_angles(Quaternion& att_to_quat, const Quaternion& att_from_quat, Vector3f& att_diff_angle, float& thrust_vec_dot);
-    void thrust_vector_rotation_angles(Vector3f att_to_thrust_vec, const Quaternion& att_from_quat, Quaternion& thrust_vec_correction_quat, float& thrust_angle, float& thrust_vec_dot);
 
     // Calculates the body frame angular velocities to follow the target attitude
     void attitude_controller_run_quat();
