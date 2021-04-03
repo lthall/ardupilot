@@ -161,6 +161,9 @@ public:
     // Command an angular step (i.e change) in body frame angle
     virtual void input_angle_step_bf_roll_pitch_yaw(float roll_angle_step_bf_cd, float pitch_angle_step_bf_cd, float yaw_angle_step_bf_cd);
 
+    void input_thrust_vector_rate_heading(Vector3f thrust_vector, float euler_yaw_rate_cds);
+    void input_thrust_vector_heading(Vector3f thrust_vector, float heading);
+
     // Run angular velocity controller and send outputs to the motors
     virtual void rate_controller_run() = 0;
 
@@ -288,7 +291,8 @@ public:
 
     // thrust_heading_rotation_angles - calculates two ordered rotations to move the att_from_quat quaternion to the att_to_quat quaternion.
     // The first rotation corrects the thrust vector and the second rotation corrects the heading vector.
-    void thrust_heading_rotation_angles(Quaternion& attitude_target_quat, const Quaternion& attitude_vehicle_quat, Vector3f& attitude_error_vector, float& thrust_error_angle);
+    void thrust_heading_rotation_angles(Quaternion& attitude_target_quat, const Quaternion& attitude_vehicle_quat, Vector3f& attitude_error_vector, float& thrust_angle, float& thrust_error_angle);
+    void thrust_vector_rotation_angles(Vector3f att_target_thrust_vec, const Quaternion& attitude_vehicle_quat, Quaternion& thrust_vec_correction_quat, float& thrust_angle, float& thrust_error_angle);
 
     // Calculates the body frame angular velocities to follow the target attitude
     void attitude_controller_run_quat();
