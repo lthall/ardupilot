@@ -57,6 +57,11 @@ public:
         quat.from_rotation_matrix(rot_body_to_ned);
     }
 
+    // return the quaternion defining the rotation from NED to XYZ (body) axes
+    bool get_quaternion(Quaternion &quat) const WARN_IF_UNUSED {
+        return ahrs.get_quaternion(quat);
+    }
+
     // apply pitch trim
     void set_pitch_trim(float trim_deg);
 
