@@ -666,7 +666,10 @@ void ModeGuided::angle_control_run()
     if (guided_angle_state.use_yaw_rate) {
         attitude_control->input_euler_angle_roll_pitch_euler_rate_yaw(roll_in, pitch_in, yaw_rate_in);
     } else {
-        attitude_control->input_euler_angle_roll_pitch_yaw(roll_in, pitch_in, yaw_in, true);
+        Matrix3f att_target_rot_matrix;
+        att_target_rot_matrix.from_euler(radians(roll_in * 0.01f), radians(pitch_in * 0.01f), radians(yaw_in * 0.01f));
+        Vector3f att_target_thrust_vec = att_target_rot_matrix * Vector3f(0.0f, 0.0f, -1.0f);
+        attitude_control->input_thrust_vector_heading(att_target_thrust_vec, yaw_in);
     }
 
     // call position controller
