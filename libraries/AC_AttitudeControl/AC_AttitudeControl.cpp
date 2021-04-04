@@ -669,7 +669,7 @@ void AC_AttitudeControl::attitude_controller_run_quat()
     Quaternion attitude_target_ang_vel_quat = Quaternion(0.0f, _attitude_target_ang_vel.x, _attitude_target_ang_vel.y, _attitude_target_ang_vel.z);
 
     // rotation from the target frame to the vehicle frame
-    Quaternion target_to_vehicle_quat = attitude_vehicle_quat * _attitude_target_quat.inverse();
+    Quaternion target_to_vehicle_quat = _attitude_target_quat.inverse() * attitude_vehicle_quat;
 
     // target angle velocity vector in the vehicle frame
     Quaternion desired_ang_vel_quat = target_to_vehicle_quat.inverse() * attitude_target_ang_vel_quat * target_to_vehicle_quat;
