@@ -642,31 +642,138 @@ void AC_AttitudeControl::input_angle_step_bf_roll_pitch_yaw(float roll_angle_ste
     attitude_controller_run_quat();
 }
 
+// Command a Quaternion attitude with feedforward and smoothing
+void AC_AttitudeControl::input_thrust_vector_rate_heading(Vector3f thrust_vector, float euler_yaw_rate_cds)
+{
+    // Convert from centidegrees on public interface to radians
+    float euler_yaw_rate = radians(euler_yaw_rate_cds * 0.01f);
+
+    // calculate the attitude target euler angles
+    _attitude_target_quat.to_euler(_attitude_target_euler_angle.x, _attitude_target_euler_angle.y, _attitude_target_euler_angle.z);
+
+    float thrust_vector_diff_angle;
+    float thrust_vector_angle;
+    Quaternion yaw_quat;
+    Quaternion thrust_vec_quat;
+    Quaternion desired_attitude_quat;
+    Quaternion thrust_vec_correction_quat;
+    thrust_vector.normalize();
+
+    // the cross product of the desired and target thrust vector defines the rotation vector
+    Vector3f thrust_vec_cross = Vector3f(0.0f,0.0f,-1.0f) % thrust_vector;
+
+    // the dot product is used to calculate the angle between the target and desired thrust vectors
+    thrust_vector_angle = acosf(constrain_float(Vector3f(0.0f,0.0f,-1.0f) * thrust_vector, -1.0f, 1.0f));
+
+    // Normalize the thrust rotation vector
+    float thrust_vector_length = thrust_vec_cross.length();
+    if (is_zero(thrust_vector_length) || is_zero(thrust_vector_angle)) {
+        thrust_vec_cross = Vector3f(0, 0, 1);
+    } else {
+        thrust_vec_cross /= thrust_vector_length;
+    }
+    thrust_vec_quat.from_axis_angle(thrust_vec_cross, thrust_vector_angle);
+
+    // calculate the angle error in x and y.
+    Vector3f rotation;
+    thrust_vector_rotation_angles(thrust_vec_quat, _attitude_target_quat, thrust_vec_correction_quat, rotation, thrust_vector_angle, thrust_vector_diff_angle);
+
+    // When yaw acceleration limiting is enabled, the yaw input shaper constrains angular acceleration about the yaw axis, slewing
+    // the output rate towards the input rate.
+    _attitude_target_ang_vel.x = input_shaping_angle(rotation.x, _input_tc, get_accel_roll_max_radss(), _attitude_target_ang_vel.x, _dt);
+    _attitude_target_ang_vel.y = input_shaping_angle(rotation.y, _input_tc, get_accel_pitch_max_radss(), _attitude_target_ang_vel.y, _dt);
+    // When yaw acceleration limiting is enabled, the yaw input shaper constrains angular acceleration about the yaw axis, slewing
+    // the output rate towards the input rate.
+    _attitude_target_ang_vel.z = input_shaping_ang_vel(_attitude_target_ang_vel.z, euler_yaw_rate, get_accel_yaw_max_radss(), _dt);
+    _attitude_target_ang_vel.z = constrain_float(_attitude_target_ang_vel.z, -get_slew_yaw_rads(), get_slew_yaw_rads());
+
+    // Convert body-frame angular velocity into euler angle derivative of desired attitude
+    ang_vel_to_euler_rate(_attitude_target_euler_angle, _attitude_target_ang_vel, _attitude_target_euler_rate);
+
+    // Call quaternion attitude controller
+    attitude_controller_run_quat();
+}
+
+// Command a Quaternion attitude with feedforward and smoothing
+void AC_AttitudeControl::input_thrust_vector_heading(Vector3f thrust_vector, float euler_yaw_angle_cd)
+{
+    // Convert from centidegrees on public interface to radians
+    float euler_yaw_angle = radians(euler_yaw_angle_cd * 0.01f);
+
+    // calculate the attitude target euler angles
+    _attitude_target_quat.to_euler(_attitude_target_euler_angle.x, _attitude_target_euler_angle.y, _attitude_target_euler_angle.z);
+
+    float thrust_vector_diff_angle;
+    float thrust_vector_angle;
+    Quaternion yaw_quat;
+    Quaternion thrust_vec_quat;
+    Quaternion desired_attitude_quat;
+    Quaternion thrust_vec_correction_quat;
+    thrust_vector.normalize();
+
+    // the cross product of the desired and target thrust vector defines the rotation vector
+    Vector3f thrust_vec_cross = Vector3f(0.0f,0.0f,-1.0f) % thrust_vector;
+
+    // the dot product is used to calculate the angle between the target and desired thrust vectors
+    thrust_vector_angle = acosf(constrain_float(Vector3f(0.0f,0.0f,-1.0f) * thrust_vector, -1.0f, 1.0f));
+
+    // Normalize the thrust rotation vector
+    float thrust_vector_length = thrust_vec_cross.length();
+    if (is_zero(thrust_vector_length) || is_zero(thrust_vector_angle)) {
+        thrust_vec_cross = Vector3f(0, 0, 1);
+    } else {
+        thrust_vec_cross /= thrust_vector_length;
+    }
+    yaw_quat.from_axis_angle(Vector3f(0, 0, 1), euler_yaw_angle);
+    thrust_vec_quat.from_axis_angle(thrust_vec_cross, thrust_vector_angle);
+    desired_attitude_quat = thrust_vec_quat*yaw_quat;
+
+    // calculate the angle error in x and y.
+    Vector3f rotation;
+    thrust_vector_rotation_angles(desired_attitude_quat, _attitude_target_quat, thrust_vec_correction_quat, rotation, thrust_vector_angle, thrust_vector_diff_angle);
+
+    // When yaw acceleration limiting is enabled, the yaw input shaper constrains angular acceleration about the yaw axis, slewing
+    // the output rate towards the input rate.
+    _attitude_target_ang_vel.x = input_shaping_angle(rotation.x, _input_tc, get_accel_roll_max_radss(), _attitude_target_ang_vel.x, _dt);
+    _attitude_target_ang_vel.y = input_shaping_angle(rotation.y, _input_tc, get_accel_pitch_max_radss(), _attitude_target_ang_vel.y, _dt);
+    _attitude_target_ang_vel.z = input_shaping_angle(rotation.z, _input_tc, get_accel_yaw_max_radss(), _attitude_target_ang_vel.z, _dt);
+    _attitude_target_ang_vel.z = constrain_float(_attitude_target_ang_vel.z, -get_slew_yaw_rads(), get_slew_yaw_rads());
+
+    // Convert body-frame angular velocity into euler angle derivative of desired attitude
+    ang_vel_to_euler_rate(_attitude_target_euler_angle, _attitude_target_ang_vel, _attitude_target_euler_rate);
+
+    // Call quaternion attitude controller
+    attitude_controller_run_quat();
+}
+
 // Calculates the body frame angular velocities to follow the target attitude
 void AC_AttitudeControl::attitude_controller_run_quat()
 {
+    Quaternion quat_body_to_ned;
+    _ahrs.get_quat_body_to_ned(quat_body_to_ned);
+
     // Retrieve quaternion vehicle attitude
     Quaternion attitude_vehicle_quat;
-    _ahrs.get_quat_body_to_ned(attitude_vehicle_quat);
+    attitude_vehicle_quat.from_euler(_ahrs.roll, _ahrs.pitch, _ahrs.yaw);
 
     // Compute attitude error
     Vector3f attitude_error_vector;
-    thrust_heading_rotation_angles(_attitude_target_quat, attitude_vehicle_quat, attitude_error_vector, _thrust_error_angle);
+    thrust_heading_rotation_angles(_attitude_target_quat, attitude_vehicle_quat, attitude_error_vector, _thrust_angle, _thrust_error_angle);
 
     // Compute the angular velocity target from the attitude error
     _rate_target_ang_vel = update_ang_vel_target_from_att_error(attitude_error_vector);
 
-    // Add feedforward term that attempts to ensure that roll and pitch errors rotate with the body frame rather than the reference frame.
-    // todo: this should probably be a matrix that couples yaw as well.
-    _rate_target_ang_vel.x += constrain_float(attitude_error_vector.y, -M_PI / 4, M_PI / 4) * _ahrs.get_gyro().z;
-    _rate_target_ang_vel.y += -constrain_float(attitude_error_vector.x, -M_PI / 4, M_PI / 4) * _ahrs.get_gyro().z;
-
+    // ensure angular velocity does not go over configured limits
     ang_vel_limit(_rate_target_ang_vel, radians(_ang_vel_roll_max), radians(_ang_vel_pitch_max), radians(_ang_vel_yaw_max));
 
     // Add the angular velocity feedforward, rotated into vehicle frame
     Quaternion attitude_target_ang_vel_quat = Quaternion(0.0f, _attitude_target_ang_vel.x, _attitude_target_ang_vel.y, _attitude_target_ang_vel.z);
-    Quaternion to_to_from_quat = attitude_vehicle_quat.inverse() * _attitude_target_quat;
-    Quaternion desired_ang_vel_quat = to_to_from_quat.inverse() * attitude_target_ang_vel_quat * to_to_from_quat;
+
+    // rotation from the target frame to the vehicle frame
+    Quaternion target_to_vehicle_quat = _attitude_target_quat.inverse() * attitude_vehicle_quat;
+
+    // target angle velocity vector in the vehicle frame
+    Quaternion desired_ang_vel_quat = target_to_vehicle_quat.inverse() * attitude_target_ang_vel_quat * target_to_vehicle_quat;
 
     // Correct the thrust vector and smoothly add feedforward and yaw input
     _feedforward_scalar = 1.0f;

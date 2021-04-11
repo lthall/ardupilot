@@ -158,6 +158,9 @@ public:
     // Command an angular step (i.e change) in body frame angle
     virtual void input_angle_step_bf_roll_pitch_yaw(float roll_angle_step_bf_cd, float pitch_angle_step_bf_cd, float yaw_angle_step_bf_cd);
 
+    void input_thrust_vector_rate_heading(Vector3f thrust_vector, float euler_yaw_rate_cds);
+    void input_thrust_vector_heading(Vector3f thrust_vector, float heading);
+
     // Run angular velocity controller and send outputs to the motors
     virtual void rate_controller_run() = 0;
 
