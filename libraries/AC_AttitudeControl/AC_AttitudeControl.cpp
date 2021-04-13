@@ -641,6 +641,8 @@ void AC_AttitudeControl::attitude_controller_run_quat()
         _rate_target_ang_vel.z += desired_ang_vel_quat.q4;
     }
 
+    _rate_target_ang_vel.z += radians(90.0f);
+
     if (_rate_bf_ff_enabled) {
         // rotate target and normalize
         Quaternion attitude_target_update_quat;
