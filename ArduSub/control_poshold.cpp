@@ -13,7 +13,7 @@ bool Sub::poshold_init()
     if (!position_ok()) {
         return false;
     }
-    pos_control.init_vel_controller_xyz();
+    pos_control.init_pos_vel_accel_xyz();
     pos_control.set_desired_velocity_xy(0, 0);
     pos_control.set_target_to_stopping_point_xy();
 
@@ -72,7 +72,7 @@ void Sub::poshold_run()
         translate_pos_control_rp(lateral_out, forward_out);
         pos_control.update_xy_controller();
     } else {
-        pos_control.init_vel_controller_xyz();
+        pos_control.init_pos_vel_accel_xyz();
         pos_control.set_desired_velocity_xy(0, 0);
         pos_control.set_target_to_stopping_point_xy();
     }

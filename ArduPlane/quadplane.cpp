@@ -1456,7 +1456,7 @@ void QuadPlane::control_loiter()
     // process pilot's roll and pitch input
     float target_roll_cd, target_pitch_cd;
     get_pilot_desired_lean_angles(target_roll_cd, target_pitch_cd, loiter_nav->get_angle_max_cd(), attitude_control->get_althold_lean_angle_max());
-    loiter_nav->set_pilot_desired_acceleration(target_roll_cd, target_pitch_cd, plane.G_Dt);
+    loiter_nav->set_pilot_desired_acceleration(target_roll_cd, target_pitch_cd);
     
     // run loiter controller
     loiter_nav->update();
@@ -2516,11 +2516,11 @@ void QuadPlane::vtol_position_controller(void)
         // reset position controller xy target to current position
         // because we only want velocity control (no position control)
         const Vector3f& curr_pos = inertial_nav.get_position();
-        pos_control->set_xy_target(curr_pos.x, curr_pos.y);
+        pos_control->set_target_pos_xy(curr_pos.x, curr_pos.y);
         pos_control->set_desired_accel_xy(0.0f,0.0f);
 
         // run horizontal velocity controller
-        pos_control->update_xy_controller();
+        pos_control->run_xy_controller();
 
         // nav roll and pitch are controller by position controller
         plane.nav_roll_cd = pos_control->get_roll();
@@ -2585,9 +2585,9 @@ void QuadPlane::vtol_position_controller(void)
         if (should_relax()) {
             loiter_nav->soften_for_landing();
         } else {
-            pos_control->set_xy_target(poscontrol.target.x, poscontrol.target.y);
+            pos_control->set_target_pos_xy(poscontrol.target.x, poscontrol.target.y);
         }
-        pos_control->update_xy_controller();
+        pos_control->run_xy_controller();
 
         // nav roll and pitch are controller by position controller
         plane.nav_roll_cd = pos_control->get_roll();
@@ -2709,8 +2709,8 @@ void QuadPlane::takeoff_controller(void)
     pos_control->set_desired_accel_xy(0.0f,0.0f);
 
     // set position control target and update
-    pos_control->set_xy_target(poscontrol.target.x, poscontrol.target.y);
-    pos_control->update_xy_controller();
+    pos_control->set_target_pos_xy(poscontrol.target.x, poscontrol.target.y);
+    pos_control->run_xy_controller();
 
     // nav roll and pitch are controller by position controller
     plane.nav_roll_cd = pos_control->get_roll();

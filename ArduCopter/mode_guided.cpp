@@ -168,7 +168,7 @@ void ModeGuided::vel_control_start()
     pos_control->set_max_speed_accel_z(-get_pilot_speed_dn(), g.pilot_speed_up, g.pilot_accel_z);
 
     // initialise velocity controller
-    pos_control->init_vel_controller_xyz();
+    pos_control->init_pos_vel_accel_xy();
 }
 
 // initialise guided mode's posvel controller
@@ -186,7 +186,7 @@ void ModeGuided::posvel_control_start()
     const Vector3f& curr_vel = inertial_nav.get_velocity();
 
     // set target position and velocity to current position and velocity
-    pos_control->set_xy_target(curr_pos.x, curr_pos.y);
+    pos_control->set_target_pos_xy(curr_pos.x, curr_pos.y);
     pos_control->set_desired_velocity_xy(curr_vel.x, curr_vel.y);
 
     // set vertical speed and acceleration
@@ -649,7 +649,7 @@ void ModeGuided::angle_control_run()
     if (guided_angle_state.use_thrust) {
         attitude_control->set_throttle_out(guided_angle_state.thrust, true, copter.g.throttle_filt);
     } else {
-        pos_control->set_alt_target_from_climb_rate_ff(climb_rate_cms, G_Dt, false);
+        pos_control->set_alt_target_from_climb_rate_ff(climb_rate_cms, false);
         pos_control->update_z_controller();
     }
 }

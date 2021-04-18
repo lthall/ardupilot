@@ -160,7 +160,7 @@ void ModeThrow::run()
         attitude_control->input_euler_angle_roll_pitch_euler_rate_yaw(0.0f, 0.0f, 0.0f);
 
         // call height controller
-        pos_control->set_alt_target_from_climb_rate_ff(0.0f, G_Dt, false);
+        pos_control->set_alt_target_from_climb_rate_ff(0.0f, false);
         pos_control->update_z_controller();
 
         break;
@@ -177,7 +177,7 @@ void ModeThrow::run()
         attitude_control->input_euler_angle_roll_pitch_euler_rate_yaw(loiter_nav->get_roll(), loiter_nav->get_pitch(), 0.0f);
 
         // call height controller
-        pos_control->set_alt_target_from_climb_rate_ff(0.0f, G_Dt, false);
+        pos_control->set_alt_target_from_climb_rate_ff(0.0f, false);
         pos_control->update_z_controller();
 
         break;

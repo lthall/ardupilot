@@ -85,33 +85,33 @@ public:
     void set_alt_target(float alt_cm) { _pos_target.z = alt_cm; }
 
     /// set_alt_target_with_slew - adjusts target towards a final altitude target
-    ///     should be called continuously (with dt set to be the expected time between calls)
+    ///     should be called continuously
     ///     actual position target will be moved no faster than the speed_down and speed_up
     ///     target will also be stopped if the motors hit their limits or leash length is exceeded
-    void set_alt_target_with_slew(float alt_cm, float dt);
+    void set_alt_target_with_slew(float alt_cm);
 
     /// set_alt_target_from_climb_rate - adjusts target up or down using a climb rate in cm/s
-    ///     should be called continuously (with dt set to be the expected time between calls)
+    ///     should be called continuously
     ///     actual position target will be moved no faster than the speed_down and speed_up
     ///     target will also be stopped if the motors hit their limits or leash length is exceeded
     ///     set force_descend to true during landing to allow target to move low enough to slow the motors
-    virtual void set_alt_target_from_climb_rate(float climb_rate_cms, float dt, bool force_descend);
+    virtual void set_alt_target_from_climb_rate(float climb_rate_cms, bool force_descend);
 
     /// set_alt_target_from_climb_rate_ff - adjusts target up or down using a climb rate in cm/s using feed-forward
-    ///     should be called continuously (with dt set to be the expected time between calls)
+    ///     should be called continuously
     ///     actual position target will be moved no faster than the speed_down and speed_up
     ///     target will also be stopped if the motors hit their limits or leash length is exceeded
     ///     set force_descend to true during landing to allow target to move low enough to slow the motors
-    virtual void set_alt_target_from_climb_rate_ff(float climb_rate_cms, float dt, bool force_descend);
+    virtual void set_alt_target_from_climb_rate_ff(float climb_rate_cms, bool force_descend);
 
     /// add_takeoff_climb_rate - adjusts alt target up or down using a climb rate in cm/s
-    ///     should be called continuously (with dt set to be the expected time between calls)
+    ///     should be called continuously
     ///     almost no checks are performed on the input
-    void add_takeoff_climb_rate(float climb_rate_cms, float dt);
+    void add_takeoff_climb_rate(float climb_rate_cms);
 
-    /// init_pos_vel_z - initialise the position controller to the current position and velocity with zero acceleration.
+    /// init_pos_vel_accel_z - initialise the position controller to the current position and velocity with zero acceleration.
     ///     This function should be called before input_vel_z or input_pos_vel_z are used.
-    void init_pos_vel_z();
+    void init_pos_vel_accel_z();
 
     /// input_vel_z calculate a jerk limited path from the current position, velocity and acceleration to an input velocity.
     ///     The function takes the current position, velocity, and acceleration and calculates the required jerk limited adjustment to the acceleration for the next time dt.
@@ -214,8 +214,8 @@ public:
     /// set position, velocity and acceleration targets
     void set_pos_vel_accel_target(const Vector3f& pos, const Vector3f& vel, const Vector3f& accel);
 
-    /// set_xy_target in cm from home
-    void set_xy_target(float x, float y);
+    /// set_target_pos_xy in cm from home
+    void set_target_pos_xy(float pos_x, float pos_y) {_pos_target.x = pos_x; _pos_target.y = pos_y; }
 
     /// get_desired_velocity - returns xy desired velocity (i.e. feed forward) in cm/s in lat and lon direction
     const Vector3f& get_desired_velocity() { return _vel_desired; }
@@ -229,7 +229,7 @@ public:
     /// set_desired_velocity_xy - sets desired velocity in cm/s in lat and lon directions
     ///     when update_xy_controller is next called the position target is moved based on the desired velocity and
     ///     the desired velocities are fed forward into the rate_to_accel step
-    void set_desired_velocity_xy(float vel_lat_cms, float vel_lon_cms) {_vel_desired.x = vel_lat_cms; _vel_desired.y = vel_lon_cms; }
+    void set_desired_velocity_xy(float vel_x, float vel_y) {_vel_desired.x = vel_x; _vel_desired.y = vel_y; }
 
     /// set_desired_velocity - sets desired velocity in cm/s in all 3 axis
     ///     when update_vel_controller_xyz is next called the position target is moved based on the desired velocity
@@ -267,18 +267,12 @@ public:
 
     /// xyz velocity controller
 
-    /// init_vel_controller_xyz - initialise the velocity controller - should be called once before the caller attempts to use the controller
-    void init_vel_controller_xyz();
+    /// init_pos_vel_accel_xyz - initialise the velocity controller - should be called once before the caller attempts to use the controller
+    void init_pos_vel_accel_xyz();
 
-    /// update_velocity_controller_xyz - run the velocity controller - should be called at 100hz or higher
-    ///     velocity targets should we set using set_desired_velocity_xyz() method
-    ///     callers should use get_roll() and get_pitch() methods and sent to the attitude controller
-    ///     throttle targets will be sent directly to the motors
-    void update_vel_controller_xyz();
-
-    /// init_pos_vel_xy - initialise the position controller to the current position and velocity with zero acceleration.
+    /// init_pos_vel_accel_xy - initialise the position controller to the current position and velocity with zero acceleration.
     ///     This function should be called before input_vel_xy or input_pos_vel_xy are used.
-    void init_pos_vel_xy();
+    void init_pos_vel_accel_xy();
 
     /// input_vel_xy calculate a jerk limited path from the current position, velocity and acceleration to an input velocity.
     ///     The function takes the current position, velocity, and acceleration and calculates the required jerk limited adjustment to the acceleration for the next time dt.
@@ -379,14 +373,14 @@ protected:
     ///
 
     /// desired_vel_to_pos - move position target using desired velocities
-    void desired_vel_to_pos(float nav_dt);
+    void desired_vel_to_pos();
 
     /// run horizontal position controller correcting position and velocity
     ///     converts position (_pos_target) to target velocity (_vel_target)
     ///     desired velocity (_vel_desired) is combined into final target velocity
     ///     converts desired velocities in lat/lon directions to accelerations in lat/lon frame
     ///     converts desired accelerations provided in lat/lon frame to roll/pitch angles
-    void run_xy_controller(float dt);
+    void run_xy_controller();
 
     /// initialise and check for ekf position resets
     void init_ekf_xy_reset();

@@ -397,7 +397,7 @@ void AC_WPNav::shift_wp_origin_and_destination_to_current_pos_xy()
     _destination.y = curr_pos.y;
 
     // move pos controller target horizontally
-    _pos_control.set_xy_target(curr_pos.x, curr_pos.y);
+    _pos_control.set_target_pos_xy(curr_pos.x, curr_pos.y);
 }
 
 /// shifts the origin and destination horizontally to the achievable stopping point
@@ -420,7 +420,7 @@ void AC_WPNav::shift_wp_origin_and_destination_to_stopping_point_xy()
     _destination.y = stopping_point.y;
 
     // move pos controller target horizontally
-    _pos_control.set_xy_target(stopping_point.x, stopping_point.y);
+    _pos_control.set_target_pos_xy(stopping_point.x, stopping_point.y);
 }
 
 /// get_wp_stopping_point_xy - returns vector to stopping point based on a horizontal position and velocity

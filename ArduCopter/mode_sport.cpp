@@ -95,8 +95,8 @@ void ModeSport::run()
         target_climb_rate = get_avoidance_adjusted_climbrate(target_climb_rate);
 
         // call position controller
-        pos_control->set_alt_target_from_climb_rate_ff(target_climb_rate, G_Dt, false);
-        pos_control->add_takeoff_climb_rate(takeoff_climb_rate, G_Dt);
+        pos_control->set_alt_target_from_climb_rate_ff(target_climb_rate, false);
+        pos_control->add_takeoff_climb_rate(takeoff_climb_rate);
         break;
 
     case AltHold_Landed_Ground_Idle:
@@ -117,7 +117,7 @@ void ModeSport::run()
         // get avoidance adjusted climb rate
         target_climb_rate = get_avoidance_adjusted_climbrate(target_climb_rate);
 
-        pos_control->set_alt_target_from_climb_rate_ff(target_climb_rate, G_Dt, false);
+        pos_control->set_alt_target_from_climb_rate_ff(target_climb_rate, false);
         break;
     }
 

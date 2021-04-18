@@ -135,8 +135,8 @@ void ModePosHold::run()
         loiter_nav->update(false);
 
         // set position controller targets
-        pos_control->set_alt_target_from_climb_rate_ff(target_climb_rate, G_Dt, false);
-        pos_control->add_takeoff_climb_rate(takeoff_climb_rate, G_Dt);
+        pos_control->set_alt_target_from_climb_rate_ff(target_climb_rate, false);
+        pos_control->add_takeoff_climb_rate(takeoff_climb_rate);
 
         // set poshold state to pilot override
         roll_mode = RPMode::PILOT_OVERRIDE;
@@ -172,7 +172,7 @@ void ModePosHold::run()
         // get avoidance adjusted climb rate
         target_climb_rate = get_avoidance_adjusted_climbrate(target_climb_rate);
 
-        pos_control->set_alt_target_from_climb_rate_ff(target_climb_rate, G_Dt, false);
+        pos_control->set_alt_target_from_climb_rate_ff(target_climb_rate, false);
         break;
     }
 

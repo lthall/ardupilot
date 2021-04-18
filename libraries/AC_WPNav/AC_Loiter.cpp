@@ -99,7 +99,7 @@ void AC_Loiter::init_target(const Vector3f& position)
     _predicted_euler_angle.zero();
 
     // set target position
-    _pos_control.set_xy_target(position.x, position.y);
+    _pos_control.set_target_pos_xy(position.x, position.y);
 
     // set vehicle velocity and acceleration to zero
     _pos_control.set_desired_velocity_xy(0.0f,0.0f);
@@ -130,7 +130,7 @@ void AC_Loiter::init_target()
     _predicted_euler_angle.x = radians(roll_cd*0.01f);
     _predicted_euler_angle.y = radians(pitch_cd*0.01f);
     // set target position
-    _pos_control.set_xy_target(curr_pos.x, curr_pos.y);
+    _pos_control.set_target_pos_xy(curr_pos.x, curr_pos.y);
 
     // set vehicle velocity and acceleration to current state
     _pos_control.set_desired_velocity_xy(curr_vel.x, curr_vel.y);
@@ -146,7 +146,7 @@ void AC_Loiter::soften_for_landing()
     const Vector3f& curr_pos = _inav.get_position();
 
     // set target position to current position
-    _pos_control.set_xy_target(curr_pos.x, curr_pos.y);
+    _pos_control.set_target_pos_xy(curr_pos.x, curr_pos.y);
 
     // also prevent I term build up in xy velocity controller. Note
     // that this flag is reset on each loop, in run_xy_controller()
@@ -155,8 +155,9 @@ void AC_Loiter::soften_for_landing()
 
 /// set pilot desired acceleration in centi-degrees
 //   dt should be the time (in seconds) since the last call to this function
-void AC_Loiter::set_pilot_desired_acceleration(float euler_roll_angle_cd, float euler_pitch_angle_cd, float dt)
+void AC_Loiter::set_pilot_desired_acceleration(float euler_roll_angle_cd, float euler_pitch_angle_cd)
 {
+    float dt = _pos_control.get_dt();
     // Convert from centidegrees on public interface to radians
     const float euler_roll_angle = radians(euler_roll_angle_cd*0.01f);
     const float euler_pitch_angle = radians(euler_pitch_angle_cd*0.01f);
@@ -310,7 +311,16 @@ void AC_Loiter::calc_desired_velocity(float nav_dt, bool avoidance_on)
         }
     }
 
+    // get loiters desired velocity from the position controller where it is being stored.
+    const Vector3f &target_pos_3d = _pos_control.get_pos_target();
+    Vector2f target_pos(target_pos_3d.x,target_pos_3d.y);
+
+    // update the target position using our predicted velocity
+    target_pos.x += desired_vel.x * nav_dt;
+    target_pos.y += desired_vel.y * nav_dt;
+
     // send adjusted feed forward acceleration and velocity back to the Position Controller
     _pos_control.set_desired_accel_xy(_desired_accel.x, _desired_accel.y);
     _pos_control.set_desired_velocity_xy(desired_vel.x, desired_vel.y);
+    _pos_control.set_target_pos_xy(target_pos.x, target_pos.y);
 }
