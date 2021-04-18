@@ -19,13 +19,6 @@ public:
     ///   set to zero to disable limit
     void set_alt_min(float alt) { _alt_min = alt; }
 
-    /// set_alt_target_from_climb_rate - adjusts target up or down using a climb rate in cm/s
-    ///     should be called continuously
-    ///     actual position target will be moved no faster than the speed_down and speed_up
-    ///     target will also be stopped if the motors hit their limits or leash length is exceeded
-    ///     set force_descend to true during landing to allow target to move low enough to slow the motors
-    void set_alt_target_from_climb_rate(float climb_rate_cms, bool force_descend) override;
-
     /// set_alt_target_from_climb_rate_ff - adjusts target up or down using a climb rate in cm/s using feed-forward
     ///     should be called continuously
     ///     actual position target will be moved no faster than the speed_down and speed_up

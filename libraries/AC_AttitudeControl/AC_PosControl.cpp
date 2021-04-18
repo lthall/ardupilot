@@ -367,6 +367,9 @@ void AC_PosControl::set_max_speed_accel_z(float speed_down, float speed_up, floa
 ///     target will also be stopped if the motors hit their limits or leash length is exceeded
 void AC_PosControl::set_alt_target_with_slew(float alt_cm)
 {
+    // check for ekf z position reset
+    check_for_ekf_z_reset();
+
     // calculated increased maximum acceleration if over speed
     float accel_z_cms = _accel_z_cms;
     if (_vel_desired.z < _speed_down_cms && !is_zero(_speed_down_cms)) {
@@ -387,23 +390,6 @@ void AC_PosControl::set_alt_target_with_slew(float alt_cm)
         _p_pos_z.get_error(), _pid_vel_z.get_error());
 }
 
-/// set_alt_target_from_climb_rate - adjusts target up or down using a climb rate in cm/s
-///     should be called continuously
-///     actual position target will be moved no faster than the speed_down and speed_up
-///     target will also be stopped if the motors hit their limits or leash length is exceeded
-// todo: this should be replaced with set_alt_target_from_climb_rate_ff in all vehicles
-void AC_PosControl::set_alt_target_from_climb_rate(float climb_rate_cms, bool force_descend)
-{
-    // adjust desired alt if motors have not hit their limits
-    // To-Do: add check of _limit.pos_down?
-    if ((climb_rate_cms < 0 && (!_motors.limit.throttle_lower || force_descend)) || (climb_rate_cms > 0 && !_motors.limit.throttle_upper && !_limit.pos_up)) {
-        _pos_target.z += climb_rate_cms * _dt;
-    }
-
-    // do not use z-axis desired velocity feed forward
-    _vel_desired.z = 0.0f;
-}
-
 /// set_alt_target_from_climb_rate_ff - adjusts target up or down using a climb rate in cm/s using feed-forward
 ///     should be called continuously
 ///     actual position target will be moved no faster than the speed_down and speed_up
@@ -411,6 +397,9 @@ void AC_PosControl::set_alt_target_from_climb_rate(float climb_rate_cms, bool fo
 ///     set force_descend to true during landing to allow target to move low enough to slow the motors
 void AC_PosControl::set_alt_target_from_climb_rate_ff(float climb_rate_cms, bool force_descend)
 {
+    // check for ekf z position reset
+    check_for_ekf_z_reset();
+
     // calculated increased maximum acceleration if over speed
     float accel_z_cms = _accel_z_cms;
     if (_vel_desired.z < _speed_down_cms && !is_zero(_speed_down_cms)) {
@@ -514,18 +503,6 @@ bool AC_PosControl::is_active_z() const
 /// update_z_controller - fly to altitude in cm above home
 void AC_PosControl::update_z_controller()
 {
-    // check time since last cast
-    const uint64_t now_us = AP_HAL::micros64();
-    if (now_us - _last_update_z_us > POSCONTROL_ACTIVE_TIMEOUT_US) {
-        _pid_accel_z.set_integrator((_attitude_control.get_throttle_in() - _motors.get_throttle_hover()) * 1000.0f);
-        _accel_target.z = -(_ahrs.get_accel_ef_blended().z + GRAVITY_MSS) * 100.0f;
-        _pid_accel_z.reset_filter();
-    }
-    _last_update_z_us = now_us;
-
-    // check for ekf altitude reset
-    check_for_ekf_z_reset();
-
     // call z-axis position controller
     run_z_controller();
 }
@@ -1066,7 +1043,15 @@ void AC_PosControl::check_for_ekf_xy_reset()
     Vector2f pos_shift;
     uint32_t reset_ms = _ahrs.getLastPosNorthEastReset(pos_shift);
     if (reset_ms != _ekf_xy_reset_ms) {
-        // todo: do this properly.
+
+        const Vector3f& curr_pos = _inav.get_position();
+        _pos_target.x = curr_pos.x + _p_pos_xy.get_error().x;
+        _pos_target.y = curr_pos.y + _p_pos_xy.get_error().y;
+
+        const Vector3f& curr_vel = _inav.get_velocity();
+        _vel_target.x = curr_vel.x + _pid_vel_xy.get_error().x;
+        _vel_target.y = curr_vel.y + _pid_vel_xy.get_error().y;
+
         _ekf_xy_reset_ms = reset_ms;
     }
 }
@@ -1082,11 +1067,16 @@ void AC_PosControl::init_ekf_z_reset()
 void AC_PosControl::check_for_ekf_z_reset()
 {
     // check for position shift
-    // todo: replace with with a simple getLastReset();
     float alt_shift;
     uint32_t reset_ms = _ahrs.getLastPosDownReset(alt_shift);
     if (reset_ms != 0 && reset_ms != _ekf_z_reset_ms) {
-        // todo: do this properly.
+
+        const Vector3f& curr_pos = _inav.get_position();
+        _pos_target.z = curr_pos.z + _p_pos_z.get_error();
+
+        const Vector3f& curr_vel = _inav.get_velocity();
+        _vel_target.z = curr_vel.z + _pid_vel_z.get_error();
+
         _ekf_z_reset_ms = reset_ms;
     }
 }

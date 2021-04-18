@@ -1492,7 +1492,7 @@ void QuadPlane::control_loiter()
         }
         float height_above_ground = plane.relative_ground_altitude(plane.g.rangefinder_landing);
         float descent_rate = (poscontrol.state == QPOS_LAND_FINAL)? land_speed_cms:landing_descent_rate_cms(height_above_ground);
-        pos_control->set_alt_target_from_climb_rate(-descent_rate, true);
+        pos_control->set_alt_target_from_climb_rate_ff(-descent_rate, true);
         check_land_complete();
     } else if (plane.control_mode == &plane.mode_guided && guided_takeoff) {
         pos_control->set_alt_target_from_climb_rate_ff(0.0, false);
@@ -2632,19 +2632,19 @@ void QuadPlane::vtol_position_controller(void)
             }
             adjust_alt_target(target_altitude - plane.home.alt);
         } else {
-            pos_control->set_alt_target_from_climb_rate(0, false);
+            pos_control->set_alt_target_from_climb_rate_ff(0, false);
         }
         break;
     }
 
     case QPOS_LAND_DESCEND: {
         float height_above_ground = plane.relative_ground_altitude(plane.g.rangefinder_landing);
-        pos_control->set_alt_target_from_climb_rate(-landing_descent_rate_cms(height_above_ground), true);
+        pos_control->set_alt_target_from_climb_rate_ff(-landing_descent_rate_cms(height_above_ground), true);
         break;
     }
 
     case QPOS_LAND_FINAL:
-        pos_control->set_alt_target_from_climb_rate(-land_speed_cms, true);
+        pos_control->set_alt_target_from_climb_rate_ff(-land_speed_cms, true);
         if ((options & OPTION_DISABLE_GROUND_EFFECT_COMP) == 0) {
             ahrs.setTouchdownExpected(true);
         }
@@ -2719,7 +2719,7 @@ void QuadPlane::takeoff_controller(void)
                                                                   plane.nav_pitch_cd,
                                                                   get_pilot_input_yaw_rate_cds() + get_weathervane_yaw_rate_cds());
 
-    pos_control->set_alt_target_from_climb_rate(wp_nav->get_default_speed_up(), true);
+    pos_control->set_alt_target_from_climb_rate_ff(wp_nav->get_default_speed_up(), true);
     run_z_controller();
 }
 

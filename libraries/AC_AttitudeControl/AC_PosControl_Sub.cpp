@@ -7,35 +7,6 @@ AC_PosControl_Sub::AC_PosControl_Sub(AP_AHRS_View& ahrs, const AP_InertialNav& i
     _alt_min(0.0f)
 {}
 
-/// set_alt_target_from_climb_rate - adjusts target up or down using a climb rate in cm/s
-///     should be called continuously
-///     actual position target will be moved no faster than the speed_down and speed_up
-///     target will also be stopped if the motors hit their limits or leash length is exceeded
-void AC_PosControl_Sub::set_alt_target_from_climb_rate(float climb_rate_cms, bool force_descend)
-{
-    // adjust desired alt if motors have not hit their limits
-    // To-Do: add check of _limit.pos_down?
-    if ((climb_rate_cms<0 && (!_motors.limit.throttle_lower || force_descend)) || (climb_rate_cms>0 && !_motors.limit.throttle_upper && !_limit.pos_up)) {
-        _pos_target.z += climb_rate_cms * _dt;
-    }
-
-    // do not let target alt get above limit
-    if (_alt_max < 100 && _pos_target.z > _alt_max) {
-        _pos_target.z = _alt_max;
-        _limit.pos_up = true;
-    }
-
-    // do not let target alt get below limit
-    if (_alt_min < 0 && _alt_min < _alt_max && _pos_target.z < _alt_min) {
-        _pos_target.z = _alt_min;
-        _limit.pos_down = true;
-    }
-
-    // do not use z-axis desired velocity feed forward
-    // vel_desired set to desired climb rate for reporting and land-detector
-    _vel_desired.z = 0.0f;
-}
-
 /// set_alt_target_from_climb_rate_ff - adjusts target up or down using a climb rate in cm/s using feed-forward
 ///     should be called continuously
 ///     actual position target will be moved no faster than the speed_down and speed_up
