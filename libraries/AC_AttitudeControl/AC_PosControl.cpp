@@ -278,7 +278,7 @@ const AP_Param::GroupInfo AC_PosControl::var_info[] = {
     // @Range: 0 10
     // @Increment: 0.01
     // @User: Advanced
-    AP_GROUPINFO("_TC", 8, AC_PosControl, _shaping_tc, 1.0f),
+    AP_GROUPINFO("_TC", 8, AC_PosControl, _shaping_tc, 0.25f),
 
     AP_GROUPEND
 };
@@ -492,6 +492,9 @@ void AC_PosControl::init_takeoff()
 
     // initialise ekf reset handler
     init_ekf_z_reset();
+
+    // initialise z_controller time out
+    _last_update_z_us = AP_HAL::micros64();
 }
 
 // is_active_z - returns true if the z-axis position controller has been run very recently
@@ -532,6 +535,9 @@ void AC_PosControl::init_pos_vel_accel_z()
 
     // initialise ekf xy reset handler
     init_ekf_z_reset();
+
+    // initialise z_controller time out
+    _last_update_z_us = AP_HAL::micros64();
 }
 
 /// input_vel_z calculate a jerk limited path from the current position, velocity and acceleration to an input velocity.
@@ -616,12 +622,11 @@ void AC_PosControl::input_pos_vel_accel_z(const Vector3f& pos, const Vector3f& v
 // vel_up_max, vel_down_max should have already been set before calling this method
 void AC_PosControl::run_z_controller()
 {
-    // Check for position control time out
+    // Check for z_controller time out
     const uint64_t now_us = AP_HAL::micros64();
     if ((now_us - _last_update_z_us) >= POSCONTROL_ACTIVE_TIMEOUT_US) {
         init_pos_vel_accel_z();
-        // todo: prevent internal error going off after initialisation
-//        INTERNAL_ERROR(AP_InternalError::error_t::flow_of_control);
+        INTERNAL_ERROR(AP_InternalError::error_t::flow_of_control);
     }
     _last_update_z_us = now_us;
 
@@ -795,6 +800,9 @@ void AC_PosControl::init_xy_controller()
 
     // initialise ekf xy reset handler
     init_ekf_xy_reset();
+
+    // initialise xy_controller time out
+    _last_update_xy_us = AP_HAL::micros64();
 }
 
 /// standby_xyz_reset - resets I terms and removes position error
