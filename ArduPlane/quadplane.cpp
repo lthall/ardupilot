@@ -1181,7 +1181,7 @@ void QuadPlane::hold_hover(float target_climb_rate)
     multicopter_attitude_rate_update(get_desired_yaw_rate_cds());
 
     // call position controller
-    pos_control->set_alt_target_from_climb_rate_ff(target_climb_rate, false);
+    pos_control->input_vel_accel_z(Vector3f(0.0f, 0.0f, target_climb_rate), Vector3f(), false);
     run_z_controller();
 }
 
@@ -1492,13 +1492,13 @@ void QuadPlane::control_loiter()
         }
         float height_above_ground = plane.relative_ground_altitude(plane.g.rangefinder_landing);
         float descent_rate = (poscontrol.state == QPOS_LAND_FINAL)? land_speed_cms:landing_descent_rate_cms(height_above_ground);
-        pos_control->set_alt_target_from_climb_rate_ff(-descent_rate, true);
+        pos_control->input_vel_accel_z(Vector3f(0.0f, 0.0f, -descent_rate), Vector3f(), true);
         check_land_complete();
     } else if (plane.control_mode == &plane.mode_guided && guided_takeoff) {
-        pos_control->set_alt_target_from_climb_rate_ff(0.0, false);
+        pos_control->input_vel_accel_z(Vector3f(0.0f, 0.0f, 0.0f), Vector3f(), false);
     } else {
         // update altitude target and call position controller
-        pos_control->set_alt_target_from_climb_rate_ff(get_pilot_desired_climb_rate_cms(), false);
+        pos_control->input_vel_accel_z(Vector3f(0.0f, 0.0f, get_pilot_desired_climb_rate_cms()), Vector3f(), false);
     }
     run_z_controller();
 }
@@ -2632,19 +2632,19 @@ void QuadPlane::vtol_position_controller(void)
             }
             adjust_alt_target(target_altitude - plane.home.alt);
         } else {
-            pos_control->set_alt_target_from_climb_rate_ff(0, false);
+            pos_control->input_vel_accel_z(Vector3f(0.0f, 0.0f, 0.0f), Vector3f(), false);
         }
         break;
     }
 
     case QPOS_LAND_DESCEND: {
         float height_above_ground = plane.relative_ground_altitude(plane.g.rangefinder_landing);
-        pos_control->set_alt_target_from_climb_rate_ff(-landing_descent_rate_cms(height_above_ground), true);
+        pos_control->input_vel_accel_z(Vector3f(0.0f, 0.0f, -landing_descent_rate_cms(height_above_ground)), Vector3f(), false);
         break;
     }
 
     case QPOS_LAND_FINAL:
-        pos_control->set_alt_target_from_climb_rate_ff(-land_speed_cms, true);
+        pos_control->input_vel_accel_z(Vector3f(0.0f, 0.0f, -land_speed_cms), Vector3f(), true);
         if ((options & OPTION_DISABLE_GROUND_EFFECT_COMP) == 0) {
             ahrs.setTouchdownExpected(true);
         }
@@ -2653,8 +2653,6 @@ void QuadPlane::vtol_position_controller(void)
     case QPOS_LAND_COMPLETE:
         break;
     }
-    
-    run_z_controller();
 }
 
 
@@ -2719,8 +2717,7 @@ void QuadPlane::takeoff_controller(void)
                                                                   plane.nav_pitch_cd,
                                                                   get_pilot_input_yaw_rate_cds() + get_weathervane_yaw_rate_cds());
 
-    pos_control->set_alt_target_from_climb_rate_ff(wp_nav->get_default_speed_up(), true);
-    run_z_controller();
+    pos_control->input_vel_accel_z(Vector3f(0.0f, 0.0f, wp_nav->get_default_speed_up()), Vector3f(), false);
 }
 
 /*
@@ -2748,8 +2745,7 @@ void QuadPlane::waypoint_controller(void)
     plane.nav_pitch_cd = wp_nav->get_pitch();
     
     // climb based on altitude error
-    pos_control->set_alt_target_from_climb_rate_ff(assist_climb_rate_cms(), false);
-    run_z_controller();
+    pos_control->input_vel_accel_z(Vector3f(0.0f, 0.0f, assist_climb_rate_cms()), Vector3f(), false);
 }
 
 
@@ -2815,7 +2811,7 @@ void QuadPlane::init_qrtl(void)
     poscontrol.state = QPOS_POSITION1;
     poscontrol.speed_scale = 0;
     pos_control->set_desired_accel_xy(0.0f, 0.0f);
-    pos_control->init_xy_controller();
+    pos_control->init_xyz();
 }
 
 /*
@@ -2902,7 +2898,7 @@ bool QuadPlane::do_vtol_land(const AP_Mission::Mission_Command& cmd)
     poscontrol.state = QPOS_POSITION1;
     poscontrol.speed_scale = 0;
     pos_control->set_desired_accel_xy(0.0f, 0.0f);
-    pos_control->init_xy_controller();
+    pos_control->init_xyz();
 
     throttle_wait = false;
     landing_detect.lower_limit_start_ms = 0;
@@ -3378,7 +3374,7 @@ void QuadPlane::adjust_alt_target(float altitude_cm)
     float current_alt = inertial_nav.get_altitude();
     // don't let it get beyond 50cm from current altitude
     float target_cm = constrain_float(altitude_cm, current_alt-50, current_alt+50);
-    pos_control->set_alt_target(target_cm);
+    pos_control->input_pos_vel_accel_z(Vector3f(0.0f, 0.0f, target_cm), Vector3f(), Vector3f())
 }
 
 // user initiated takeoff for guided mode
