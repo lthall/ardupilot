@@ -144,12 +144,8 @@ void AC_WPNav::wp_and_spline_init(float speed_cms)
     _wp_desired_speed_xy_cms = is_positive(speed_cms) ? speed_cms : _wp_speed_cms;
 
     // initialise position controller speed and acceleration
-    _pos_control.set_max_speed_xy(_wp_desired_speed_xy_cms);
-    _pos_control.set_max_accel_xy(_wp_accel_cmss);
-    _pos_control.set_max_speed_z(-_wp_speed_down_cms, _wp_speed_up_cms);
-    _pos_control.set_max_accel_z(_wp_accel_z_cmss);
-    _pos_control.calc_leash_length_xy();
-    _pos_control.calc_leash_length_z();
+    _pos_control.set_max_speed_accel_xy(_wp_desired_speed_xy_cms, _wp_accel_cmss);
+    _pos_control.set_max_speed_accel_z(-_wp_speed_down_cms, _wp_speed_up_cms, _wp_accel_z_cmss);
 
     // calculate scurve jerk and jerk time
     if (!is_positive(_wp_jerk)) {
@@ -186,7 +182,7 @@ void AC_WPNav::set_speed_xy(float speed_cms)
     // range check target speed
     if (speed_cms >= WPNAV_WP_SPEED_MIN) {
         _wp_desired_speed_xy_cms = speed_cms;
-        _pos_control.set_max_speed_xy(_wp_desired_speed_xy_cms);
+        _pos_control.set_max_speed_accel_xy(_wp_desired_speed_xy_cms, _wp_accel_cmss);
         update_track_with_speed_accel_limits();
     }
 }
@@ -194,14 +190,14 @@ void AC_WPNav::set_speed_xy(float speed_cms)
 /// set current target climb rate during wp navigation
 void AC_WPNav::set_speed_up(float speed_up_cms)
 {
-    _pos_control.set_max_speed_z(_pos_control.get_max_speed_down(), speed_up_cms);
+    _pos_control.set_max_speed_accel_z(_pos_control.get_max_speed_down(), speed_up_cms, _pos_control.get_max_accel_z());
     update_track_with_speed_accel_limits();
 }
 
 /// set current target descent rate during wp navigation
 void AC_WPNav::set_speed_down(float speed_down_cms)
 {
-    _pos_control.set_max_speed_z(speed_down_cms, _pos_control.get_max_speed_up());
+    _pos_control.set_max_speed_accel_z(speed_down_cms, _pos_control.get_max_speed_up(), _pos_control.get_max_accel_z());
     update_track_with_speed_accel_limits();
 }
 
@@ -594,11 +590,6 @@ bool AC_WPNav::update_wpnav()
 
     // get dt from pos controller
     float dt = _pos_control.get_dt();
-
-    // allow the accel and speed values to be set without changing
-    // out of auto mode. This makes it easier to tune auto flight
-    _pos_control.set_max_accel_xy(_wp_accel_cmss);
-    _pos_control.set_max_accel_z(_wp_accel_z_cmss);
 
     // advance the target if necessary
     if (!advance_wp_target_along_track(dt)) {
