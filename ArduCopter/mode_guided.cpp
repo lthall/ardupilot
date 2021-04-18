@@ -162,12 +162,10 @@ void ModeGuided::vel_control_start()
     guided_mode = SubMode::Velocity;
 
     // initialise horizontal speed, acceleration
-    pos_control->set_max_speed_xy(wp_nav->get_default_speed_xy());
-    pos_control->set_max_accel_xy(wp_nav->get_wp_acceleration());
+    pos_control->set_max_speed_accel_xy(wp_nav->get_default_speed_xy(), wp_nav->get_wp_acceleration());
 
     // initialize vertical speeds and acceleration
-    pos_control->set_max_speed_z(-get_pilot_speed_dn(), g.pilot_speed_up);
-    pos_control->set_max_accel_z(g.pilot_accel_z);
+    pos_control->set_max_speed_accel_z(-get_pilot_speed_dn(), g.pilot_speed_up, g.pilot_accel_z);
 
     // initialise velocity controller
     pos_control->init_vel_controller_xyz();
@@ -182,8 +180,7 @@ void ModeGuided::posvel_control_start()
     pos_control->init_xy_controller();
 
     // set speed and acceleration from wpnav's speed and acceleration
-    pos_control->set_max_speed_xy(wp_nav->get_default_speed_xy());
-    pos_control->set_max_accel_xy(wp_nav->get_wp_acceleration());
+    pos_control->set_max_speed_accel_xy(wp_nav->get_default_speed_xy(), wp_nav->get_wp_acceleration());
 
     const Vector3f& curr_pos = inertial_nav.get_position();
     const Vector3f& curr_vel = inertial_nav.get_velocity();
@@ -193,8 +190,7 @@ void ModeGuided::posvel_control_start()
     pos_control->set_desired_velocity_xy(curr_vel.x, curr_vel.y);
 
     // set vertical speed and acceleration
-    pos_control->set_max_speed_z(wp_nav->get_default_speed_down(), wp_nav->get_default_speed_up());
-    pos_control->set_max_accel_z(wp_nav->get_accel_z());
+    pos_control->set_max_speed_accel_z(wp_nav->get_default_speed_down(), wp_nav->get_default_speed_up(), wp_nav->get_accel_z());
 
     // pilot always controls yaw
     auto_yaw.set_mode(AUTO_YAW_HOLD);
@@ -212,8 +208,7 @@ void ModeGuided::angle_control_start()
     guided_mode = SubMode::Angle;
 
     // set vertical speed and acceleration
-    pos_control->set_max_speed_z(wp_nav->get_default_speed_down(), wp_nav->get_default_speed_up());
-    pos_control->set_max_accel_z(wp_nav->get_accel_z());
+    pos_control->set_max_speed_accel_z(wp_nav->get_default_speed_down(), wp_nav->get_default_speed_up(), wp_nav->get_accel_z());
 
     // initialise position and desired velocity
     if (!pos_control->is_active_z()) {

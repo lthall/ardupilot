@@ -1319,9 +1319,9 @@ void ModeAuto::do_loiter_to_alt(const AP_Mission::Mission_Command& cmd)
     loiter_to_alt.reached_alt = false;
     loiter_to_alt.alt_error_cm = 0;
 
-    pos_control->set_max_accel_z(wp_nav->get_accel_z());
-    pos_control->set_max_speed_z(wp_nav->get_default_speed_down(),
-                                 wp_nav->get_default_speed_up());
+    pos_control->set_max_speed_accel_z(wp_nav->get_default_speed_down(),
+                                 wp_nav->get_default_speed_up(),
+                                 wp_nav->get_accel_z());
 }
 
 // do_spline_wp - initiate move to next waypoint

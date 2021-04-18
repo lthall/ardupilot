@@ -28,8 +28,7 @@
 bool ModePosHold::init(bool ignore_checks)
 {
     // initialize vertical speeds and acceleration
-    pos_control->set_max_speed_z(-get_pilot_speed_dn(), g.pilot_speed_up);
-    pos_control->set_max_accel_z(g.pilot_accel_z);
+    pos_control->set_max_speed_accel_z(-get_pilot_speed_dn(), g.pilot_speed_up, g.pilot_accel_z);
 
     // initialise position and desired velocity
     if (!pos_control->is_active_z()) {
@@ -74,8 +73,7 @@ void ModePosHold::run()
     const Vector3f& vel = inertial_nav.get_velocity();
 
     // initialize vertical speeds and acceleration
-    pos_control->set_max_speed_z(-get_pilot_speed_dn(), g.pilot_speed_up);
-    pos_control->set_max_accel_z(g.pilot_accel_z);
+    pos_control->set_max_speed_accel_z(-get_pilot_speed_dn(), g.pilot_speed_up, g.pilot_accel_z);
     loiter_nav->clear_pilot_desired_acceleration();
 
     // apply SIMPLE mode transform to pilot inputs

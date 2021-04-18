@@ -13,8 +13,7 @@ bool ModeBrake::init(bool ignore_checks)
     init_target();
 
     // initialize vertical speed and acceleration
-    pos_control->set_max_speed_z(BRAKE_MODE_SPEED_Z, BRAKE_MODE_SPEED_Z);
-    pos_control->set_max_accel_z(BRAKE_MODE_DECEL_RATE);
+    pos_control->set_max_speed_accel_z(BRAKE_MODE_SPEED_Z, BRAKE_MODE_SPEED_Z, BRAKE_MODE_DECEL_RATE);
 
     // initialise position and desired velocity
     if (!pos_control->is_active_z()) {
@@ -83,9 +82,7 @@ void ModeBrake::init_target()
     pos_control->init_xy_controller();
 
     // initialise pos controller speed and acceleration
-    pos_control->set_max_speed_xy(inertial_nav.get_velocity().length());
-    pos_control->set_max_accel_xy(BRAKE_MODE_DECEL_RATE);
-    pos_control->calc_leash_length_xy();
+    pos_control->set_max_speed_accel_xy(inertial_nav.get_velocity().length(), BRAKE_MODE_DECEL_RATE);
 
     // set target position
     Vector3f stopping_point;
