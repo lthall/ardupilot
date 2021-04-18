@@ -294,14 +294,11 @@ AC_PosControl::AC_PosControl(AP_AHRS_View& ahrs, const AP_InertialNav& inav,
     _speed_up_cms(POSCONTROL_SPEED_UP),
     _speed_cms(POSCONTROL_SPEED),
     _accel_z_cms(POSCONTROL_ACCEL_Z),
-    _accel_cms(POSCONTROL_ACCEL_XY),
-    _accel_target_filter(POSCONTROL_ACCEL_FILTER_HZ)
+    _accel_cms(POSCONTROL_ACCEL_XY)
 {
     AP_Param::setup_object_defaults(this, var_info);
 
     // initialise flags
-    _flags.reset_desired_vel_to_pos = true;
-    _flags.reset_accel_to_lean_xy = true;
     _limit.pos_up = true;
     _limit.pos_down = true;
     _limit.vel_up = true;
@@ -711,10 +708,6 @@ void AC_PosControl::init_xy_controller()
     lean_angles_to_accel(_accel_target.x, _accel_target.y);
     _pid_vel_xy.set_integrator(_accel_target - _accel_desired);
 
-    // flag reset required in rate to accel step
-    _flags.reset_desired_vel_to_pos = true;
-    _flags.reset_accel_to_lean_xy = true;
-
     // initialise ekf xy reset handler
     init_ekf_xy_reset();
 }
@@ -792,10 +785,6 @@ void AC_PosControl::init_vel_controller_xyz()
     lean_angles_to_accel(_accel_target.x, _accel_target.y);
     _pid_vel_xy.set_integrator(_accel_target);
 
-    // flag reset required in rate to accel step
-    _flags.reset_desired_vel_to_pos = true;
-    _flags.reset_accel_to_lean_xy = true;
-
     // set target position
     const Vector3f& curr_pos = _inav.get_position();
     set_xy_target(curr_pos.x, curr_pos.y);
@@ -842,12 +831,111 @@ void AC_PosControl::desired_vel_to_pos(float nav_dt)
     }
 
     // update target position
-    if (_flags.reset_desired_vel_to_pos) {
-        _flags.reset_desired_vel_to_pos = false;
-    } else {
-        _pos_target.x += _vel_desired.x * nav_dt;
-        _pos_target.y += _vel_desired.y * nav_dt;
+    _pos_target.x += _vel_desired.x * nav_dt;
+    _pos_target.y += _vel_desired.y * nav_dt;
+}
+
+/// init_pos_vel_xy - initialise the position controller to the current position and velocity with zero acceleration.
+///     This function should be called before input_vel_xy or input_pos_vel_xy are used.
+void AC_PosControl::init_pos_vel_xy()
+{
+    // set roll, pitch lean angle targets to current attitude
+    // todo: this should probably be based on the desired attitude not the current attitude
+    _roll_target = _ahrs.roll_sensor;
+    _pitch_target = _ahrs.pitch_sensor;
+
+    Vector3f curr_pos = _inav.get_position();
+    _pos_target.x = curr_pos.x;
+    _pos_target.y = curr_pos.y;
+
+    const Vector3f &curr_vel = _inav.get_velocity();
+    _vel_desired.x = curr_vel.x;
+    _vel_desired.y = curr_vel.y;
+    _vel_target.x = curr_vel.x;
+    _vel_target.y = curr_vel.y;
+
+    const Vector3f &curr_accel = _ahrs.get_accel_ef_blended() * 100.0f;
+    _accel_desired.x = curr_accel.x;
+    _accel_desired.y = curr_accel.y;
+
+    // initialise I terms from lean angles
+    _pid_vel_xy.reset_filter();
+    lean_angles_to_accel(_accel_target.x, _accel_target.y);
+    _pid_vel_xy.set_integrator(_accel_target - _accel_desired);
+
+    // initialise ekf xy reset handler
+    init_ekf_xy_reset();
+}
+
+/// input_vel_xy calculate a jerk limited path from the current position, velocity and acceleration to an input velocity.
+///     The function takes the current position, velocity, and acceleration and calculates the required jerk limited adjustment to the acceleration for the next time dt.
+///     The kinematic path is constrained by:
+///         accel_max : maximum acceleration
+///         tc : time constant
+///     The time constant defines the acceleration error decay in the kinematic path as the system approaches constant acceleration.
+///     The time constant also defines the time taken to achieve the maximum acceleration.
+///     The time constant must be positive.
+///     The function alters the input velocity to be the velocity that the system could reach zero acceleration in the minimum time.
+void AC_PosControl::input_vel_accel_xy(const Vector3f& vel, const Vector3f& accel, float tc)
+{
+    // compute dt
+    const uint64_t now_us = AP_HAL::micros64();
+    float dt = (now_us - _last_update_xy_us) * 1.0e-6f;
+
+    // sanity check dt
+    if (dt >= POSCONTROL_ACTIVE_TIMEOUT_US * 1.0e-6f) {
+        dt = 0.0f;
     }
+
+    // check for ekf xy position reset
+    check_for_ekf_xy_reset();
+
+
+    update_pos_vel_accel_xy(_pos_target, _vel_desired, _accel_desired, dt,
+        _limit.accel_xy, _p_pos_xy.get_error(), _pid_vel_xy.get_error());
+
+    shape_vel_accel_xy(vel, accel, _vel_desired, _accel_desired, _speed_cms, _accel_cms, tc, dt);
+
+    // run horizontal position controller
+    run_xy_controller(dt);
+
+    // update xy update time
+    _last_update_xy_us = now_us;
+}
+
+/// input_pos_vel_xy calculate a jerk limited path from the current position, velocity and acceleration to an input position and velocity.
+///     The function takes the current position, velocity, and acceleration and calculates the required jerk limited adjustment to the acceleration for the next time dt.
+///     The kinematic path is constrained by:
+///         vel_max : maximum velocity
+///         accel_max : maximum acceleration
+///         tc : time constant
+///     The time constant defines the acceleration error decay in the kinematic path as the system approaches constant acceleration.
+///     The time constant also defines the time taken to achieve the maximum acceleration.
+///     The time constant must be positive.
+///     The function alters the input position to be the closest position that the system could reach zero acceleration in the minimum time.
+void AC_PosControl::input_pos_vel_accel_xy(const Vector3f& pos, const Vector3f& vel, const Vector3f& accel, float tc)
+{
+    // compute dt
+    const uint64_t now_us = AP_HAL::micros64();
+    float dt = (now_us - _last_update_xy_us) * 1.0e-6f;
+
+    // sanity check dt
+    if (dt >= POSCONTROL_ACTIVE_TIMEOUT_US * 1.0e-6f) {
+        dt = 0.0f;
+    }
+
+    // check for ekf xy position reset
+    check_for_ekf_xy_reset();
+
+    update_pos_vel_accel_xy(_pos_target, _vel_desired, _accel_desired, dt,
+        _limit.accel_xy, _p_pos_xy.get_error(), _pid_vel_xy.get_error());
+    shape_pos_vel_accel_xy(pos, vel, accel, _pos_target, _vel_desired, _accel_desired, _speed_cms, _speed_cms, _accel_cms, tc, dt);
+
+    // run horizontal position controller
+    run_xy_controller(dt);
+
+    // update xy update time
+    _last_update_xy_us = now_us;
 }
 
 /// run horizontal position controller correcting position and velocity
@@ -876,6 +964,7 @@ void AC_PosControl::run_xy_controller(float dt)
     // Velocity Controller
 
     // check if vehicle velocity is being overridden
+    // todo: remove this and use input shaping
     if (_flags.vehicle_horiz_vel_override) {
         _flags.vehicle_horiz_vel_override = false;
     } else {
@@ -886,19 +975,9 @@ void AC_PosControl::run_xy_controller(float dt)
     // acceleration to correct for velocity error and scale PID output to compensate for optical flow measurement induced EKF noise
     accel_target *= ekfNavVelGainScaler;
 
-    // reset accel to current desired acceleration
-    if (_flags.reset_accel_to_lean_xy) {
-        _accel_target_filter.reset(accel_target);
-        _flags.reset_accel_to_lean_xy = false;
-    }
-
-    // filter correction acceleration
-    _accel_target_filter.set_cutoff_frequency(MIN(_accel_xy_filt_hz, 5.0f * ekfNavVelGainScaler));
-    _accel_target_filter.apply(accel_target, dt);
-
     // pass the correction acceleration to the target acceleration output
-    _accel_target.x = _accel_target_filter.get().x;
-    _accel_target.y = _accel_target_filter.get().y;
+    _accel_target.x = accel_target.x;
+    _accel_target.y = accel_target.y;
 
     // Add feed forward into the target acceleration output
     _accel_target.x += _accel_desired.x;

@@ -249,6 +249,34 @@ public:
     ///     throttle targets will be sent directly to the motors
     void update_vel_controller_xyz();
 
+    /// init_pos_vel_xy - initialise the position controller to the current position and velocity with zero acceleration.
+    ///     This function should be called before input_vel_xy or input_pos_vel_xy are used.
+    void init_pos_vel_xy();
+
+    /// input_vel_xy calculate a jerk limited path from the current position, velocity and acceleration to an input velocity.
+    ///     The function takes the current position, velocity, and acceleration and calculates the required jerk limited adjustment to the acceleration for the next time dt.
+    ///     The kinematic path is constrained by:
+    ///         accel_max : maximum acceleration
+    ///         tc : time constant
+    ///     The time constant defines the acceleration error decay in the kinematic path as the system approaches constant acceleration.
+    ///     The time constant also defines the time taken to achieve the maximum acceleration.
+    ///     The time constant must be positive.
+    ///     The function alters the input velocity to be the velocity that the system could reach zero acceleration in the minimum time.
+    void input_vel_accel_xy(const Vector3f& vel, const Vector3f& accel, float tc);
+
+    /// input_pos_vel_xy calculate a jerk limited path from the current position, velocity and acceleration to an input position and velocity.
+    ///     The function takes the current position, velocity, and acceleration and calculates the required jerk limited adjustment to the acceleration for the next time dt.
+    ///     The kinematic path is constrained by:
+    ///         vel_max : maximum velocity
+    ///         accel_max : maximum acceleration
+    ///         tc : time constant
+    ///     The time constant defines the acceleration error decay in the kinematic path as the system approaches constant acceleration.
+    ///     The time constant also defines the time taken to achieve the maximum acceleration.
+    ///     The time constant must be positive.
+    ///     The function alters the input position to be the closest position that the system could reach zero acceleration in the minimum time.
+    void input_pos_vel_accel_xy(const Vector3f& pos, const Vector3f& vel, const Vector3f& accel, float tc);
+
+
     /// get desired roll, pitch which should be fed into stabilize controllers
     float get_roll() const { return _roll_target; }
     float get_pitch() const { return _pitch_target; }
@@ -290,8 +318,6 @@ protected:
 
     // general purpose flags
     struct poscontrol_flags {
-            uint16_t reset_desired_vel_to_pos   : 1;    // 1 if we should reset the rate_to_accel_xy step
-            uint16_t reset_accel_to_lean_xy     : 1;    // 1 if we should reset the accel to lean angle step
             uint16_t vehicle_horiz_vel_override : 1; // 1 if we should use _vehicle_horiz_vel as our velocity process variable for one timestep
     } _flags;
 
@@ -382,8 +408,6 @@ protected:
     Vector3f    _accel_error;           // acceleration error in cm/s/s
     Vector2f    _vehicle_horiz_vel;     // velocity to use if _flags.vehicle_horiz_vel_override is set
     LowPassFilterFloat _vel_error_filter;   // low-pass-filter on z-axis velocity error
-
-    LowPassFilterVector2f _accel_target_filter; // acceleration target filter
 
     // ekf reset handling
     uint32_t    _ekf_xy_reset_ms;      // system time of last recorded ekf xy position reset

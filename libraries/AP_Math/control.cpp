@@ -83,15 +83,13 @@ void update_pos_vel_accel_xy(Vector2f& pos, Vector2f& vel, Vector2f& accel, floa
 // update_pos_vel_accel_xy - dual axis projection of position and velocity, pos and vel, forwards in time based on a time step of dt and acceleration of accel.
 // This function only updates the x and y axis leaving the z axis unchanged.
 void update_pos_vel_accel_xy(Vector3f& pos, Vector3f& vel, Vector3f& accel, float dt,
-    bool limit, const Vector3f& pos_error, const Vector3f& vel_error)
+    bool limit, const Vector2f& pos_error, const Vector2f& vel_error)
 {
     Vector2f pos_2f = Vector2f(pos.x, pos.y);
     Vector2f vel_2f = Vector2f(vel.x, vel.y);
     Vector2f accel_2f = Vector2f(accel.x, accel.y);
-    Vector2f pos_error_2f = Vector2f(pos_error.x, pos_error.y);
-    Vector2f vel_error_2f = Vector2f(vel_error.x, vel_error.y);
     update_pos_vel_accel_xy(pos_2f, vel_2f, accel_2f, dt,
-        limit, pos_error_2f, vel_error_2f);
+        limit, pos_error, vel_error);
     pos.x = pos_2f.x;
     pos.y = pos_2f.y;
     vel.x = vel_2f.x;

@@ -18,7 +18,7 @@ void update_pos_vel_accel_z(Vector3f& pos, Vector3f& vel, Vector3f& accel, float
 void update_pos_vel_accel_xy(Vector2f& pos, Vector2f& vel, Vector2f& accel, float dt,
     bool limit, Vector2f pos_error, Vector2f vel_error);
 void update_pos_vel_accel_xy(Vector3f& pos, Vector3f& vel, Vector3f& accel, float dt,
-    bool limit, const Vector3f& pos_error, const Vector3f& vel_error);
+    bool limit, const Vector2f& pos_error, const Vector2f& vel_error);
 
 /* shape_accel calculates a jerk limited path from the current acceleration to an input acceleration.
  The function takes the current acceleration and calculates the required jerk limited adjustment to the acceleration for the next time dt.

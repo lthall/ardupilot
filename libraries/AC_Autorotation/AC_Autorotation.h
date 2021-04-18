@@ -73,8 +73,6 @@ private:
     float _vel_ff;                   // Forward velocity Feed Forward term.
     float _accel_out;                // Acceleration value used to calculate pitch target.
 
-    LowPassFilterFloat _accel_target_filter; // acceleration target filter
-
     //--------Parameter Values--------
     AP_Int8  _param_enable;
     AC_P _p_hs;
