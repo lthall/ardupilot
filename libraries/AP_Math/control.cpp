@@ -23,7 +23,6 @@
 #include "vector2.h"
 #include "vector3.h"
 #include <AP_InternalError/AP_InternalError.h>
-#include <AP_Logger/AP_Logger.h>
 
 // control default definitions
 #define CONTROL_TIME_CONSTANT_RATIO 4.0f   // minimum horizontal acceleration in cm/s/s - used for sanity checking acceleration in leash length calculation
