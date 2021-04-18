@@ -91,8 +91,7 @@ void AC_Loiter::init_target(const Vector3f& position)
     sanity_check_params();
 
     // initialise pos controller speed, acceleration
-    _pos_control.set_max_speed_xy(LOITER_VEL_CORRECTION_MAX);
-    _pos_control.set_max_accel_xy(_accel_cmss);
+    _pos_control.set_max_speed_accel_xy(LOITER_VEL_CORRECTION_MAX, _accel_cmss);
 
     // initialise desired acceleration and angles to zero to remain on station
     _predicted_accel.zero();
@@ -121,8 +120,7 @@ void AC_Loiter::init_target()
     sanity_check_params();
 
     // initialise pos controller speed and acceleration
-    _pos_control.set_max_speed_xy(LOITER_VEL_CORRECTION_MAX);
-    _pos_control.set_max_accel_xy(_accel_cmss);
+    _pos_control.set_max_speed_accel_xy(LOITER_VEL_CORRECTION_MAX, _accel_cmss);
     _pos_control.set_leash_length_xy(LOITER_POS_CORRECTION_MAX);
 
     _predicted_accel = _desired_accel;
@@ -216,8 +214,7 @@ void AC_Loiter::update(bool avoidance_on)
     }
 
     // initialise pos controller speed and acceleration
-    _pos_control.set_max_speed_xy(_speed_cms);
-    _pos_control.set_max_accel_xy(_accel_cmss);
+    _pos_control.set_max_speed_accel_xy(LOITER_VEL_CORRECTION_MAX, _accel_cmss);
 
     calc_desired_velocity(dt, avoidance_on);
     _pos_control.update_xy_controller();
@@ -249,8 +246,7 @@ void AC_Loiter::calc_desired_velocity(float nav_dt, bool avoidance_on)
         return;
     }
 
-    _pos_control.set_max_speed_xy(gnd_speed_limit_cms);
-    _pos_control.set_max_accel_xy(_accel_cmss);
+    _pos_control.set_max_speed_accel_xy(LOITER_VEL_CORRECTION_MAX, _accel_cmss);
     _pos_control.set_leash_length_xy(LOITER_POS_CORRECTION_MAX);
 
     // get loiters desired velocity from the position controller where it is being stored.
