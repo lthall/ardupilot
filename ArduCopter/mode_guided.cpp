@@ -162,15 +162,13 @@ void ModeGuided::vel_control_start()
     guided_mode = SubMode::Velocity;
 
     // initialise horizontal speed, acceleration
-    pos_control->set_max_speed_xy(wp_nav->get_default_speed_xy());
-    pos_control->set_max_accel_xy(wp_nav->get_wp_acceleration());
+    pos_control->set_max_speed_accel_xy(wp_nav->get_default_speed_xy(), wp_nav->get_wp_acceleration());
 
     // initialize vertical speeds and acceleration
-    pos_control->set_max_speed_z(-get_pilot_speed_dn(), g.pilot_speed_up);
-    pos_control->set_max_accel_z(g.pilot_accel_z);
+    pos_control->set_max_speed_accel_z(-get_pilot_speed_dn(), g.pilot_speed_up, g.pilot_accel_z);
 
     // initialise velocity controller
-    pos_control->init_vel_controller_xyz();
+    pos_control->init_pos_vel_accel_xy();
 }
 
 // initialise guided mode's posvel controller
@@ -182,19 +180,17 @@ void ModeGuided::posvel_control_start()
     pos_control->init_xy_controller();
 
     // set speed and acceleration from wpnav's speed and acceleration
-    pos_control->set_max_speed_xy(wp_nav->get_default_speed_xy());
-    pos_control->set_max_accel_xy(wp_nav->get_wp_acceleration());
+    pos_control->set_max_speed_accel_xy(wp_nav->get_default_speed_xy(), wp_nav->get_wp_acceleration());
 
     const Vector3f& curr_pos = inertial_nav.get_position();
     const Vector3f& curr_vel = inertial_nav.get_velocity();
 
     // set target position and velocity to current position and velocity
-    pos_control->set_xy_target(curr_pos.x, curr_pos.y);
+    pos_control->set_target_pos_xy(curr_pos.x, curr_pos.y);
     pos_control->set_desired_velocity_xy(curr_vel.x, curr_vel.y);
 
     // set vertical speed and acceleration
-    pos_control->set_max_speed_z(wp_nav->get_default_speed_down(), wp_nav->get_default_speed_up());
-    pos_control->set_max_accel_z(wp_nav->get_accel_z());
+    pos_control->set_max_speed_accel_z(wp_nav->get_default_speed_down(), wp_nav->get_default_speed_up(), wp_nav->get_accel_z());
 
     // pilot always controls yaw
     auto_yaw.set_mode(AUTO_YAW_HOLD);
@@ -212,8 +208,7 @@ void ModeGuided::angle_control_start()
     guided_mode = SubMode::Angle;
 
     // set vertical speed and acceleration
-    pos_control->set_max_speed_z(wp_nav->get_default_speed_down(), wp_nav->get_default_speed_up());
-    pos_control->set_max_accel_z(wp_nav->get_accel_z());
+    pos_control->set_max_speed_accel_z(wp_nav->get_default_speed_down(), wp_nav->get_default_speed_up(), wp_nav->get_accel_z());
 
     // initialise position and desired velocity
     if (!pos_control->is_active_z()) {
@@ -496,18 +491,13 @@ void ModeGuided::vel_control_run()
     // set velocity to zero and stop rotating if no updates received for 3 seconds
     uint32_t tnow = millis();
     if (tnow - vel_update_time_ms > GUIDED_POSVEL_TIMEOUT_MS) {
-        if (!pos_control->get_desired_velocity().is_zero()) {
-            set_desired_velocity_with_accel_and_fence_limits(Vector3f(0.0f, 0.0f, 0.0f));
-        }
+        set_desired_velocity_with_accel_and_fence_limits(Vector3f(0.0f, 0.0f, 0.0f));
         if (auto_yaw.mode() == AUTO_YAW_RATE) {
             auto_yaw.set_rate(0.0f);
         }
     } else {
         set_desired_velocity_with_accel_and_fence_limits(guided_vel_target_cms);
     }
-
-    // call velocity controller which includes z axis controller
-    pos_control->update_vel_controller_xyz();
 
     // call attitude controller
     if (auto_yaw.mode() == AUTO_YAW_HOLD) {
@@ -566,13 +556,9 @@ void ModeGuided::posvel_control_run()
     // advance position target using velocity target
     guided_pos_target_cm += guided_vel_target_cms * dt;
 
-    // send position and velocity targets to position controller
-    pos_control->set_pos_target(guided_pos_target_cm);
-    pos_control->set_desired_velocity_xy(guided_vel_target_cms.x, guided_vel_target_cms.y);
-
-    // run position controllers
-    pos_control->update_xy_controller();
-    pos_control->update_z_controller();
+    // update position controller with new target
+    pos_control->input_pos_vel_accel_xy(guided_pos_target_cm, guided_vel_target_cms, Vector3f());
+    pos_control->input_pos_vel_accel_z(guided_pos_target_cm, guided_vel_target_cms, Vector3f());
 
     // call attitude controller
     if (auto_yaw.mode() == AUTO_YAW_HOLD) {
@@ -663,41 +649,24 @@ void ModeGuided::angle_control_run()
     if (guided_angle_state.use_thrust) {
         attitude_control->set_throttle_out(guided_angle_state.thrust, true, copter.g.throttle_filt);
     } else {
-        pos_control->set_alt_target_from_climb_rate_ff(climb_rate_cms, G_Dt, false);
+        pos_control->set_alt_target_from_climb_rate_ff(climb_rate_cms, false);
         pos_control->update_z_controller();
     }
 }
 
 // helper function to update position controller's desired velocity while respecting acceleration limits
-void ModeGuided::set_desired_velocity_with_accel_and_fence_limits(const Vector3f& vel_des)
+void ModeGuided::set_desired_velocity_with_accel_and_fence_limits(Vector3f vel_des)
 {
-    // get current desired velocity
-    Vector3f curr_vel_des = pos_control->get_desired_velocity();
-
-    // get change in desired velocity
-    Vector3f vel_delta = vel_des - curr_vel_des;
-
-    // limit xy change
-    float vel_delta_xy = safe_sqrt(sq(vel_delta.x)+sq(vel_delta.y));
-    float vel_delta_xy_max = G_Dt * pos_control->get_max_accel_xy();
-    float ratio_xy = 1.0f;
-    if (!is_zero(vel_delta_xy) && (vel_delta_xy > vel_delta_xy_max)) {
-        ratio_xy = vel_delta_xy_max / vel_delta_xy;
-    }
-    curr_vel_des.x += (vel_delta.x * ratio_xy);
-    curr_vel_des.y += (vel_delta.y * ratio_xy);
-
-    // limit z change
-    float vel_delta_z_max = G_Dt * pos_control->get_max_accel_z();
-    curr_vel_des.z += constrain_float(vel_delta.z, -vel_delta_z_max, vel_delta_z_max);
 
 #if AC_AVOID_ENABLED
     // limit the velocity for obstacle/fence avoidance
-    copter.avoid.adjust_velocity(curr_vel_des, pos_control->get_pos_xy_p().kP(), pos_control->get_max_accel_xy(), pos_control->get_pos_z_p().kP(), pos_control->get_max_accel_z(), G_Dt);
+    // todo: if this returns true this can be made to work with position command also
+    copter.avoid.adjust_velocity(vel_des, pos_control->get_pos_xy_p().kP(), pos_control->get_max_accel_xy(), pos_control->get_pos_z_p().kP(), pos_control->get_max_accel_z(), G_Dt);
 #endif
 
     // update position controller with new target
-    pos_control->set_desired_velocity(curr_vel_des);
+    pos_control->input_vel_accel_xy(vel_des, Vector3f());
+    pos_control->input_vel_accel_z(vel_des, Vector3f());
 }
 
 // helper function to set yaw state and targets
