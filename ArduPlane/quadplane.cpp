@@ -1096,8 +1096,7 @@ void QuadPlane::run_z_controller(void)
         pos_control->set_desired_velocity_z(inertial_nav.get_velocity_z());
 
         // initialize vertical speeds and leash lengths
-        pos_control->set_max_speed_z(-get_pilot_velocity_z_max_dn(), pilot_velocity_z_max_up);
-        pos_control->set_max_accel_z(pilot_accel_z);
+        pos_control->set_max_speed_accel_z(-get_pilot_velocity_z_max_dn(), pilot_velocity_z_max_up, pilot_accel_z);
 
         last_pidz_init_ms = now;
     }
@@ -1141,8 +1140,7 @@ void QuadPlane::init_qacro(void)
 void QuadPlane::init_hover(void)
 {
     // initialize vertical speeds and leash lengths
-    pos_control->set_max_speed_z(-get_pilot_velocity_z_max_dn(), pilot_velocity_z_max_up);
-    pos_control->set_max_accel_z(pilot_accel_z);
+    pos_control->set_max_speed_accel_z(-get_pilot_velocity_z_max_dn(), pilot_velocity_z_max_up, pilot_accel_z);
 
     // initialise position and desired velocity
     set_alt_target_current();
@@ -1177,8 +1175,7 @@ void QuadPlane::hold_hover(float target_climb_rate)
     motors->set_desired_spool_state(AP_Motors::DesiredSpoolState::THROTTLE_UNLIMITED);
 
     // initialize vertical speeds and acceleration
-    pos_control->set_max_speed_z(-get_pilot_velocity_z_max_dn(), pilot_velocity_z_max_up);
-    pos_control->set_max_accel_z(pilot_accel_z);
+    pos_control->set_max_speed_accel_z(-get_pilot_velocity_z_max_dn(), pilot_velocity_z_max_up, pilot_accel_z);
 
     // call attitude controller
     multicopter_attitude_rate_update(get_desired_yaw_rate_cds());
@@ -1308,8 +1305,7 @@ void QuadPlane::init_loiter(void)
     loiter_nav->init_target();
 
     // initialize vertical speed and acceleration
-    pos_control->set_max_speed_z(-get_pilot_velocity_z_max_dn(), pilot_velocity_z_max_up);
-    pos_control->set_max_accel_z(pilot_accel_z);
+    pos_control->set_max_speed_accel_z(-get_pilot_velocity_z_max_dn(), pilot_velocity_z_max_up, pilot_accel_z);
 
     // initialise position and desired velocity
     set_alt_target_current();
@@ -1455,8 +1451,7 @@ void QuadPlane::control_loiter()
     motors->set_desired_spool_state(AP_Motors::DesiredSpoolState::THROTTLE_UNLIMITED);
 
     // initialize vertical speed and acceleration
-    pos_control->set_max_speed_z(-get_pilot_velocity_z_max_dn(), pilot_velocity_z_max_up);
-    pos_control->set_max_accel_z(pilot_accel_z);
+    pos_control->set_max_speed_accel_z(-get_pilot_velocity_z_max_dn(), pilot_velocity_z_max_up, pilot_accel_z);
 
     // process pilot's roll and pitch input
     float target_roll_cd, target_pitch_cd;
@@ -2691,12 +2686,10 @@ void QuadPlane::setup_target_position(void)
     last_loiter_ms = now;
     
     // setup vertical speed and acceleration
-    pos_control->set_max_speed_z(-get_pilot_velocity_z_max_dn(), pilot_velocity_z_max_up);
-    pos_control->set_max_accel_z(pilot_accel_z);
+    pos_control->set_max_speed_accel_z(-get_pilot_velocity_z_max_dn(), pilot_velocity_z_max_up, pilot_accel_z);
 
     // setup horizontal speed and acceleration
-    pos_control->set_max_speed_xy(wp_nav->get_default_speed_xy());
-    pos_control->set_max_accel_xy(wp_nav->get_wp_acceleration());
+    pos_control->set_max_speed_accel_xy(wp_nav->get_default_speed_xy(), wp_nav->get_wp_acceleration());
 }
 
 /*
@@ -2857,8 +2850,7 @@ bool QuadPlane::do_vtol_takeoff(const AP_Mission::Mission_Command& cmd)
     loiter_nav->init_target();
 
     // initialize vertical speed and acceleration
-    pos_control->set_max_speed_z(-get_pilot_velocity_z_max_dn(), pilot_velocity_z_max_up);
-    pos_control->set_max_accel_z(pilot_accel_z);
+    pos_control->set_max_speed_accel_z(-get_pilot_velocity_z_max_dn(), pilot_velocity_z_max_up, pilot_accel_z);
 
     // initialise position and desired velocity
     set_alt_target_current();
