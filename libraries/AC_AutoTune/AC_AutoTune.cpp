@@ -222,8 +222,7 @@ bool AC_AutoTune::start(void)
 
     // initialise position and desired velocity
     if (!pos_control->is_active_z()) {
-        pos_control->set_alt_target_to_current_alt();
-        pos_control->set_desired_velocity_z(inertial_nav->get_velocity_z());
+        pos_control->init_z();
     }
 
     return true;
@@ -420,8 +419,7 @@ void AC_AutoTune::run()
     }
 
     // call position controller
-    pos_control->set_alt_target_from_climb_rate_ff(target_climb_rate_cms, AP::scheduler().get_last_loop_time_s(), false);
-    pos_control->update_z_controller();
+    pos_control->input_vel_accel_z(Vector3f(0.0f, 0.0f, target_climb_rate_cms), Vector3f(), false);
 
 }
 
