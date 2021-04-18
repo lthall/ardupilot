@@ -65,30 +65,21 @@ public:
     /// z position controller
     ///
 
-    /// set_max_speed_z - sets maximum climb and descent rates
+    /// set_max_speed_accel_z - sets maximum climb and descent rates and maximum vertical acceleration
     ///     speed_down can be positive or negative but will always be interpreted as a descent speed
-    ///     leash length will be recalculated
-    void set_max_speed_z(float speed_down, float speed_up);
+    void set_max_speed_accel_z(float speed_down, float speed_up, float accel_cmss);
 
-    /// get_max_speed_up - accessor for current maximum up speed in cm/s
+    /// get_max_speed_up - accessors for current maximum up speed in cm/s
     float get_max_speed_up() const { return _speed_up_cms; }
 
     /// get_max_speed_down - accessors for current maximum down speed in cm/s.  Will be a negative number
     float get_max_speed_down() const { return _speed_down_cms; }
 
-    /// get_vel_target_z - returns current vertical speed in cm/s
-    float get_vel_target_z() const { return _vel_target.z; }
-
-    /// set_max_accel_z - set the maximum vertical acceleration in cm/s/s
-    ///     leash length will be recalculated
-    void set_max_accel_z(float accel_cmss);
-
     /// get_max_accel_z - returns current maximum vertical acceleration in cm/s/s
     float get_max_accel_z() const { return _accel_z_cms; }
 
-    /// calc_leash_length - calculates the vertical leash lengths from maximum speed, acceleration
-    ///     called by update_z_controller if z-axis speed or accelerations are changed
-    void calc_leash_length_z();
+    /// get_vel_target_z - returns current vertical speed in cm/s
+    float get_vel_target_z() const { return _vel_target.z; }
 
     /// set_alt_target - set altitude target in cm above home
     void set_alt_target(float alt_cm) { _pos_target.z = alt_cm; }
@@ -152,8 +143,9 @@ public:
     void update_z_controller();
 
     // get_leash_down_z, get_leash_up_z - returns vertical leash lengths in cm
-    float get_leash_down_z() const { return _leash_down_z; }
-    float get_leash_up_z() const { return _leash_up_z; }
+    // todo: change to a more appropriate name
+    float get_leash_down_z() const { return _p_pos_z.get_error_min(); }
+    float get_leash_up_z() const { return _p_pos_z.get_error_max(); }
 
     ///
     /// xy position controller
@@ -174,26 +166,17 @@ public:
     ///     aircraft when in standby.
     void standby_xyz_reset();
 
-    /// set_max_accel_xy - set the maximum horizontal acceleration in cm/s/s
-    ///     leash length will be recalculated
-    void set_max_accel_xy(float accel_cmss);
+    /// set_max_speed_accel_xy - set the maximum horizontal speed (cm/s) and acceleration (cm/s/s)
+    void set_max_speed_accel_xy(float speed_cms, float accel_cmss);
     float get_max_accel_xy() const { return _accel_cms; }
-
-    /// set_max_speed_xy - set the maximum horizontal speed maximum in cm/s
-    ///     leash length will be recalculated
-    void set_max_speed_xy(float speed_cms);
     float get_max_speed_xy() const { return _speed_cms; }
 
     /// set_limit_accel_xy - mark that accel has been limited
     ///     this prevents integrator buildup
     void set_limit_accel_xy(void) { _limit.accel_xy = true; }
 
-    /// calc_leash_length - calculates the horizontal leash length given a maximum speed, acceleration
-    ///     should be called whenever the speed, acceleration or position kP is modified
-    void calc_leash_length_xy();
-
     /// set the horizontal leash length
-    void set_leash_length_xy(float leash) { _leash = leash; _flags.recalc_leash_xy = false; }
+    void set_leash_length_xy(float error_max) { _p_pos_xy.set_limits(error_max, _speed_cms, _accel_cms, 0.0f); }
 
     /// get_pos_target - get target as position vector (from home in cm)
     const Vector3f& get_pos_target() const { return _pos_target; }
@@ -206,9 +189,6 @@ public:
 
     /// set_xy_target in cm from home
     void set_xy_target(float x, float y);
-
-    /// shift position target target in x, y axis
-    void shift_pos_xy_target(float x_cm, float y_cm);
 
     /// get_desired_velocity - returns xy desired velocity (i.e. feed forward) in cm/s in lat and lon direction
     const Vector3f& get_desired_velocity() { return _vel_desired; }
@@ -247,7 +227,6 @@ public:
     /// get_stopping_point_xy - calculates stopping point based on current position, velocity, vehicle acceleration
     ///     results placed in stopping_position vector
     ///     set_accel_xy() should be called before this method to set vehicle acceleration
-    ///     set_leash_length() should have been called before this method
     void get_stopping_point_xy(Vector3f &stopping_point) const;
 
     /// get_pos_error - get position error vector between the current and target position
@@ -274,9 +253,6 @@ public:
     float get_roll() const { return _roll_target; }
     float get_pitch() const { return _pitch_target; }
     Vector3f get_thrust_vector() const;
-
-    // get_leash_xy - returns horizontal leash length in cm
-    float get_leash_xy() const { return _leash; }
 
     /// get pid controllers
     AC_P_2D& get_pos_xy_p() { return _p_pos_xy; }
@@ -314,11 +290,8 @@ protected:
 
     // general purpose flags
     struct poscontrol_flags {
-            uint16_t recalc_leash_z     : 1;    // 1 if we should recalculate the z axis leash length
-            uint16_t recalc_leash_xy    : 1;    // 1 if we should recalculate the xy axis leash length
             uint16_t reset_desired_vel_to_pos   : 1;    // 1 if we should reset the rate_to_accel_xy step
             uint16_t reset_accel_to_lean_xy     : 1;    // 1 if we should reset the accel to lean angle step
-            uint16_t reset_rate_to_accel_z      : 1;    // 1 if we should reset the rate_to_accel_z step
             uint16_t vehicle_horiz_vel_override : 1; // 1 if we should use _vehicle_horiz_vel as our velocity process variable for one timestep
     } _flags;
 
@@ -352,9 +325,6 @@ protected:
     /// xy controller private methods
     ///
 
-    /// move velocity target using desired acceleration
-    void desired_accel_to_vel(float nav_dt);
-
     /// desired_vel_to_pos - move position target using desired velocities
     void desired_vel_to_pos(float nav_dt);
 
@@ -364,9 +334,6 @@ protected:
     ///     converts desired velocities in lat/lon directions to accelerations in lat/lon frame
     ///     converts desired accelerations provided in lat/lon frame to roll/pitch angles
     void run_xy_controller(float dt);
-
-    /// calc_leash_length - calculates the horizontal leash length given a maximum speed, acceleration and position kP gain
-    float calc_leash_length(float speed_cms, float accel_cms, float kP) const;
 
     /// initialise and check for ekf position resets
     void init_ekf_xy_reset();
@@ -399,9 +366,6 @@ protected:
     float       _accel_z_cms;           // max vertical acceleration in cm/s/s
     float       _accel_last_z_cms;      // max vertical acceleration in cm/s/s
     float       _accel_cms;             // max horizontal acceleration in cm/s/s
-    float       _leash;                 // horizontal leash length in cm.  target will never be further than this distance from the vehicle
-    float       _leash_down_z;          // vertical leash down in cm.  target will never be further than this distance below the vehicle
-    float       _leash_up_z;            // vertical leash up in cm.  target will never be further than this distance above the vehicle
     float       _vel_z_control_ratio = 2.0f;   // confidence that we have control in the vertical axis
 
     // output from controller

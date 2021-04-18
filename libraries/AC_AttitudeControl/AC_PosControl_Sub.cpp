@@ -95,7 +95,6 @@ void AC_PosControl_Sub::relax_alt_hold_controllers()
     _vel_target.z = _inav.get_velocity_z();
     _accel_desired.z = 0.0f;
     _accel_last_z_cms = 0.0f;
-    _flags.reset_rate_to_accel_z = true;
     _accel_target.z = -(_ahrs.get_accel_ef_blended().z + GRAVITY_MSS) * 100.0f;
     _pid_accel_z.reset_filter();
 }
