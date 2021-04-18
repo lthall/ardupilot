@@ -109,6 +109,33 @@ public:
     ///     almost no checks are performed on the input
     void add_takeoff_climb_rate(float climb_rate_cms, float dt);
 
+    /// init_pos_vel_z - initialise the position controller to the current position and velocity with zero acceleration.
+    ///     This function should be called before input_vel_z or input_pos_vel_z are used.
+    void init_pos_vel_z();
+
+    /// input_vel_z calculate a jerk limited path from the current position, velocity and acceleration to an input velocity.
+    ///     The function takes the current position, velocity, and acceleration and calculates the required jerk limited adjustment to the acceleration for the next time dt.
+    ///     The kinematic path is constrained by:
+    ///         accel_max : maximum acceleration
+    ///         tc : time constant
+    ///     The time constant defines the acceleration error decay in the kinematic path as the system approaches constant acceleration.
+    ///     The time constant also defines the time taken to achieve the maximum acceleration.
+    ///     The time constant must be positive.
+    ///     The function alters the input velocity to be the velocity that the system could reach zero acceleration in the minimum time.
+    void input_vel_accel_z(const Vector3f& vel, const Vector3f& accel);
+
+    /// input_pos_vel_z calculate a jerk limited path from the current position, velocity and acceleration to an input position and velocity.
+    ///     The function takes the current position, velocity, and acceleration and calculates the required jerk limited adjustment to the acceleration for the next time dt.
+    ///     The kinematic path is constrained by:
+    ///         vel_up_max, vel_down_max : maximum velocity
+    ///         accel_max : maximum acceleration
+    ///         tc : time constant
+    ///     The time constant defines the acceleration error decay in the kinematic path as the system approaches constant acceleration.
+    ///     The time constant also defines the time taken to achieve the maximum acceleration.
+    ///     The time constant must be positive.
+    ///     The function alters the input position to be the closest position that the system could reach zero acceleration in the minimum time.
+    void input_pos_vel_accel_z(const Vector3f& pos, const Vector3f& vel, const Vector3f& accel);
+
     /// set_alt_target_to_current_alt - set altitude target to current altitude
     void set_alt_target_to_current_alt() { _pos_target.z = _inav.get_altitude(); }
 
@@ -262,7 +289,7 @@ public:
     ///     The time constant also defines the time taken to achieve the maximum acceleration.
     ///     The time constant must be positive.
     ///     The function alters the input velocity to be the velocity that the system could reach zero acceleration in the minimum time.
-    void input_vel_accel_xy(const Vector3f& vel, const Vector3f& accel, float tc);
+    void input_vel_accel_xy(const Vector3f& vel, const Vector3f& accel);
 
     /// input_pos_vel_xy calculate a jerk limited path from the current position, velocity and acceleration to an input position and velocity.
     ///     The function takes the current position, velocity, and acceleration and calculates the required jerk limited adjustment to the acceleration for the next time dt.
@@ -274,7 +301,7 @@ public:
     ///     The time constant also defines the time taken to achieve the maximum acceleration.
     ///     The time constant must be positive.
     ///     The function alters the input position to be the closest position that the system could reach zero acceleration in the minimum time.
-    void input_pos_vel_accel_xy(const Vector3f& pos, const Vector3f& vel, const Vector3f& accel, float tc);
+    void input_pos_vel_accel_xy(const Vector3f& pos, const Vector3f& vel, const Vector3f& accel);
 
 
     /// get desired roll, pitch which should be fed into stabilize controllers
@@ -376,6 +403,7 @@ protected:
     // parameters
     AP_Float    _accel_xy_filt_hz;      // XY acceleration filter cutoff frequency
     AP_Float    _lean_angle_max;        // Maximum autopilot commanded angle (in degrees). Set to zero for Angle Max
+    AP_Float    _shaping_tc;            // This is the time constant used to determine how quickly the aircraft varies the acceleration target
     AC_P_2D     _p_pos_xy;              // XY axis position controller to convert distance error to desired velocity
     AC_P_1D     _p_pos_z;               // Z axis position controller to convert altitude error to desired climb rate
     AC_PID_2D   _pid_vel_xy;            // XY axis velocity controller to convert velocity error to desired acceleration

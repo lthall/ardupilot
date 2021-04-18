@@ -23,6 +23,7 @@
 #include "vector2.h"
 #include "vector3.h"
 #include <AP_InternalError/AP_InternalError.h>
+#include <AP_Logger/AP_Logger.h>
 
 // control default definitions
 #define CONTROL_TIME_CONSTANT_RATIO 4.0f   // minimum horizontal acceleration in cm/s/s - used for sanity checking acceleration in leash length calculation
@@ -165,7 +166,7 @@ void shape_accel_xy(const Vector2f& accel_input, Vector2f& accel,
 
     // jerk limit acceleration change
     Vector2f accel_delta = accel_input - accel;
-    if (is_positive(accel_max)) {
+    if (is_positive(jerk_max)) {
         accel_delta.limit_length(jerk_max * dt);
     }
     accel = accel + accel_delta;
@@ -274,7 +275,7 @@ void shape_vel_accel_xy(Vector2f vel_input, const Vector2f& accel_input,
     Vector2f accel_target = vel_error * KPa;
     accel_target += accel_input;
 
-    shape_accel_xy(accel_input, accel, accel_max, tc, dt);
+    shape_accel_xy(accel_target, accel, accel_max, tc, dt);
 }
 
 void shape_vel_accel_xy(const Vector3f& vel_input, const Vector3f& accel_input,

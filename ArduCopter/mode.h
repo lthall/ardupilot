@@ -884,7 +884,7 @@ private:
     void pos_control_run();
     void vel_control_run();
     void posvel_control_run();
-    void set_desired_velocity_with_accel_and_fence_limits(const Vector3f& vel_des);
+    void set_desired_velocity_with_accel_and_fence_limits(Vector3f vel_des);
     void set_yaw_state(bool use_yaw, float yaw_cd, bool use_yaw_rate, float yaw_rate_cds, bool relative_angle);
     bool use_pilot_yaw(void) const;
 
