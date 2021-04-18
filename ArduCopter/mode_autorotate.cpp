@@ -251,7 +251,7 @@ void ModeAutorotate::run()
             _pitch_target -= _target_pitch_adjust*G_Dt;
         }
         // Set position controller
-        pos_control->set_alt_target_from_climb_rate(_desired_v_z, G_Dt, false);
+        pos_control->set_alt_target_from_climb_rate(_desired_v_z, false);
 
         // Update controllers
         pos_control->update_z_controller();

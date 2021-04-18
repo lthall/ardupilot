@@ -70,7 +70,7 @@ void Sub::poshold_run()
             pos_control.set_target_to_stopping_point_xy();
         }
         translate_pos_control_rp(lateral_out, forward_out);
-        pos_control.update_xy_controller();
+        pos_control.run_xy_controller();
     } else {
         pos_control.init_pos_vel_accel_xyz();
         pos_control.set_desired_velocity_xy(0, 0);

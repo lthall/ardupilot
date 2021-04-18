@@ -597,7 +597,7 @@ bool AC_WPNav::update_wpnav()
         ret = false;
     }
 
-    _pos_control.update_xy_controller();
+    _pos_control.run_xy_controller();
 
     _wp_last_update = AP_HAL::millis();
 

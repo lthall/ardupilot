@@ -79,6 +79,6 @@ void Sub::circle_run()
     }
 
     // update altitude target and call position controller
-    pos_control.set_alt_target_from_climb_rate(target_climb_rate, G_Dt, false);
+    pos_control.set_alt_target_from_climb_rate(target_climb_rate, false);
     pos_control.update_z_controller();
 }

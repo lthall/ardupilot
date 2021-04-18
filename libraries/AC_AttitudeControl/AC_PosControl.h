@@ -244,10 +244,6 @@ public:
     // is_active_xy - returns true if the xy position controller has been run very recently
     bool is_active_xy() const;
 
-    /// update_xy_controller - run the horizontal position controller - should be called at 100hz or higher
-    ///     when use_desired_velocity is true the desired velocity (i.e. feed forward) is incorporated at the pos_to_rate step
-    void update_xy_controller();
-
     /// set_target_to_stopping_point_xy - sets horizontal target to reasonable stopping position in cm from home
     void set_target_to_stopping_point_xy();
 
@@ -296,6 +292,13 @@ public:
     ///     The time constant must be positive.
     ///     The function alters the input position to be the closest position that the system could reach zero acceleration in the minimum time.
     void input_pos_vel_accel_xy(const Vector3f& pos, const Vector3f& vel, const Vector3f& accel);
+
+    /// run horizontal position controller correcting position and velocity
+    ///     converts position (_pos_target) to target velocity (_vel_target)
+    ///     desired velocity (_vel_desired) is combined into final target velocity
+    ///     converts desired velocities in lat/lon directions to accelerations in lat/lon frame
+    ///     converts desired accelerations provided in lat/lon frame to roll/pitch angles
+    void run_xy_controller();
 
 
     /// get desired roll, pitch which should be fed into stabilize controllers
@@ -372,16 +375,6 @@ protected:
     /// xy controller private methods
     ///
 
-    /// desired_vel_to_pos - move position target using desired velocities
-    void desired_vel_to_pos();
-
-    /// run horizontal position controller correcting position and velocity
-    ///     converts position (_pos_target) to target velocity (_vel_target)
-    ///     desired velocity (_vel_desired) is combined into final target velocity
-    ///     converts desired velocities in lat/lon directions to accelerations in lat/lon frame
-    ///     converts desired accelerations provided in lat/lon frame to roll/pitch angles
-    void run_xy_controller();
-
     /// initialise and check for ekf position resets
     void init_ekf_xy_reset();
     void check_for_ekf_xy_reset();
@@ -406,8 +399,8 @@ protected:
 
     // internal variables
     float       _dt;                    // time difference (in seconds) between calls from the main program
-    uint64_t    _last_update_xy_us;     // system time (in microseconds) since last update_xy_controller call
-    uint64_t    _last_update_z_us;      // system time (in microseconds) of last update_z_controller call
+    uint64_t    _last_update_xy_us;     // system time (in microseconds) since last run_xy_controller call
+    uint64_t    _last_update_z_us;      // system time (in microseconds) since last run_z_controller call
     float       _speed_down_cms;        // max descent rate in cm/s
     float       _speed_up_cms;          // max climb rate in cm/s
     float       _speed_cms;             // max horizontal speed in cm/s

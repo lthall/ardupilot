@@ -838,19 +838,6 @@ void AC_PosControl::standby_xyz_reset()
     init_ekf_xy_reset();
 }
 
-/// update_xy_controller - run the horizontal position controller - should be called at 100hz or higher
-void AC_PosControl::update_xy_controller()
-{
-    // check for ekf xy position reset
-    check_for_ekf_xy_reset();
-
-    // translate any adjustments from pilot to loiter target
-    desired_vel_to_pos();
-
-    // run horizontal position controller
-    run_xy_controller();
-}
-
 float AC_PosControl::time_since_last_xy_update() const
 {
     const uint64_t now_us = AP_HAL::micros64();
@@ -875,15 +862,6 @@ void AC_PosControl::init_pos_vel_accel_xyz()
 {
     init_pos_vel_accel_z();
     init_pos_vel_accel_xy();
-}
-
-
-/// desired_vel_to_pos - move position target using desired velocities
-void AC_PosControl::desired_vel_to_pos()
-{
-    // update target position
-    _pos_target.x += _vel_desired.x * _dt;
-    _pos_target.y += _vel_desired.y * _dt;
 }
 
 /// init_pos_vel_accel_xy - initialise the position controller to the current position and velocity with zero acceleration.

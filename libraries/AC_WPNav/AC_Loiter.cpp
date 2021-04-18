@@ -218,7 +218,7 @@ void AC_Loiter::update(bool avoidance_on)
     _pos_control.set_max_speed_accel_xy(LOITER_VEL_CORRECTION_MAX, _accel_cmss);
 
     calc_desired_velocity(dt, avoidance_on);
-    _pos_control.update_xy_controller();
+    _pos_control.run_xy_controller();
 }
 
 // sanity check parameters

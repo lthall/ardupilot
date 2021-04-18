@@ -662,7 +662,7 @@ void Sub::auto_terrain_recover_run()
 
     /////////////////////
     // update z target //
-    pos_control.set_alt_target_from_climb_rate_ff(target_climb_rate, G_Dt, true);
+    pos_control.set_alt_target_from_climb_rate_ff(target_climb_rate, true);
     pos_control.update_z_controller();
 
     ////////////////////////////

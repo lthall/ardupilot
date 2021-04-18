@@ -361,8 +361,8 @@ void Sub::guided_vel_control_run()
     }
 
     // call velocity controller which includes z axis controller
-    pos_control->input_vel_accel_xy(posvel_vel_target_cms, Vector3f());
-    pos_control->input_vel_accel_z(posvel_vel_target_cms, Vector3f());
+    pos_control.input_vel_accel_xy(posvel_vel_target_cms, Vector3f());
+    pos_control.input_vel_accel_z(posvel_vel_target_cms, Vector3f());
 
     float lateral_out, forward_out;
     translate_pos_control_rp(lateral_out, forward_out);
@@ -429,8 +429,8 @@ void Sub::guided_posvel_control_run()
     posvel_pos_target_cm += posvel_vel_target_cms * dt;
 
     // send position and velocity targets to position controller
-    pos_control->input_pos_vel_accel_xy(posvel_pos_target_cm, posvel_vel_target_cms, Vector3f());
-    pos_control->input_pos_vel_accel_z(posvel_pos_target_cm, posvel_vel_target_cms, Vector3f());
+    pos_control.input_pos_vel_accel_xy(posvel_pos_target_cm, posvel_vel_target_cms, Vector3f());
+    pos_control.input_pos_vel_accel_z(posvel_pos_target_cm, posvel_vel_target_cms, Vector3f());
 
     float lateral_out, forward_out;
     translate_pos_control_rp(lateral_out, forward_out);
@@ -495,7 +495,7 @@ void Sub::guided_angle_control_run()
     attitude_control.input_euler_angle_roll_pitch_yaw(roll_in, pitch_in, yaw_in, true);
 
     // call position controller
-    pos_control.set_alt_target_from_climb_rate_ff(climb_rate_cms, G_Dt, false);
+    pos_control.set_alt_target_from_climb_rate_ff(climb_rate_cms, false);
     pos_control.update_z_controller();
 }
 
