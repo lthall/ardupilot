@@ -169,8 +169,8 @@ public:
     ///
 
     // get target yaw in centi-degrees (used for wp and spline navigation)
-    float get_yaw() const;
-    float get_yaw_rate_cds() const;
+    float get_yaw() const {return _pos_control.get_heading(); }
+    float get_yaw_rate_cds() const {return _pos_control.get_heading(); }
 
     /// set_spline_destination waypoint using location class
     ///     returns false if conversion from location to vector from ekf origin cannot be calculated
@@ -233,7 +233,6 @@ protected:
         uint8_t reached_destination     : 1;    // true if we have reached the destination
         uint8_t fast_waypoint           : 1;    // true if we should ignore the waypoint radius and consider the waypoint complete once the intermediate target has reached the waypoint
         SegmentType segment_type        : 1;    // active segment is either straight or spline
-        uint8_t wp_yaw_set              : 1;    // true if yaw target has been set
     } _flags;
 
     // get terrain's altitude (in cm above the ekf origin) at the current position (+ve means terrain below vehicle is above ekf origin's altitude)
@@ -242,10 +241,6 @@ protected:
     // convert location to vector from ekf origin.  terrain_alt is set to true if resulting vector's z-axis should be treated as alt-above-terrain
     //      returns false if conversion failed (likely because terrain data was not available)
     bool get_vector_NEU(const Location &loc, Vector3f &vec, bool &terrain_alt);
-
-    // set heading used for spline and waypoint navigation
-    void set_yaw_cd(float heading_cd);
-    void set_yaw_rate_cds(float yaw_rate_cds);
 
     // helper function to calculate scurve jerk and jerk_time values
     // updates _scurve_jerk and _scurve_jerk_time
@@ -289,8 +284,6 @@ protected:
     Vector3f    _destination;           // target destination in cm from ekf origin
     float       _track_error_xy;        // horizontal error of the actual position vs the desired position
     float       _track_scalar_dt;       // time compression multiplier to slow the progress along the track
-    float       _yaw;                   // current yaw heading in centi-degrees based on track direction
-    float       _yaw_rate_cds;          // current yaw rate in centi-degrees/second based on track curvature
 
     // terrain following variables
     bool        _terrain_alt;   // true if origin and destination.z are alt-above-terrain, false if alt-above-ekf-origin
