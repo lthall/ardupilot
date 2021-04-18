@@ -340,10 +340,6 @@ void AC_Autorotation::update_forward_speed_controller(void)
     //calculate acceleration target based on PI controller
     _accel_target = _vel_ff + _vel_p;
 
-    // filter correction acceleration
-    _accel_target_filter.set_cutoff_frequency(10.0f);
-    _accel_target_filter.apply(_accel_target, _dt);
-
     //Limits the maximum change in pitch attitude based on acceleration
     if (_accel_target > _accel_out_last + _accel_max) {
         _accel_target = _accel_out_last + _accel_max;
