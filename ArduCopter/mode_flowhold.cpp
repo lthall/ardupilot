@@ -89,14 +89,10 @@ bool ModeFlowHold::init(bool ignore_checks)
     }
 
     // initialize vertical speeds and leash lengths
-    copter.pos_control->set_max_speed_z(-get_pilot_speed_dn(), copter.g.pilot_speed_up);
-    copter.pos_control->set_max_accel_z(copter.g.pilot_accel_z);
+    copter.pos_control->set_max_speed_accel_z(-get_pilot_speed_dn(), copter.g.pilot_speed_up, copter.g.pilot_accel_z);
 
     // initialise position and desired velocity
-    if (!copter.pos_control->is_active_z()) {
-        copter.pos_control->set_alt_target_to_current_alt();
-        copter.pos_control->set_desired_velocity_z(copter.inertial_nav.get_velocity_z());
-    }
+    pos_control->init_z();
 
     flow_filter.set_cutoff_frequency(copter.scheduler.get_loop_rate_hz(), flow_filter_hz.get());
 
@@ -234,8 +230,7 @@ void ModeFlowHold::run()
     update_height_estimate();
 
     // initialize vertical speeds and acceleration
-    copter.pos_control->set_max_speed_z(-get_pilot_speed_dn(), copter.g.pilot_speed_up);
-    copter.pos_control->set_max_accel_z(copter.g.pilot_accel_z);
+    copter.pos_control->set_max_speed_accel_z(-get_pilot_speed_dn(), copter.g.pilot_speed_up, copter.g.pilot_accel_z);
 
     // apply SIMPLE mode transform to pilot inputs
     update_simple_mode();
@@ -289,8 +284,7 @@ void ModeFlowHold::run()
         target_climb_rate = get_avoidance_adjusted_climbrate(target_climb_rate);
 
         // call position controller
-        copter.pos_control->set_alt_target_from_climb_rate_ff(target_climb_rate, copter.G_Dt, false);
-        copter.pos_control->add_takeoff_climb_rate(takeoff_climb_rate, copter.G_Dt);
+        pos_control->input_vel_accel_z(Vector3f(0.0f, 0.0f, target_climb_rate+takeoff_climb_rate), Vector3f(), false);
         break;
 
     case AltHold_Landed_Ground_Idle:
@@ -311,7 +305,7 @@ void ModeFlowHold::run()
         // get avoidance adjusted climb rate
         target_climb_rate = get_avoidance_adjusted_climbrate(target_climb_rate);
 
-        copter.pos_control->set_alt_target_from_climb_rate_ff(target_climb_rate, G_Dt, false);
+        pos_control->input_vel_accel_z(Vector3f(0.0f, 0.0f, target_climb_rate), Vector3f(), false);
         break;
     }
 
