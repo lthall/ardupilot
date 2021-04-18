@@ -620,7 +620,8 @@ void AC_PosControl::run_z_controller()
     const uint64_t now_us = AP_HAL::micros64();
     if ((now_us - _last_update_z_us) >= POSCONTROL_ACTIVE_TIMEOUT_US) {
         init_pos_vel_accel_z();
-        INTERNAL_ERROR(AP_InternalError::error_t::flow_of_control);
+        // todo: prevent internal error going off after initialisation
+//        INTERNAL_ERROR(AP_InternalError::error_t::flow_of_control);
     }
     _last_update_z_us = now_us;
 
@@ -934,7 +935,8 @@ void AC_PosControl::run_xy_controller()
     const uint64_t now_us = AP_HAL::micros64();
     if ((now_us - _last_update_xy_us) >= POSCONTROL_ACTIVE_TIMEOUT_US) {
         init_pos_vel_accel_xy();
-        INTERNAL_ERROR(AP_InternalError::error_t::flow_of_control);
+        // todo: prevent internal error going off after initialisation
+//        INTERNAL_ERROR(AP_InternalError::error_t::flow_of_control);
     }
     _last_update_xy_us = now_us;
 
