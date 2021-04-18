@@ -274,7 +274,7 @@ const AP_Param::GroupInfo AC_PosControl::var_info[] = {
     // @Param: _TC
     // @DisplayName: Time constant for kinimatic input shaping
     // @Description: This is the time constant used to determine how quickly the aircraft varies the acceleration target
-    // @Units: seconds
+    // @Units: s
     // @Range: 0 10
     // @Increment: 0.01
     // @User: Advanced
