@@ -232,7 +232,7 @@ bool AC_Circle::update()
     }
 
     // update position controller
-    _pos_control.update_xy_controller();
+    _pos_control.run_xy_controller();
 
     // set update time
     _last_update_ms = AP_HAL::millis();
