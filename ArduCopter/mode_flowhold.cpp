@@ -92,9 +92,8 @@ bool ModeFlowHold::init(bool ignore_checks)
     copter.pos_control->set_max_speed_accel_z(-get_pilot_speed_dn(), copter.g.pilot_speed_up, copter.g.pilot_accel_z);
 
     // initialise position and desired velocity
-    if (!copter.pos_control->is_active_z()) {
-        copter.pos_control->set_alt_target_to_current_alt();
-        copter.pos_control->set_desired_velocity_z(copter.inertial_nav.get_velocity_z());
+    if (!pos_control->is_active_z()) {
+        pos_control->init_pos_vel_accel_z();
     }
 
     flow_filter.set_cutoff_frequency(copter.scheduler.get_loop_rate_hz(), flow_filter_hz.get());

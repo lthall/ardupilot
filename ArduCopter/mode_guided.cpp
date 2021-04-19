@@ -42,6 +42,13 @@ struct Guided_Limit {
 // guided_init - initialise guided controller
 bool ModeGuided::init(bool ignore_checks)
 {
+    // initialise position and desired velocity
+    if (!pos_control->is_active_z()) {
+        pos_control->init_pos_vel_accel_z();
+    }
+    if (!pos_control->is_active_xy()) {
+        pos_control->init_pos_vel_accel_xy();
+    }
     // start in position control mode
     pos_control_start();
     send_notification = false;
@@ -211,9 +218,9 @@ void ModeGuided::angle_control_start()
     pos_control->set_max_speed_accel_z(wp_nav->get_default_speed_down(), wp_nav->get_default_speed_up(), wp_nav->get_accel_z());
 
     // initialise position and desired velocity
+    // initialise position and desired velocity
     if (!pos_control->is_active_z()) {
-        pos_control->set_alt_target_to_current_alt();
-        pos_control->set_desired_velocity_z(inertial_nav.get_velocity_z());
+        pos_control->init_pos_vel_accel_z();
     }
 
     // initialise targets

@@ -19,6 +19,9 @@ bool ModeLand::init(bool ignore_checks)
     if (!pos_control->is_active_z()) {
         pos_control->init_pos_vel_accel_z();
     }
+    if (!pos_control->is_active_xy()) {
+        pos_control->init_pos_vel_accel_xy();
+    }
 
     land_start_time = millis();
     land_pause = false;
