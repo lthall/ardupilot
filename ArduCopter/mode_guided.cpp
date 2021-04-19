@@ -177,7 +177,7 @@ void ModeGuided::posvel_control_start()
     // set guided_mode to velocity controller
     guided_mode = SubMode::PosVel;
 
-    pos_control->init_xy_controller();
+    pos_control->init_pos_vel_accel_xyz();
 
     // set speed and acceleration from wpnav's speed and acceleration
     pos_control->set_max_speed_accel_xy(wp_nav->get_default_speed_xy(), wp_nav->get_wp_acceleration());

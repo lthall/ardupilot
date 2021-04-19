@@ -174,12 +174,6 @@ public:
     /// get_lean_angle_max_cd - returns the maximum lean angle the autopilot may request
     float get_lean_angle_max_cd() const;
 
-    /// init_xy_controller - initialise the xy controller
-    ///     sets target roll angle, pitch angle and I terms based on vehicle current lean angles
-    ///     should be called once whenever significant changes to the position target are made
-    ///     this does not update the xy target
-    void init_xy_controller();
-
     /// standby_xyz_reset - resets I terms and removes position error
     ///     This function will let Loiter and Alt Hold continue to operate
     ///     in the event that the flight controller is in control of the
@@ -257,6 +251,9 @@ public:
     /// xyz velocity controller
 
     /// init_pos_vel_accel_xyz - initialise the velocity controller - should be called once before the caller attempts to use the controller
+    ///     sets target roll angle, pitch angle and I terms based on vehicle current lean angles
+    ///     should be called once whenever significant changes to the position target are made
+    ///     this does not update the xy target
     void init_pos_vel_accel_xyz();
 
     /// init_pos_vel_accel_xy - initialise the position controller to the current position and velocity with zero acceleration.

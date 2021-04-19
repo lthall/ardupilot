@@ -781,30 +781,6 @@ float AC_PosControl::get_lean_angle_max_cd() const
     return _lean_angle_max * 100.0f;
 }
 
-/// init_xy_controller - initialise the xy controller
-///     this should be called after setting the position target and the desired velocity and acceleration
-///     sets target roll angle, pitch angle and I terms based on vehicle current lean angles
-///     should be called once whenever significant changes to the position target are made
-///     this does not update the xy target
-void AC_PosControl::init_xy_controller()
-{
-    // set roll, pitch lean angle targets to current attitude
-    const Vector3f &att_target_euler_cd = _attitude_control.get_att_target_euler_cd();
-    _roll_target = att_target_euler_cd.x;
-    _pitch_target = att_target_euler_cd.y;
-
-    // initialise I terms from lean angles
-    _pid_vel_xy.reset_filter();
-    lean_angles_to_accel(_accel_target.x, _accel_target.y);
-    _pid_vel_xy.set_integrator(_accel_target - _accel_desired);
-
-    // initialise ekf xy reset handler
-    init_ekf_xy_reset();
-
-    // initialise xy_controller time out
-    _last_update_xy_us = AP_HAL::micros64();
-}
-
 /// standby_xyz_reset - resets I terms and removes position error
 ///     This function will let Loiter and Alt Hold continue to operate
 ///     in the event that the flight controller is in control of the
@@ -855,9 +831,9 @@ void AC_PosControl::init_pos_vel_accel_xyz()
 void AC_PosControl::init_pos_vel_accel_xy()
 {
     // set roll, pitch lean angle targets to current attitude
-    // todo: this should probably be based on the desired attitude not the current attitude
-    _roll_target = _ahrs.roll_sensor;
-    _pitch_target = _ahrs.pitch_sensor;
+    const Vector3f &att_target_euler_cd = _attitude_control.get_att_target_euler_cd();
+    _roll_target = att_target_euler_cd.x;
+    _pitch_target = att_target_euler_cd.y;
 
     Vector3f curr_pos = _inav.get_position();
     _pos_target.x = curr_pos.x;

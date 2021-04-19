@@ -107,7 +107,7 @@ void AC_Loiter::init_target(const Vector3f& position)
 
     // initialise position controller if not already active
     if (!_pos_control.is_active_xy()) {
-        _pos_control.init_xy_controller();
+        _pos_control.init_pos_vel_accel_xyz();
     }
 }
 
@@ -137,7 +137,7 @@ void AC_Loiter::init_target()
     _pos_control.set_desired_accel_xy(_desired_accel.x, _desired_accel.y);
 
     // initialise position controller
-    _pos_control.init_xy_controller();
+    _pos_control.init_pos_vel_accel_xyz();
 }
 
 /// reduce response for landing
