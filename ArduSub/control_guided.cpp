@@ -115,7 +115,7 @@ void Sub::guided_angle_control_start()
     pos_control.set_max_speed_accel_z(wp_nav.get_default_speed_down(), wp_nav.get_default_speed_up(), wp_nav.get_accel_z());
 
     // initialise position and desired velocity
-    pos_control.init_pos_vel_accel_z();
+    pos_control.init_z();
 
     // initialise targets
     guided_angle_state.update_time_ms = AP_HAL::millis();
