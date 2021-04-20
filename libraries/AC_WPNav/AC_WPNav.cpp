@@ -367,19 +367,15 @@ bool AC_WPNav::set_wp_destination_next_NED(const Vector3f& destination_NED)
 ///     relies on set_wp_destination or set_wp_origin_and_destination having been called first
 void AC_WPNav::shift_wp_origin_to_current_pos()
 {
-    // get current and target locations
-    const Vector3f &curr_pos = _inav.get_position();
+    // Reset position controller to current location
+    _pos_control.init_xyz();
     const Vector3f pos_target = _pos_control.get_pos_target();
 
-    // calculate difference between current position and target
-    Vector3f pos_diff = curr_pos - pos_target;
-
     // shift origin and destination
-    _origin += pos_diff;
-    _destination += pos_diff;
-
-    // move pos controller target and disable feed forward
-    _pos_control.set_pos_target(curr_pos);
+    _origin.x = pos_target.x;
+    _origin.y = pos_target.y;
+    _destination.x = pos_target.x;
+    _destination.y = pos_target.y;
 }
 
 /// shifts the origin and destination horizontally to the current position

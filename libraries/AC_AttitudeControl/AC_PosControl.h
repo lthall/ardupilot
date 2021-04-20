@@ -40,7 +40,7 @@
 #define POSCONTROL_THROTTLE_CUTOFF_FREQ         2.0f    // low-pass filter on accel error (unit: hz)
 #define POSCONTROL_ACCEL_FILTER_HZ              2.0f    // low-pass filter on acceleration (unit: hz)
 
-#define POSCONTROL_Z_SHAPER_TC                  1.0f    // low-pass filter on acceleration (unit: hz)
+#define POSCONTROL_Z_SHAPER_TC                  0.25f    // low-pass filter on acceleration (unit: hz)
 
 #define POSCONTROL_OVERSPEED_GAIN_Z             2.0f    // gain controlling rate at which z-axis speed is brought back within SPEED_UP and SPEED_DOWN range
 
