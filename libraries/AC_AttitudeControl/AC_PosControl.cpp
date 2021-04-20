@@ -533,7 +533,7 @@ void AC_PosControl::init_z()
     _accel_target.z = 0;
     _pid_accel_z.reset_filter();
 
-    // initialise ekf xy reset handler
+    // initialise ekf z reset handler
     init_ekf_z_reset();
 
     // initialise z_controller time out
@@ -859,6 +859,9 @@ void AC_PosControl::init_xy()
 
     // initialise ekf xy reset handler
     init_ekf_xy_reset();
+
+    // initialise z_controller time out
+    _last_update_xy_us = AP_HAL::micros64();
 }
 
 /// input_vel_xy calculate a jerk limited path from the current position, velocity and acceleration to an input velocity.
