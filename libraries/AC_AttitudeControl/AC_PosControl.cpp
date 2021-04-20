@@ -510,9 +510,9 @@ void AC_PosControl::update_z_controller()
     run_z_controller();
 }
 
-/// init_pos_vel_accel_z - initialise the position controller to the current position and velocity with zero acceleration.
+/// init_z - initialise the position controller to the current position and velocity with zero acceleration.
 ///     This function should be called before input_vel_z or input_pos_vel_z are used.
-void AC_PosControl::init_pos_vel_accel_z()
+void AC_PosControl::init_z()
 {
     Vector3f curr_pos = _inav.get_position();
     _pos_target.z = curr_pos.z;
@@ -625,7 +625,7 @@ void AC_PosControl::run_z_controller()
     // Check for z_controller time out
     const uint64_t now_us = AP_HAL::micros64();
     if ((now_us - _last_update_z_us) >= POSCONTROL_ACTIVE_TIMEOUT_US) {
-        init_pos_vel_accel_z();
+        init_z();
         INTERNAL_ERROR(AP_InternalError::error_t::flow_of_control);
     }
     _last_update_z_us = now_us;
@@ -810,7 +810,7 @@ float AC_PosControl::time_since_last_xy_update() const
 void AC_PosControl::write_log()
 {
     float accel_x, accel_y;
-    lean_angles_to_accel(accel_x, accel_y);
+    lean_angles_to_accel_xy(accel_x, accel_y);
 
     AP::logger().Write_PSC(get_pos_target(), _inav.get_position(), get_vel_target(), _inav.get_velocity(), get_accel_target(), accel_x, accel_y);
     AP::logger().Write_PSCZ(get_pos_target().z, _inav.get_position().z,
@@ -820,15 +820,15 @@ void AC_PosControl::write_log()
 
 /// init_pos_vel_accel_xyz - initialise the velocity controller - should be called once before the caller attempts to use the controller
 // todo: remove
-void AC_PosControl::init_pos_vel_accel_xyz()
+void AC_PosControl::init_xyz()
 {
-    init_pos_vel_accel_z();
-    init_pos_vel_accel_xy();
+    init_z();
+    init_xy();
 }
 
 /// init_pos_vel_accel_xy - initialise the position controller to the current position and velocity with zero acceleration.
 ///     This function should be called before input_vel_xy or input_pos_vel_xy are used.
-void AC_PosControl::init_pos_vel_accel_xy()
+void AC_PosControl::init_xy()
 {
     // set roll, pitch lean angle targets to current attitude
     const Vector3f &att_target_euler_cd = _attitude_control.get_att_target_euler_cd();
@@ -854,7 +854,7 @@ void AC_PosControl::init_pos_vel_accel_xy()
     // initialise I terms from lean angles
     _pid_vel_xy.reset_filter();
     Vector3f accel_target;
-    lean_angles_to_accel(accel_target.x, accel_target.y);
+    lean_angles_to_accel_xy(accel_target.x, accel_target.y);
     _pid_vel_xy.set_integrator(accel_target - _accel_desired);
 
     // initialise ekf xy reset handler
@@ -918,7 +918,7 @@ void AC_PosControl::run_xy_controller()
     // Check for position control time out
     const uint64_t now_us = AP_HAL::micros64();
     if ((now_us - _last_update_xy_us) >= POSCONTROL_ACTIVE_TIMEOUT_US) {
-        init_pos_vel_accel_xy();
+        init_xy();
         // todo: prevent internal error going off after initialisation
         INTERNAL_ERROR(AP_InternalError::error_t::flow_of_control);
     }
@@ -990,20 +990,34 @@ void AC_PosControl::accel_to_lean_angles(float accel_x_cmss, float accel_y_cmss,
     roll_target = atanf(accel_right * cos_pitch_target / (GRAVITY_MSS * 100.0f)) * (18000.0f / M_PI);
 }
 
-// get_lean_angles_to_accel - convert roll, pitch lean target angles to lat/lon frame accelerations in cm/s/s
-void AC_PosControl::lean_angles_to_accel(float& accel_x_cmss, float& accel_y_cmss) const
+// get_lean_angles_to_accel_xy - convert roll, pitch lean target angles to lat/lon frame accelerations in cm/s/s
+void AC_PosControl::lean_angles_to_accel_xy(float& accel_x_cmss, float& accel_y_cmss) const
 {
     // rotate our roll, pitch angles into lat/lon frame
-    const Vector3f &att_target_euler = _attitude_control.get_att_target_euler_rad();
+    Vector3f att_target_euler = _attitude_control.get_att_target_euler_rad();
+    att_target_euler.z = _ahrs.yaw;
+    Vector3f accel_cmss = lean_angles_to_accel(att_target_euler);
+
+    accel_x_cmss = accel_cmss.x;
+    accel_y_cmss = accel_cmss.y;
+}
+
+// get_lean_angles_to_accel - convert roll, pitch lean target angles to lat/lon frame accelerations in cm/s/s
+Vector3f AC_PosControl::lean_angles_to_accel(const Vector3f& att_target_euler) const
+{
+    // rotate our roll, pitch angles into lat/lon frame
     const float sin_roll = sinf(att_target_euler.x);
     const float cos_roll = cosf(att_target_euler.x);
     const float sin_pitch = sinf(att_target_euler.y);
     const float cos_pitch = cosf(att_target_euler.y);
-    const float sin_yaw = _ahrs.sin_yaw();
-    const float cos_yaw = _ahrs.cos_yaw();
+    const float sin_yaw = sinf(att_target_euler.z);
+    const float cos_yaw = cosf(att_target_euler.z);
 
-    accel_x_cmss = (GRAVITY_MSS * 100) * (-cos_yaw * sin_pitch * cos_roll - sin_yaw * sin_roll) / MAX(cos_roll * cos_pitch, 0.5f);
-    accel_y_cmss = (GRAVITY_MSS * 100) * (-sin_yaw * sin_pitch * cos_roll + cos_yaw * sin_roll) / MAX(cos_roll * cos_pitch, 0.5f);
+    Vector3f accel_cmss;
+    accel_cmss.x = (GRAVITY_MSS * 100) * (-cos_yaw * sin_pitch * cos_roll - sin_yaw * sin_roll) / MAX(cos_roll * cos_pitch, 0.1f);
+    accel_cmss.y = (GRAVITY_MSS * 100) * (-sin_yaw * sin_pitch * cos_roll + cos_yaw * sin_roll) / MAX(cos_roll * cos_pitch, 0.1f);
+    accel_cmss.z = (GRAVITY_MSS * 100);
+    return accel_cmss;
 }
 
 // returns the NED target acceleration vector for attitude control

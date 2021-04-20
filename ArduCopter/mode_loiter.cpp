@@ -25,11 +25,6 @@ bool ModeLoiter::init(bool ignore_checks)
     }
     loiter_nav->init_target();
 
-    // initialise position and desired velocity
-    if (!pos_control->is_active_z()) {
-        pos_control->init_pos_vel_accel_z();
-    }
-
     return true;
 }
 

@@ -102,9 +102,9 @@ public:
     ///     almost no checks are performed on the input
     void add_takeoff_climb_rate(float climb_rate_cms);
 
-    /// init_pos_vel_accel_z - initialise the position controller to the current position and velocity with zero acceleration.
+    /// init_z - initialise the position controller to the current position and velocity with zero acceleration.
     ///     This function should be called before input_vel_z or input_pos_vel_z are used.
-    void init_pos_vel_accel_z();
+    void init_z();
 
     /// input_vel_z calculate a jerk limited path from the current position, velocity and acceleration to an input velocity.
     ///     The function takes the current position, velocity, and acceleration and calculates the required jerk limited adjustment to the acceleration for the next time dt.
@@ -250,15 +250,15 @@ public:
 
     /// xyz velocity controller
 
-    /// init_pos_vel_accel_xyz - initialise the velocity controller - should be called once before the caller attempts to use the controller
+    /// init_xyz - initialise the velocity controller - should be called once before the caller attempts to use the controller
     ///     sets target roll angle, pitch angle and I terms based on vehicle current lean angles
     ///     should be called once whenever significant changes to the position target are made
     ///     this does not update the xy target
-    void init_pos_vel_accel_xyz();
+    void init_xyz();
 
-    /// init_pos_vel_accel_xy - initialise the position controller to the current position and velocity with zero acceleration.
+    /// init_xy - initialise the position controller to the current position and velocity with zero acceleration.
     ///     This function should be called before input_vel_xy or input_pos_vel_xy are used.
-    void init_pos_vel_accel_xy();
+    void init_xy();
 
     /// input_vel_xy calculate a jerk limited path from the current position, velocity and acceleration to an input velocity.
     ///     The function takes the current position, velocity, and acceleration and calculates the required jerk limited adjustment to the acceleration for the next time dt.
@@ -311,7 +311,8 @@ public:
     void accel_to_lean_angles(float accel_x_cmss, float accel_y_cmss, float& roll_target, float& pitch_target) const;
 
     // lean_angles_to_accel - convert roll, pitch lean angles to lat/lon frame accelerations in cm/s/s
-    void lean_angles_to_accel(float& accel_x_cmss, float& accel_y_cmss) const;
+    void lean_angles_to_accel_xy(float& accel_x_cmss, float& accel_y_cmss) const;
+    Vector3f lean_angles_to_accel(const Vector3f& att_target_euler) const;
 
     // time_since_last_xy_update - returns time in seconds since the horizontal position controller was last run
     float time_since_last_xy_update() const;

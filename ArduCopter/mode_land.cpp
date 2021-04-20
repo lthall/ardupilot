@@ -16,12 +16,7 @@ bool ModeLand::init(bool ignore_checks)
     pos_control->set_max_speed_accel_z(wp_nav->get_default_speed_down(), wp_nav->get_default_speed_up(), wp_nav->get_accel_z());
 
     // initialise position and desired velocity
-    if (!pos_control->is_active_z()) {
-        pos_control->init_pos_vel_accel_z();
-    }
-    if (!pos_control->is_active_xy()) {
-        pos_control->init_pos_vel_accel_xy();
-    }
+    pos_control->init_xyz();
 
     land_start_time = millis();
     land_pause = false;

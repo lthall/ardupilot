@@ -77,7 +77,7 @@ void Sub::guided_vel_control_start()
     pos_control.set_max_speed_accel_z(-get_pilot_speed_dn(), g.pilot_speed_up, g.pilot_accel_z);
 
     // initialise velocity controller
-    pos_control.init_pos_vel_accel_xyz();
+    pos_control.init_xyz();
 }
 
 // initialise guided mode's posvel controller
@@ -86,7 +86,7 @@ void Sub::guided_posvel_control_start()
     // set guided_mode to velocity controller
     guided_mode = Guided_PosVel;
 
-    pos_control.init_pos_vel_accel_xyz();
+    pos_control.init_xyz();
 
     // set speed and acceleration from wpnav's speed and acceleration
     pos_control.set_max_speed_accel_xy(wp_nav.get_default_speed_xy(), wp_nav.get_wp_acceleration());
@@ -332,7 +332,7 @@ void Sub::guided_vel_control_run()
     // if motors not enabled set throttle to zero and exit immediately
     if (!motors.armed()) {
         // initialise velocity controller
-        pos_control.init_pos_vel_accel_xyz();
+        pos_control.init_xyz();
         motors.set_desired_spool_state(AP_Motors::DesiredSpoolState::GROUND_IDLE);
         // Sub vehicles do not stabilize roll/pitch/yaw when disarmed
         attitude_control.set_throttle_out(0,true,g.throttle_filt);

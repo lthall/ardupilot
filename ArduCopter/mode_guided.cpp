@@ -43,12 +43,8 @@ struct Guided_Limit {
 bool ModeGuided::init(bool ignore_checks)
 {
     // initialise position and desired velocity
-    if (!pos_control->is_active_z()) {
-        pos_control->init_pos_vel_accel_z();
-    }
-    if (!pos_control->is_active_xy()) {
-        pos_control->init_pos_vel_accel_xy();
-    }
+    pos_control->init_xyz();
+
     // start in position control mode
     pos_control_start();
     send_notification = false;
@@ -175,7 +171,7 @@ void ModeGuided::vel_control_start()
     pos_control->set_max_speed_accel_z(-get_pilot_speed_dn(), g.pilot_speed_up, g.pilot_accel_z);
 
     // initialise velocity controller
-    pos_control->init_pos_vel_accel_xy();
+    pos_control->init_xyz();
 }
 
 // initialise guided mode's posvel controller
@@ -184,7 +180,7 @@ void ModeGuided::posvel_control_start()
     // set guided_mode to velocity controller
     guided_mode = SubMode::PosVel;
 
-    pos_control->init_pos_vel_accel_xyz();
+    pos_control->init_xyz();
 
     // set speed and acceleration from wpnav's speed and acceleration
     pos_control->set_max_speed_accel_xy(wp_nav->get_default_speed_xy(), wp_nav->get_wp_acceleration());
@@ -218,10 +214,7 @@ void ModeGuided::angle_control_start()
     pos_control->set_max_speed_accel_z(wp_nav->get_default_speed_down(), wp_nav->get_default_speed_up(), wp_nav->get_accel_z());
 
     // initialise position and desired velocity
-    // initialise position and desired velocity
-    if (!pos_control->is_active_z()) {
-        pos_control->init_pos_vel_accel_z();
-    }
+    pos_control->init_z();
 
     // initialise targets
     guided_angle_state.update_time_ms = millis();

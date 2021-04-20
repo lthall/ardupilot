@@ -2815,7 +2815,7 @@ void QuadPlane::init_qrtl(void)
     poscontrol.state = QPOS_POSITION1;
     poscontrol.speed_scale = 0;
     pos_control->set_desired_accel_xy(0.0f, 0.0f);
-    pos_control->init_pos_vel_accel_xyz();
+    pos_control->init_xyz();
 }
 
 /*
@@ -2902,7 +2902,7 @@ bool QuadPlane::do_vtol_land(const AP_Mission::Mission_Command& cmd)
     poscontrol.state = QPOS_POSITION1;
     poscontrol.speed_scale = 0;
     pos_control->set_desired_accel_xy(0.0f, 0.0f);
-    pos_control->init_pos_vel_accel_xyz();
+    pos_control->init_xyz();
 
     throttle_wait = false;
     landing_detect.lower_limit_start_ms = 0;

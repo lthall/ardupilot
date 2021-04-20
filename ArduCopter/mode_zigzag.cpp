@@ -83,11 +83,6 @@ bool ModeZigZag::init(bool ignore_checks)
     }
     loiter_nav->init_target();
 
-    // initialise position_z and desired velocity_z
-    if (!pos_control->is_active_z()) {
-        pos_control->init_pos_vel_accel_z();
-    }
-
     // initialise waypoint state
     stage = STORING_POINTS;
     dest_A.zero();

@@ -10,7 +10,7 @@ bool ModeAltHold::init(bool ignore_checks)
 {
     // initialise position and desired velocity
     if (!pos_control->is_active_z()) {
-        pos_control->init_pos_vel_accel_z();
+        pos_control->init_z();
     }
 
     return true;

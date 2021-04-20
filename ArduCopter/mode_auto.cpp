@@ -259,11 +259,6 @@ void ModeAuto::land_start(const Vector3f& destination)
     // initialise loiter target destination
     loiter_nav->init_target(destination);
 
-    // initialise position and desired velocity
-    if (!pos_control->is_active_z()) {
-        pos_control->init_pos_vel_accel_z();
-    }
-
     // initialise yaw
     auto_yaw.set_mode(AUTO_YAW_HOLD);
 
@@ -982,11 +977,6 @@ void ModeAuto::payload_place_start(const Vector3f& destination)
 
     // initialise loiter target destination
     loiter_nav->init_target(destination);
-
-    // initialise position and desired velocity
-    if (!pos_control->is_active_z()) {
-        pos_control->init_pos_vel_accel_z();
-    }
 
     // initialise yaw
     auto_yaw.set_mode(AUTO_YAW_HOLD);

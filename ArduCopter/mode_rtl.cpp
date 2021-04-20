@@ -355,11 +355,6 @@ void ModeRTL::land_start()
     // Set wp navigation target to above home
     loiter_nav->init_target(wp_nav->get_wp_destination());
 
-    // initialise position and desired velocity
-    if (!pos_control->is_active_z()) {
-        pos_control->init_pos_vel_accel_z();
-    }
-
     // initialise yaw
     auto_yaw.set_mode(AUTO_YAW_HOLD);
 
