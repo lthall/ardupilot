@@ -28,7 +28,7 @@
 
 
 #ifndef HAL_COMPASS_ICM20948_I2C_ADDR
-# define HAL_COMPASS_ICM20948_I2C_ADDR 0x69
+# define HAL_COMPASS_ICM20948_I2C_ADDR 0x68
 #endif
 
 class AuxiliaryBus;
