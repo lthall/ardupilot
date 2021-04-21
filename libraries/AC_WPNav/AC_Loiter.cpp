@@ -126,9 +126,6 @@ void AC_Loiter::init_target()
     _predicted_accel.y = _pos_control.get_accel_target().y;
     _predicted_euler_angle.x = radians(_pos_control.get_roll()*0.01f);
     _predicted_euler_angle.y = radians(_pos_control.get_pitch()*0.01f);
-
-    // initialise position controller
-    _pos_control.init_xyz();
 }
 
 /// reduce response for landing

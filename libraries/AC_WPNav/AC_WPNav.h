@@ -169,7 +169,7 @@ public:
     ///
 
     // get target yaw in centi-degrees (used for wp and spline navigation)
-    float get_yaw() const;
+    float get_yaw();
     float get_yaw_rate_cds() const;
 
     /// set_spline_destination waypoint using location class

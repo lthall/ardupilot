@@ -1031,6 +1031,33 @@ Vector3f AC_PosControl::get_thrust_vector() const
     return accel_target;
 }
 
+// get_lean_angles_to_accel - convert roll, pitch lean angles to lat/lon frame accelerations in cm/s/s
+bool AC_PosControl::calculate_yaw_rate_yaw(float& heading, float& heading_rate) const
+{
+    // Calculate the turn rate
+    float turn_rate = 0.0f;
+    const Vector2f vel_desired_xy(_vel_desired.x, _vel_desired.y);
+    const Vector2f accel_desired_xy(_accel_desired.x, _accel_desired.y);
+    const float vel_desired_xy_len = vel_desired_xy.length();
+    if (is_positive(vel_desired_xy_len)) {
+        const float accel_forward = (accel_desired_xy.x * vel_desired_xy.x + accel_desired_xy.y * vel_desired_xy.y)/vel_desired_xy_len;
+        const Vector2f accel_turn = accel_desired_xy - vel_desired_xy * accel_forward / vel_desired_xy_len;
+        const float accel_turn_xy_len = accel_turn.length();
+        turn_rate = accel_turn_xy_len / vel_desired_xy_len;
+        if ((accel_turn.y * vel_desired_xy.x - accel_turn.x * vel_desired_xy.y) < 0.0) {
+            turn_rate = -turn_rate;
+        }
+    }
+
+    // update the target yaw if origin and destination are at least 2m apart horizontally
+    if (vel_desired_xy_len > _speed_cms * 0.01f) {
+        heading = degrees(vel_desired_xy.angle()) * 100.0f;
+        heading_rate = turn_rate*degrees(100.0f);
+        return true;
+    }
+    return false;
+}
+
 /// initialise ekf xy position reset check
 void AC_PosControl::init_ekf_xy_reset()
 {

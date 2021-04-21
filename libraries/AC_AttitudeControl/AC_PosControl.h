@@ -296,6 +296,9 @@ public:
     float get_pitch() const { return _pitch_target; }
     Vector3f get_thrust_vector() const;
 
+    // lean_angles_to_accel - convert roll, pitch lean angles to lat/lon frame accelerations in cm/s/s
+    bool calculate_yaw_rate_yaw(float& yaw, float& rate_yaw) const;
+
     /// get pid controllers
     AC_P_2D& get_pos_xy_p() { return _p_pos_xy; }
     AC_P_1D& get_pos_z_p() { return _p_pos_z; }
