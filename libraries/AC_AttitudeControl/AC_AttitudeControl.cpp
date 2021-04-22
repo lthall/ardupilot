@@ -543,6 +543,7 @@ void AC_AttitudeControl::input_thrust_vector_rate_heading(Vector3f thrust_vector
 {
     // Convert from centidegrees on public interface to radians
     float heading_rate = radians(heading_rate_cds * 0.01f);
+    heading_rate = constrain_float(heading_rate, -get_slew_yaw_rads(), get_slew_yaw_rads());
 
     // calculate the attitude target euler angles
     _attitude_target.to_euler(_euler_angle_target.x, _euler_angle_target.y, _euler_angle_target.z);
@@ -606,6 +607,7 @@ void AC_AttitudeControl::input_thrust_vector_heading(Vector3f thrust_vector, flo
 {
     // Convert from centidegrees on public interface to radians
     float heading_rate = radians(heading_rate_rate_cds * 0.01f);
+    heading_rate = constrain_float(heading_rate, -get_slew_yaw_rads(), get_slew_yaw_rads());
     float heading_angle = radians(heading_rate_angle_cd * 0.01f);
 
     // calculate the attitude target euler angles
@@ -645,7 +647,7 @@ void AC_AttitudeControl::input_thrust_vector_heading(Vector3f thrust_vector, flo
         // the output rate towards the input rate.
         _ang_vel_target.x = input_shaping_angle(rotation.x, _input_tc, get_accel_roll_max_radss(), _ang_vel_target.x, _dt);
         _ang_vel_target.y = input_shaping_angle(rotation.y, _input_tc, get_accel_pitch_max_radss(), _ang_vel_target.y, _dt);
-        _ang_vel_target.z = input_shaping_angle(rotation.z, _input_tc, get_accel_yaw_max_radss(), _ang_vel_target.z, heading_rate, _dt);
+        _ang_vel_target.z = input_shaping_angle(rotation.z, _input_tc, get_accel_yaw_max_radss(), _ang_vel_target.z, heading_rate, get_slew_yaw_rads(), _dt);
 
         // Limit the angular velocity
         ang_vel_limit(_ang_vel_target, radians(_ang_vel_roll_max), radians(_ang_vel_pitch_max), MIN(radians(_ang_vel_yaw_max), get_slew_yaw_rads()));
@@ -790,10 +792,13 @@ void AC_AttitudeControl::thrust_vector_rotation_angles(const Quaternion& attitud
 
 // calculates the velocity correction from an angle error. The angular velocity has acceleration and
 // deceleration limits including basic jerk limiting using _input_tc
-float AC_AttitudeControl::input_shaping_angle(float error_angle, float input_tc, float accel_max, float target_ang_vel, float desired_ang_vel, float dt)
+float AC_AttitudeControl::input_shaping_angle(float error_angle, float input_tc, float accel_max, float target_ang_vel, float desired_ang_vel, float max_ang_vel, float dt)
 {
     // Calculate the velocity as error approaches zero with acceleration limited by accel_max_radss
     desired_ang_vel += sqrt_controller(error_angle, 1.0f / MAX(input_tc, 0.01f), accel_max, dt);
+    if(is_positive(max_ang_vel)) {
+        desired_ang_vel = constrain_float(desired_ang_vel, -max_ang_vel, max_ang_vel);
+    }
 
     // Acceleration is limited directly to smooth the beginning of the curve.
     return input_shaping_ang_vel(target_ang_vel, desired_ang_vel, accel_max, dt);
