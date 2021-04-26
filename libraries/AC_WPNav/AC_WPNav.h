@@ -161,8 +161,8 @@ public:
     ///
 
     // get target yaw in centi-degrees (used for wp and spline navigation)
-    float get_yaw() const {return _pos_control.get_heading();}
-    float get_yaw_rate_cds() const {return _pos_control.get_rate_heading();}
+    float get_yaw() const { return _pos_control.get_yaw_cd(); }
+    float get_yaw_rate_cds() const { return _pos_control.get_yaw_rate_cds(); }
 
     /// set_spline_destination waypoint using location class
     ///     returns false if conversion from location to vector from ekf origin cannot be calculated
