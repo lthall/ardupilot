@@ -658,7 +658,7 @@ Quaternion AC_AttitudeControl::attitude_from_thrust_vector(Vector3f thrust_vecto
     Quaternion thrust_vec_quat;
     thrust_vec_quat.from_axis_angle(thrust_vec_cross, thrust_vector_angle);
     Quaternion yaw_quat;
-    yaw_quat.from_axis_angle(thrust_vector_up, heading_angle);
+    yaw_quat.from_axis_angle(Vector3f{0.0f, 0.0f, 1.0f}, heading_angle);
     return thrust_vec_quat*yaw_quat;
 }
 
