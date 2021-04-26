@@ -816,8 +816,8 @@ void AC_PosControl::init_xy_controller()
     const Vector3f &att_target_euler_cd = _attitude_control.get_att_target_euler_cd();
     _roll_target = att_target_euler_cd.x;
     _pitch_target = att_target_euler_cd.y;
-    _heading = att_target_euler_cd.z; // todo: this should be thrust vector heading, not yaw.
-    _rate_heading = 0.0f;
+    _yaw_target = att_target_euler_cd.z;
+    _yaw_rate_target = 0.0f;
 
     // initialise I terms from lean angles
     _pid_vel_xy.reset_filter();
@@ -903,8 +903,8 @@ void AC_PosControl::init_vel_controller_xyz()
     // set roll, pitch lean angle targets to current attitude
     _roll_target = _ahrs.roll_sensor;
     _pitch_target = _ahrs.pitch_sensor;
-    _heading = _ahrs.yaw_sensor; // todo: this should be thrust vector heading, not yaw.
-    _rate_heading = 0.0f;
+    _yaw_target = _ahrs.yaw_sensor; // todo: this should be thrust vector heading, not yaw.
+    _yaw_rate_target = 0.0f;
 
     _pid_vel_xy.reset_filter();
     lean_angles_to_accel(_accel_target.x, _accel_target.y);
@@ -1058,7 +1058,7 @@ void AC_PosControl::run_xy_controller(float dt)
 
     // update angle targets that will be passed to stabilize controller
     accel_to_lean_angles(_accel_target.x, _accel_target.y, _roll_target, _pitch_target);
-    calculate_heading_rate_heading();
+    calculate_yaw_rate_yaw();
 }
 
 // get_lean_angles_to_accel - convert roll, pitch lean angles to lat/lon frame accelerations in cm/s/s
@@ -1099,7 +1099,7 @@ Vector3f AC_PosControl::get_thrust_vector() const
 }
 
 // get_lean_angles_to_accel - convert roll, pitch lean angles to lat/lon frame accelerations in cm/s/s
-bool AC_PosControl::calculate_heading_rate_heading()
+bool AC_PosControl::calculate_yaw_rate_yaw()
 {
     // Calculate the turn rate
     float turn_rate = 0.0f;
@@ -1118,8 +1118,8 @@ bool AC_PosControl::calculate_heading_rate_heading()
 
     // update the target yaw if origin and destination are at least 2m apart horizontally
     if (vel_desired_xy_len > _speed_cms * 0.05f) {
-        _heading = degrees(vel_desired_xy.angle()) * 100.0f;
-        _rate_heading = turn_rate*degrees(100.0f);
+        _yaw_target = degrees(vel_desired_xy.angle()) * 100.0f;
+        _yaw_rate_target = turn_rate*degrees(100.0f);
         return true;
     }
     return false;

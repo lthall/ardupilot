@@ -172,6 +172,7 @@ public:
     void input_thrust_vector_rate_heading(Vector3f thrust_vector, float heading_rate_cds);
     void input_thrust_vector_heading(Vector3f thrust_vector, float heading_angle_cd, float heading_rate_cds);
     void input_thrust_vector_heading(Vector3f thrust_vector, float heading_cd) {input_thrust_vector_heading(thrust_vector, heading_cd, 0.0f);}
+    Quaternion attitude_from_thrust_vector(Vector3f thrust_vector, float heading_angle);
 
     // Run angular velocity controller and send outputs to the motors
     virtual void rate_controller_run() = 0;
