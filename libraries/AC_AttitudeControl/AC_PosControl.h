@@ -86,7 +86,7 @@ public:
 
     /// init_z - initialise the position controller to the current position and velocity with zero acceleration.
     ///     This function should be called before input_vel_z or input_pos_vel_z are used.
-    void init_z();
+    void init_z_controller();
 
     /// input_vel_z calculate a jerk limited path from the current position, velocity and acceleration to an input velocity.
     ///     The function takes the current position, velocity, and acceleration and calculates the required jerk limited adjustment to the acceleration for the next time dt.
@@ -98,6 +98,7 @@ public:
     ///     The time constant must be positive.
     ///     The function alters the input velocity to be the velocity that the system could reach zero acceleration in the minimum time.
     void input_vel_accel_z(const Vector3f& vel, const Vector3f& accel, bool force_descend);
+    void set_alt_target_from_climb_rate_ff(const float& vel, bool force_descend) {input_vel_accel_z(Vector3f(0.0f, 0.0f, vel), Vector3f(0.0f, 0.0f, 0.0f), force_descend);}
 
     /// input_pos_vel_z calculate a jerk limited path from the current position, velocity and acceleration to an input position and velocity.
     ///     The function takes the current position, velocity, and acceleration and calculates the required jerk limited adjustment to the acceleration for the next time dt.
@@ -110,6 +111,7 @@ public:
     ///     The time constant must be positive.
     ///     The function alters the input position to be the closest position that the system could reach zero acceleration in the minimum time.
     void input_pos_vel_accel_z(const Vector3f& pos, const Vector3f& vel, const Vector3f& accel);
+    void set_alt_target_with_slew(const float& pos) {input_pos_vel_accel_z(Vector3f(0.0f, 0.0f, pos), Vector3f(0.0f, 0.0f, 0.0f), Vector3f(0.0f, 0.0f, 0.0f));}
 
     /// set_alt_target_to_current_alt - set altitude target to current altitude
     void set_alt_target_to_current_alt() { _pos_target.z = _inav.get_altitude(); }
@@ -180,9 +182,6 @@ public:
     /// set_pos_target in cm from home
     void set_pos_target(const Vector3f& position);
 
-    /// set position, velocity and acceleration targets
-    void set_pos_vel_accel_target(const Vector3f& pos, const Vector3f& vel, const Vector3f& accel);
-
     /// set_target_pos_xy in cm from home
     void set_target_pos_xy(float pos_x, float pos_y) {_pos_target.x = pos_x; _pos_target.y = pos_y; }
 
@@ -195,14 +194,24 @@ public:
     // set desired acceleration in cm/s in xy axis
     void set_desired_accel_xy(float accel_lat_cms, float accel_lon_cms) { _accel_desired.x = accel_lat_cms; _accel_desired.y = accel_lon_cms; }
 
+    /// set_desired_velocity - sets desired velocity in cm/s in all 3 axis
+    ///     when update_vel_controller_xyz is next called the position target is moved based on the desired velocity
+    void set_desired_velocity(const Vector3f &des_vel) { _vel_desired = des_vel; }
+
     /// set_desired_velocity_xy - sets desired velocity in cm/s in lat and lon directions
     ///     when update_xy_controller is next called the position target is moved based on the desired velocity and
     ///     the desired velocities are fed forward into the rate_to_accel step
     void set_desired_velocity_xy(float vel_x, float vel_y) {_vel_desired.x = vel_x; _vel_desired.y = vel_y; }
 
-    /// set_desired_velocity - sets desired velocity in cm/s in all 3 axis
-    ///     when update_vel_controller_xyz is next called the position target is moved based on the desired velocity
-    void set_desired_velocity(const Vector3f &des_vel) { _vel_desired = des_vel; }
+    /// set position, velocity and acceleration targets
+    void set_pos_vel_accel_target(const Vector3f& pos, const Vector3f& vel, const Vector3f& accel);
+
+    // run position control for Z axis
+    // target altitude should be set with one of these functions
+    //          set_alt_target
+    //          set_target_to_stopping_point_z
+    //          init_takeoff
+    void run_z_controller();
 
     // overrides the velocity process variable for one timestep
     void override_vehicle_velocity_xy(const Vector2f& vel_xy) { _vehicle_horiz_vel = vel_xy; _flags.vehicle_horiz_vel_override = true; }
@@ -240,7 +249,7 @@ public:
 
     /// init_xy - initialise the position controller to the current position and velocity with zero acceleration.
     ///     This function should be called before input_vel_xy or input_pos_vel_xy are used.
-    void init_xy();
+    void init_xy_controller();
 
     /// input_vel_xy calculate a jerk limited path from the current position, velocity and acceleration to an input velocity.
     ///     The function takes the current position, velocity, and acceleration and calculates the required jerk limited adjustment to the acceleration for the next time dt.
@@ -335,13 +344,6 @@ protected:
     ///
     /// z controller private methods
     ///
-
-    // run position control for Z axis
-    // target altitude should be set with one of these functions
-    //          set_alt_target
-    //          set_target_to_stopping_point_z
-    //          init_takeoff
-    void run_z_controller();
 
     // get throttle using vibration-resistant calculation (uses feed forward with manually calculated gain)
     float get_throttle_with_vibration_override();

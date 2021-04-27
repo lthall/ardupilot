@@ -335,7 +335,7 @@ void AC_PosControl::set_dt(float delta_sec)
     _vel_error_filter.set_cutoff_frequency(POSCONTROL_VEL_ERROR_CUTOFF_FREQ);
 }
 
-/// set_max_speed_z - set the maximum climb and descent rates
+/// set_max_speed_accel_z - set the maximum climb and descent rates and acceleration
 /// To-Do: call this in the main code as part of flight mode initialisation
 void AC_PosControl::set_max_speed_accel_z(float speed_down, float speed_up, float accel_cmss)
 {
@@ -359,18 +359,6 @@ void AC_PosControl::set_max_speed_accel_z(float speed_down, float speed_up, floa
     }
     // define maximum position error and maximum first and second differential limits
     _p_pos_z.set_limits(0.0f, 0.0f, -fabsf(_speed_down_cms), _speed_up_cms, _accel_z_cms, 0.0f);
-}
-
-/// relax_alt_hold_controllers - set all desired and targets to measured
-void AC_PosControl::relax_alt_hold_controllers(float throttle_setting)
-{
-    _pos_target.z = _inav.get_altitude();
-    _vel_desired.z = 0.0f;
-    _vel_target.z = 0.0f;
-    _accel_desired.z = _inav.get_velocity_z();
-    _pid_accel_z.set_integrator((throttle_setting - _motors.get_throttle_hover()) * 1000.0f);
-    _accel_target.z = -(_ahrs.get_accel_ef_blended().z + GRAVITY_MSS) * 100.0f;
-    _pid_accel_z.reset_filter();
 }
 
 // get_alt_error - returns altitude error in cm
@@ -436,9 +424,38 @@ void AC_PosControl::update_z_controller()
     run_z_controller();
 }
 
+/// relax_alt_hold_controllers - set all desired and targets to measured
+void AC_PosControl::relax_alt_hold_controllers(float throttle_setting)
+{
+    Vector3f curr_pos = _inav.get_position();
+    _pos_target.z = curr_pos.z;
+
+    const Vector3f &curr_vel = _inav.get_velocity();
+    _vel_desired.z = curr_vel.z;
+    _vel_target.z = 0;
+
+    const Vector3f &curr_accel = _ahrs.get_accel_ef_blended();
+
+    // Reset I term of velocity PID
+    _pid_vel_z.reset_filter();
+    _pid_vel_z.set_integrator(0.0f);
+
+    // Set accel PID I term based on the current throttle
+    _pid_accel_z.set_integrator((throttle_setting - _motors.get_throttle_hover()) * 1000.0f);
+    _accel_desired.z = -(curr_accel.z + GRAVITY_MSS) * 100.0f;
+    _accel_target.z = 0;
+    _pid_accel_z.reset_filter();
+
+    // initialise ekf z reset handler
+    init_ekf_z_reset();
+
+    // initialise z_controller time out
+    _last_update_z_us = AP_HAL::micros64();
+}
+
 /// init_z - initialise the position controller to the current position and velocity with zero acceleration.
 ///     This function should be called before input_vel_z or input_pos_vel_z are used.
-void AC_PosControl::init_z()
+void AC_PosControl::init_z_controller()
 {
     Vector3f curr_pos = _inav.get_position();
     _pos_target.z = curr_pos.z;
@@ -499,9 +516,6 @@ void AC_PosControl::input_vel_accel_z(const Vector3f& vel, const Vector3f& accel
     update_pos_vel_accel(_pos_target.z, _vel_desired.z, _accel_desired.z, _dt,
         (_motors.limit.throttle_lower && !force_descend), _motors.limit.throttle_upper,
         _p_pos_z.get_error(), _pid_vel_z.get_error());
-
-    // run horizontal position controller
-    run_z_controller();
 }
 
 /// input_pos_vel_z calculate a jerk limited path from the current position, velocity and acceleration to an input position and velocity.
@@ -537,9 +551,6 @@ void AC_PosControl::input_pos_vel_accel_z(const Vector3f& pos, const Vector3f& v
     update_pos_vel_accel(_pos_target.z, _vel_desired.z, _accel_desired.z, _dt,
         _motors.limit.throttle_lower, _motors.limit.throttle_upper,
         _p_pos_z.get_error(), _pid_vel_z.get_error());
-
-    // run horizontal position controller
-    run_z_controller();
 }
 
 // run position control for Z axis
@@ -551,7 +562,7 @@ void AC_PosControl::run_z_controller()
     // Check for z_controller time out
     const uint64_t now_us = AP_HAL::micros64();
     if ((now_us - _last_update_z_us) >= POSCONTROL_ACTIVE_TIMEOUT_US) {
-        init_z();
+        init_z_controller();
         INTERNAL_ERROR(AP_InternalError::error_t::flow_of_control);
     }
     _last_update_z_us = now_us;
@@ -738,8 +749,8 @@ void AC_PosControl::write_log()
 // todo: remove
 void AC_PosControl::init_xyz()
 {
-    init_z();
-    init_xy();
+    init_z_controller();
+    init_xy_controller();
 }
 
 // relax_velocity_controller_xy - initialise the position controller to the current position, velocity, acceleration and level attitude.
@@ -763,7 +774,6 @@ void AC_PosControl::relax_velocity_controller_xy()
     _vel_target.x = 0.0f;
     _vel_target.y = 0.0f;
 
-    const Vector3f &curr_accel = _ahrs.get_accel_ef_blended() * 100.0f;
     _accel_desired.x = 0.0f;
     _accel_desired.y = 0.0f;
     _accel_target.x = 0.0f;
@@ -771,8 +781,6 @@ void AC_PosControl::relax_velocity_controller_xy()
 
     // initialise I terms from lean angles
     _pid_vel_xy.reset_filter();
-    Vector3f accel_target;
-    lean_angles_to_accel_xy(accel_target.x, accel_target.y);
     _pid_vel_xy.reset_I();
 
     // initialise ekf xy reset handler
@@ -784,7 +792,7 @@ void AC_PosControl::relax_velocity_controller_xy()
 
 /// init_pos_vel_accel_xy - initialise the position controller to the current position, velocity, acceleration and attitude.
 ///     This function should be called before input_vel_xy or input_pos_vel_xy are used.
-void AC_PosControl::init_xy()
+void AC_PosControl::init_xy_controller()
 {
     // set roll, pitch lean angle targets to current attitude
     const Vector3f &att_target_euler_cd = _attitude_control.get_att_target_euler_cd();
@@ -840,9 +848,6 @@ void AC_PosControl::input_vel_accel_xy(const Vector3f& vel, const Vector3f& acce
         _limit.accel_xy, _p_pos_xy.get_error(), _pid_vel_xy.get_error());
 
     shape_vel_accel_xy(vel, accel, _vel_desired, _accel_desired, _speed_cms, _accel_cms, _shaping_tc, _dt);
-
-    // run horizontal position controller
-    run_xy_controller();
 }
 
 /// input_pos_vel_xy calculate a jerk limited path from the current position, velocity and acceleration to an input position and velocity.
@@ -864,9 +869,6 @@ void AC_PosControl::input_pos_vel_accel_xy(const Vector3f& pos, const Vector3f& 
         _limit.accel_xy, _p_pos_xy.get_error(), _pid_vel_xy.get_error());
 
     shape_pos_vel_accel_xy(pos, vel, accel, _pos_target, _vel_desired, _accel_desired, _speed_cms, _speed_cms, _accel_cms, _shaping_tc, _dt);
-
-    // run horizontal position controller
-    run_xy_controller();
 }
 
 /// run horizontal position controller correcting position and velocity
@@ -879,7 +881,7 @@ void AC_PosControl::run_xy_controller()
     // Check for position control time out
     const uint64_t now_us = AP_HAL::micros64();
     if ((now_us - _last_update_xy_us) >= POSCONTROL_ACTIVE_TIMEOUT_US) {
-        init_xy();
+        init_xy_controller();
         // todo: prevent internal error going off after initialisation
         INTERNAL_ERROR(AP_InternalError::error_t::flow_of_control);
     }
