@@ -95,10 +95,10 @@ public:
     // altitude fence
     float get_avoidance_adjusted_climbrate(float target_rate);
 
-    const Vector3f& get_desired_velocity() {
+    const Vector3f& get_vel_desired() {
         // note that position control isn't used in every mode, so
         // this may return bogus data:
-        return pos_control->get_desired_velocity();
+        return pos_control->get_vel_desired();
     }
 
 protected:
@@ -550,7 +550,6 @@ public:
     void run() override;
 
 protected:
-    bool start(void) override;
     bool position_ok() override;
     float get_pilot_desired_climb_rate_cms(void) const override;
     void get_pilot_desired_rp_yrate_cd(float &roll_cd, float &pitch_cd, float &yaw_rate_cds) override;
