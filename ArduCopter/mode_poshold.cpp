@@ -580,7 +580,7 @@ void ModePosHold::update_wind_comp_estimate()
 
     // get position controller accel target
     //  To-Do: clean this up by using accessor in loiter controller (or move entire PosHold controller to a library shared with loiter)
-    const Vector3f& accel_target = pos_control->get_accel_target();
+    const Vector3f& accel_target = pos_control->get_accel_target_cmss();
 
     // update wind compensation in earth-frame lean angles
     if (is_zero(wind_comp_ef.x)) {

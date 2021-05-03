@@ -460,7 +460,7 @@ bool ModeZigZag::calculate_next_dest(Destination ab_dest, bool use_wpnav_alt, Ve
                 next_dest.z = copter.rangefinder_state.alt_cm_filt.get();
             }
         } else {
-            next_dest.z = pos_control->is_active_z() ? pos_control->get_pos_target_z() : curr_pos.z;
+            next_dest.z = pos_control->is_active_z() ? pos_control->get_pos_target_z_cm() : curr_pos.z;
         }
     }
 
@@ -513,7 +513,7 @@ bool ModeZigZag::calculate_side_dest(Vector3f& next_dest, bool& terrain_alt) con
             next_dest.z = copter.rangefinder_state.alt_cm_filt.get();
         }
     } else {
-        next_dest.z = pos_control->is_active_z() ? pos_control->get_pos_target_z() : curr_pos.z;
+        next_dest.z = pos_control->is_active_z() ? pos_control->get_pos_target_z_cm() : curr_pos.z;
     }
 
     return true;

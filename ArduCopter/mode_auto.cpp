@@ -975,7 +975,7 @@ void ModeAuto::loiter_to_alt_run()
     float target_climb_rate = sqrt_controller(
         -alt_error_cm,
         pos_control->get_pos_z_p().kP(),
-        pos_control->get_max_accel_z(),
+        pos_control->get_max_accel_z_cmss(),
         G_Dt);
 
     // get avoidance adjusted climb rate

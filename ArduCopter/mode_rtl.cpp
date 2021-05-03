@@ -410,8 +410,8 @@ void ModeRTL::build_path()
 {
     // origin point is our stopping point
     Vector3f stopping_point;
-    pos_control->get_stopping_point_xy(stopping_point);
-    pos_control->get_stopping_point_z(stopping_point);
+    pos_control->get_stopping_point_xy_cm(stopping_point);
+    pos_control->get_stopping_point_z_cm(stopping_point);
     rtl_path.origin_point = Location(stopping_point, Location::AltFrame::ABOVE_ORIGIN);
     rtl_path.origin_point.change_alt_frame(Location::AltFrame::ABOVE_HOME);
 

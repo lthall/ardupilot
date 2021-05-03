@@ -668,7 +668,7 @@ void ModeGuided::set_desired_velocity_with_accel_and_fence_limits(const Vector3f
 
 #if AC_AVOID_ENABLED
     // limit the velocity for obstacle/fence avoidance
-    copter.avoid.adjust_velocity(curr_vel_des, pos_control->get_pos_xy_p().kP(), pos_control->get_max_accel_xy(), pos_control->get_pos_z_p().kP(), pos_control->get_max_accel_z(), G_Dt);
+    copter.avoid.adjust_velocity(curr_vel_des, pos_control->get_pos_xy_p().kP(), pos_control->get_max_accel_xy_cmss(), pos_control->get_pos_z_p().kP(), pos_control->get_max_accel_z_cmss(), G_Dt);
 #endif
 
     // update position controller with new target
@@ -765,7 +765,7 @@ uint32_t ModeGuided::wp_distance() const
         return wp_nav->get_wp_distance_to_destination();
         break;
     case SubMode::PosVel:
-        return pos_control->get_pos_error_xy();
+        return pos_control->get_pos_error_xy_cm();
         break;
     default:
         return 0;
@@ -779,7 +779,7 @@ int32_t ModeGuided::wp_bearing() const
         return wp_nav->get_wp_bearing_to_destination();
         break;
     case SubMode::PosVel:
-        return pos_control->get_bearing_to_target();
+        return pos_control->get_bearing_to_target_cd();
         break;
     case SubMode::TakeOff:
     case SubMode::Velocity:
