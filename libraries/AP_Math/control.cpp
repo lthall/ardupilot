@@ -75,13 +75,15 @@ void update_pos_vel_accel_z(Vector3f& pos, Vector3f& vel, const Vector3f& accel,
 void update_vel_accel_xy(Vector2f& vel, const Vector2f& accel, float dt,
     bool limit, Vector2f vel_error)
 {
-    // move position and velocity forward by dt.
+    // increase velocity by acceleration * dt if it does not increase error when limited.
     Vector2f delta_vel = accel * dt;
 
     if(limit && !is_zero(vel_error.length_squared())) {
-        // remove component of delta_vel that would increase the velocity error
+        // zero delta_vel if it will increase the velocity error
         vel_error.normalize();
-        delta_vel -= delta_vel * (delta_vel*vel_error);
+        if (is_positive(delta_vel*vel_error)) {
+            delta_vel.zero();
+        }
     }
 
     vel += delta_vel;
@@ -107,9 +109,11 @@ void update_pos_vel_accel_xy(Vector2f& pos, Vector2f& vel, const Vector2f& accel
     Vector2f delta_pos = vel * dt + accel * 0.5f * sq(dt);
 
     if(limit && !is_zero(pos_error.length_squared())) {
-        // remove component of delta_pos that would increase the position error
+        // zero delta_vel if it will increase the velocity error
         pos_error.normalize();
-        delta_pos -= pos_error * (delta_pos*pos_error);
+        if (is_positive(delta_pos*pos_error)) {
+            delta_pos.zero();
+        }
     }
 
     pos += delta_pos;
