@@ -75,14 +75,14 @@ void ModeThrow::run()
         // initialise the demanded height to 3m above the throw height
         // we want to rapidly clear surrounding obstacles
         if (g2.throw_type == ThrowType::Drop) {
-            pos_control->set_pos_target_z(inertial_nav.get_altitude() - 100);
+            pos_control->set_pos_target_z_cm(inertial_nav.get_altitude() - 100);
         } else {
-            pos_control->set_pos_target_z(inertial_nav.get_altitude() + 300);
+            pos_control->set_pos_target_z_cm(inertial_nav.get_altitude() + 300);
         }
 
         // set the initial velocity of the height controller demand to the measured velocity if it is going up
         // if it is going down, set it to zero to enforce a very hard stop
-        pos_control->set_vel_desired_z(fmaxf(inertial_nav.get_velocity_z(),0.0f));
+        pos_control->set_vel_desired_z_cms(fmaxf(inertial_nav.get_velocity_z(),0.0f));
 
         // Set the auto_arm status to true to avoid a possible automatic disarm caused by selection of an auto mode with throttle at minimum
         copter.set_auto_armed(true);
@@ -296,12 +296,12 @@ bool ModeThrow::throw_attitude_good()
 bool ModeThrow::throw_height_good()
 {
     // Check that we are within 0.5m of the demanded height
-    return (pos_control->get_pos_error_z() < 50.0f);
+    return (pos_control->get_pos_error_z_cm() < 50.0f);
 }
 
 bool ModeThrow::throw_position_good()
 {
     // check that our horizontal position error is within 50cm
-    return (pos_control->get_pos_error_xy() < 50.0f);
+    return (pos_control->get_pos_error_xy_cm() < 50.0f);
 }
 #endif

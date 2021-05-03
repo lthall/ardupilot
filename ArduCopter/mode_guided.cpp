@@ -46,8 +46,8 @@ bool ModeGuided::init(bool ignore_checks)
     // start in position control mode
     vel_control_start();
     posvel_update_time_ms = millis();
-    pos_control->get_stopping_point_xy(guided_pos_target_cm);
-    pos_control->get_stopping_point_z(guided_pos_target_cm);
+    pos_control->get_stopping_point_xy_cm(guided_pos_target_cm);
+    pos_control->get_stopping_point_z_cm(guided_pos_target_cm);
     guided_vel_target_cms.zero();
     guided_accel_target_cmss.zero();
     send_notification = false;
@@ -300,7 +300,7 @@ bool ModeGuided::set_destination(const Location& dest_loc, bool use_yaw, float y
 
     // record velocity target
     if (!dest_loc.get_vector_from_origin_NEU(guided_pos_target_cm)) {
-        guided_pos_target_cm = pos_control->get_pos_target();
+        guided_pos_target_cm = pos_control->get_pos_target_cm();
     }
     guided_vel_target_cms.zero();
     guided_accel_target_cmss.zero();
@@ -446,7 +446,7 @@ void ModeGuided::takeoff_run()
 #endif
 
         // switch to position control mode but maintain current target
-        const Vector3f target = pos_control->get_pos_target();
+        const Vector3f target = pos_control->get_pos_target_cm();
         set_destination(target, false, 0, false, 0, false, false);
     }
 }
@@ -476,10 +476,10 @@ void ModeGuided::pos_control_run()
     motors->set_desired_spool_state(AP_Motors::DesiredSpoolState::THROTTLE_UNLIMITED);
 
     bool do_avoid = false;
-    guided_vel_target_cms = pos_control->get_vel_target();
+    guided_vel_target_cms = pos_control->get_vel_target_cms();
 #if AC_AVOID_ENABLED
     // limit the velocity for obstacle/fence avoidance
-    copter.avoid.adjust_velocity(guided_vel_target_cms, pos_control->get_pos_xy_p().kP(), pos_control->get_max_accel_xy(), pos_control->get_pos_z_p().kP(), pos_control->get_max_accel_z(), G_Dt);
+    copter.avoid.adjust_velocity(guided_vel_target_cms, pos_control->get_pos_xy_p().kP(), pos_control->get_max_accel_xy_cmss(), pos_control->get_pos_z_p().kP(), pos_control->get_max_accel_z_cmss(), G_Dt);
     do_avoid = copter.avoid.limits_active();
 #endif
 
@@ -558,13 +558,13 @@ void ModeGuided::velaccel_control_run()
 
 #if AC_AVOID_ENABLED
     // limit the velocity for obstacle/fence avoidance
-    copter.avoid.adjust_velocity(guided_vel_target_cms, pos_control->get_pos_xy_p().kP(), pos_control->get_max_accel_xy(), pos_control->get_pos_z_p().kP(), pos_control->get_max_accel_z(), G_Dt);
+    copter.avoid.adjust_velocity(guided_vel_target_cms, pos_control->get_pos_xy_p().kP(), pos_control->get_max_accel_xy_cmss(), pos_control->get_pos_z_p().kP(), pos_control->get_max_accel_z_cmss(), G_Dt);
 #endif
 
     // update position controller with new target
     if (stop_stabilize_vel_xy()) {
         // set the current commanded xy vel to the desired vel
-        pos_control->get_vel_desired_xy(guided_vel_target_cms);
+        pos_control->get_vel_desired_xy_cms(guided_vel_target_cms);
         pos_control->input_vel_accel_xy(guided_vel_target_cms, guided_accel_target_cmss);
         // set position and velocity errors to zero
         pos_control->stop_vel_xy_stabilisation();
@@ -631,7 +631,7 @@ void ModeGuided::posvelaccel_control_run()
     bool do_avoid = false;
 #if AC_AVOID_ENABLED
     // limit the velocity for obstacle/fence avoidance
-    copter.avoid.adjust_velocity(guided_vel_target_cms, pos_control->get_pos_xy_p().kP(), pos_control->get_max_accel_xy(), pos_control->get_pos_z_p().kP(), pos_control->get_max_accel_z(), G_Dt);
+    copter.avoid.adjust_velocity(guided_vel_target_cms, pos_control->get_pos_xy_p().kP(), pos_control->get_max_accel_xy_cmss(), pos_control->get_pos_z_p().kP(), pos_control->get_max_accel_z_cmss(), G_Dt);
     do_avoid = copter.avoid.limits_active();
 #endif
 
@@ -639,18 +639,18 @@ void ModeGuided::posvelaccel_control_run()
     if (do_avoid) {
         pos_control->input_vel_accel_xy(guided_vel_target_cms, guided_accel_target_cmss);
         pos_control->input_vel_accel_z(guided_vel_target_cms, guided_accel_target_cmss, false);
-        guided_pos_target_cm = pos_control->get_pos_target();
+        guided_pos_target_cm = pos_control->get_pos_target_cm();
     } else {
         if (stop_stabilize_vel_xy()) {
             // set the current commanded xy pos to the target pos and xy vel to the desired vel
-            pos_control->get_pos_target_xy(guided_pos_target_cm);
-            pos_control->get_vel_desired_xy(guided_vel_target_cms);
+            pos_control->get_pos_target_xy_cm(guided_pos_target_cm);
+            pos_control->get_vel_desired_xy_cms(guided_vel_target_cms);
             pos_control->input_pos_vel_accel_xy(guided_pos_target_cm, guided_vel_target_cms, Vector3f());
             // set position and velocity errors to zero
             pos_control->stop_vel_xy_stabilisation();
         } else if (stop_stabilize_pos_xy()) {
             // set the current commanded xy pos to the target pos
-            pos_control->get_pos_target_xy(guided_pos_target_cm);
+            pos_control->get_pos_target_xy_cm(guided_pos_target_cm);
             pos_control->input_pos_vel_accel_xy(guided_pos_target_cm, guided_vel_target_cms, Vector3f());
             // set position errors to zero
             pos_control->stop_pos_xy_stabilisation();
@@ -861,7 +861,7 @@ uint32_t ModeGuided::wp_distance() const
         return norm(guided_pos_target_cm.x - inertial_nav.get_position().x, guided_pos_target_cm.y - inertial_nav.get_position().y);
         break;
     case SubMode::PosVel:
-        return pos_control->get_pos_error_xy();
+        return pos_control->get_pos_error_xy_cm();
         break;
     default:
         return 0;
@@ -875,7 +875,7 @@ int32_t ModeGuided::wp_bearing() const
         return get_bearing_cd(inertial_nav.get_position(), guided_pos_target_cm);
         break;
     case SubMode::PosVel:
-        return pos_control->get_bearing_to_target();
+        return pos_control->get_bearing_to_target_cd();
         break;
     case SubMode::TakeOff:
     case SubMode::Velocity:
