@@ -118,7 +118,7 @@ void Sub::control_depth() {
 
         if (ap.at_bottom) {
             pos_control.init_z_controller();
-            pos_control.set_pos_target_z(inertial_nav.get_altitude() + 10.0f); // set target to 10 cm above bottom
+            pos_control.set_pos_target_z_cm(inertial_nav.get_altitude() + 10.0f); // set target to 10 cm above bottom
         }
 
         // Detects a zero derivative

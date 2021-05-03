@@ -113,8 +113,8 @@ void Sub::guided_angle_control_start()
     pos_control.init_z_controller();
 
     // initialise position and desired velocity
-    pos_control.set_pos_target_z(inertial_nav.get_altitude());
-    pos_control.set_vel_desired_z(inertial_nav.get_velocity_z());
+    pos_control.set_pos_target_z_cm(inertial_nav.get_altitude());
+    pos_control.set_vel_desired_z_cms(inertial_nav.get_velocity_z());
 
     // initialise targets
     guided_angle_state.update_time_ms = AP_HAL::millis();
@@ -198,7 +198,7 @@ void Sub::guided_set_velocity(const Vector3f& velocity)
     vel_update_time_ms = AP_HAL::millis();
 
     // set position controller velocity target
-    pos_control.set_vel_desired(velocity);
+    pos_control.set_vel_desired_cms(velocity);
 }
 
 // set guided mode posvel target
@@ -362,7 +362,7 @@ void Sub::guided_vel_control_run()
     // set velocity to zero if no updates received for 3 seconds
     uint32_t tnow = AP_HAL::millis();
     if (tnow - vel_update_time_ms > GUIDED_POSVEL_TIMEOUT_MS && !pos_control.get_vel_desired().is_zero()) {
-        pos_control.set_vel_desired(Vector3f(0,0,0));
+        pos_control.set_vel_desired_cms(Vector3f(0,0,0));
     }
 
     // call velocity controller which includes z axis controller
