@@ -63,10 +63,10 @@ public:
     float get_max_speed_xy() const { return _vel_max_xy_cms; }
 
     /// get_max_accel_xy - get the maximum horizontal acceleration in cm/s/s
-    float get_max_accel_xy() const { return _accel_max_xy_cms; }
+    float get_max_accel_xy() const { return _accel_max_xy_cmss; }
 
     // set the maximum horizontal position error that will be allowed in the horizontal plane
-    void set_pos_error_max_xy(float error_max) { _p_pos_xy.set_limits(error_max, _vel_max_xy_cms, _accel_max_xy_cms, 0.0f); }
+    void set_pos_error_max_xy(float error_max) { _p_pos_xy.set_limits(error_max, _vel_max_xy_cms, _accel_max_xy_cmss, 0.0f); }
     float get_pos_error_max_xy() { return _p_pos_xy.get_error_max(); }
 
     /// init_xy_controller - initialise the position controller to the current position, velocity, acceleration and attitude.
@@ -221,6 +221,9 @@ public:
     /// get_pos_target - get target as position vector (from home in cm)
     const Vector3f& get_pos_target() const { return _pos_target; }
 
+    /// get_vel_desired - get xy target as position vector (from home in cm)
+    void get_pos_target_xy(Vector3f &pos_target) {pos_target.x = _pos_target.x; pos_target.y = _pos_target.y; }
+
     /// set_pos_target_z - set altitude target in cm above home
     void set_pos_target_z(float pos_target) { _pos_target.z = pos_target; }
 
@@ -250,8 +253,11 @@ public:
     ///     when update_vel_controller_xyz is next called the position target is moved based on the desired velocity
     void set_vel_desired(const Vector3f &des_vel) { _vel_desired = des_vel; }
 
-    /// get_vel_desired - returns xy desired velocity (i.e. feed forward) in cm/s in lat and lon direction
+    /// get_vel_desired - returns desired velocity (i.e. feed forward) in cm/s in NEU
     const Vector3f& get_vel_desired() { return _vel_desired; }
+
+    /// get_vel_desired - returns xy desired velocity (i.e. feed forward) in cm/s in NEU
+    void get_vel_desired_xy(Vector3f &vel_desired) {vel_desired.x = _vel_desired.x; vel_desired.y = _vel_desired.y; }
 
     /// set_vel_desired_xy - sets desired velocity in cm/s in lat and lon directions
     ///     when update_xy_controller is next called the position target is moved based on the desired velocity and
@@ -309,6 +315,12 @@ public:
 
     // overrides the velocity process variable for one timestep
     void override_vehicle_velocity_xy(const Vector2f& vel_xy) { _vehicle_horiz_vel = vel_xy; _flags.vehicle_horiz_vel_override = true; }
+
+    /// stop_pos_xy_stabilisation
+    void stop_pos_xy_stabilisation();
+
+    /// stop_vel_xy_stabilisation
+    void stop_vel_xy_stabilisation();
 
     /// accessors for reporting
     const Vector3f& get_vel_target() const { return _vel_target; }
@@ -407,7 +419,7 @@ protected:
     float       _vel_max_up_cms;        // max climb rate in cm/s
     float       _vel_max_xy_cms;        // max horizontal speed in cm/s
     float       _accel_max_z_cms;       // max vertical acceleration in cm/s/s
-    float       _accel_max_xy_cms;      // max horizontal acceleration in cm/s/s
+    float       _accel_max_xy_cmss;     // max horizontal acceleration in cm/s/s
     float       _vel_z_control_ratio = 2.0f;    // confidence that we have control in the vertical axis
 
     // output from controller
