@@ -2499,21 +2499,21 @@ void QuadPlane::vtol_position_controller(void)
         } else {
             poscontrol.max_speed = target_speed;
         }
-        pos_control->set_vel_desired_xy(target_speed_xy.x*100,
+        pos_control->set_vel_desired_xy_cms(target_speed_xy.x*100,
                                              target_speed_xy.y*100);
 
         // reset position controller xy target to current position
         // because we only want velocity control (no position control)
         const Vector3f& curr_pos = inertial_nav.get_position();
         pos_control->set_pos_target_xy(curr_pos.x, curr_pos.y);
-        pos_control->set_accel_desired_xy(0.0f,0.0f);
+        pos_control->set_accel_desired_xy_cmss(0.0f,0.0f);
 
         // run horizontal velocity controller
         pos_control->update_xy_controller();
 
         // nav roll and pitch are controller by position controller
-        plane.nav_roll_cd = pos_control->get_roll();
-        plane.nav_pitch_cd = pos_control->get_pitch();
+        plane.nav_roll_cd = pos_control->get_roll_cd();
+        plane.nav_pitch_cd = pos_control->get_pitch_cd();
 
         /*
           limit the pitch down with an expanding envelope. This
@@ -2567,8 +2567,8 @@ void QuadPlane::vtol_position_controller(void)
     case QPOS_LAND_FINAL:
 
         // set position controller desired velocity and acceleration to zero
-        pos_control->set_vel_desired_xy(0.0f,0.0f);
-        pos_control->set_accel_desired_xy(0.0f,0.0f);
+        pos_control->set_vel_desired_xy_cms(0.0f,0.0f);
+        pos_control->set_accel_desired_xy_cmss(0.0f,0.0f);
 
         // set position control target and update
         if (should_relax()) {
@@ -2579,8 +2579,8 @@ void QuadPlane::vtol_position_controller(void)
         pos_control->update_xy_controller();
 
         // nav roll and pitch are controller by position controller
-        plane.nav_roll_cd = pos_control->get_roll();
-        plane.nav_pitch_cd = pos_control->get_pitch();
+        plane.nav_roll_cd = pos_control->get_roll_cd();
+        plane.nav_pitch_cd = pos_control->get_pitch_cd();
 
         // call attitude controller
         attitude_control->input_euler_angle_roll_pitch_euler_rate_yaw(plane.nav_roll_cd,
@@ -2693,16 +2693,16 @@ void QuadPlane::takeoff_controller(void)
     setup_target_position();
 
     // set position controller desired velocity and acceleration to zero
-    pos_control->set_vel_desired_xy(0.0f,0.0f);
-    pos_control->set_accel_desired_xy(0.0f,0.0f);
+    pos_control->set_vel_desired_xy_cms(0.0f,0.0f);
+    pos_control->set_accel_desired_xy_cmss(0.0f,0.0f);
 
     // set position control target and update
     pos_control->set_pos_target_xy(poscontrol.target.x, poscontrol.target.y);
     pos_control->update_xy_controller();
 
     // nav roll and pitch are controller by position controller
-    plane.nav_roll_cd = pos_control->get_roll();
-    plane.nav_pitch_cd = pos_control->get_pitch();
+    plane.nav_roll_cd = pos_control->get_roll_cd();
+    plane.nav_pitch_cd = pos_control->get_pitch_cd();
 
     attitude_control->input_euler_angle_roll_pitch_euler_rate_yaw(plane.nav_roll_cd,
                                                                   plane.nav_pitch_cd,
@@ -2803,7 +2803,7 @@ void QuadPlane::init_qrtl(void)
     poscontrol.slow_descent = (plane.current_loc.alt > plane.next_WP_loc.alt);
     poscontrol.state = QPOS_POSITION1;
     poscontrol.speed_scale = 0;
-    pos_control->set_accel_desired_xy(0.0f, 0.0f);
+    pos_control->set_accel_desired_xy_cmss(0.0f, 0.0f);
     pos_control->init_xy_controller();
 }
 
@@ -3099,8 +3099,8 @@ void QuadPlane::Log_Write_QControl_Tuning()
     float des_alt_m = 0.0f;
     int16_t target_climb_rate_cms = 0;
     if (plane.control_mode != &plane.mode_qstabilize) {
-        des_alt_m = pos_control->get_pos_target_z() / 100.0f;
-        target_climb_rate_cms = pos_control->get_vel_target_z();
+        des_alt_m = pos_control->get_pos_target_z_cm() / 100.0f;
+        target_climb_rate_cms = pos_control->get_vel_target_z_cms();
     }
 
     struct log_QControl_Tuning pkt = {
@@ -3355,7 +3355,7 @@ bool QuadPlane::guided_mode_enabled(void)
  */
 void QuadPlane::set_alt_target_current(void)
 {
-    pos_control->set_pos_target_z(inertial_nav.get_altitude());
+    pos_control->set_pos_target_z_cm(inertial_nav.get_altitude());
 }
 
 /*
@@ -3366,7 +3366,7 @@ void QuadPlane::adjust_alt_target(float altitude_cm)
     float current_alt = inertial_nav.get_altitude();
     // don't let it get beyond 50cm from current altitude
     float target_cm = constrain_float(altitude_cm, current_alt-50, current_alt+50);
-    pos_control->set_pos_target_z(target_cm);
+    pos_control->set_pos_target_z_cm(target_cm);
 }
 
 // user initiated takeoff for guided mode
