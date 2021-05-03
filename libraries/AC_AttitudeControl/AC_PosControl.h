@@ -31,7 +31,7 @@
 #define POSCONTROL_THROTTLE_CUTOFF_FREQ         2.0f    // low-pass filter on accel error (unit: hz)
 #define POSCONTROL_ACCEL_FILTER_HZ              2.0f    // low-pass filter on acceleration (unit: hz)
 
-#define POSCONTROL_Z_SHAPER_TC                  0.25f    // low-pass filter on acceleration (unit: hz)
+#define POSCONTROL_DEFAULT_SHAPER_TC           0.25f    // default time constant of the kinimatic path generation in seconds
 
 #define POSCONTROL_OVERSPEED_GAIN_Z             2.0f    // gain controlling rate at which z-axis speed is brought back within SPEED_UP and SPEED_DOWN range
 
@@ -59,15 +59,15 @@ public:
     /// set_max_speed_accel_xy - set the maximum horizontal speed in cm/s and acceleration in cm/s/s
     void set_max_speed_accel_xy(float speed_cms, float accel_cmss);
 
-    /// get_max_speed_xy - get the maximum horizontal speed in cm/s
-    float get_max_speed_xy() const { return _vel_max_xy_cms; }
+    /// get_max_speed_xy_cms - get the maximum horizontal speed in cm/s
+    float get_max_speed_xy_cms() const { return _vel_max_xy_cms; }
 
-    /// get_max_accel_xy - get the maximum horizontal acceleration in cm/s/s
-    float get_max_accel_xy() const { return _accel_max_xy_cmss; }
+    /// get_max_accel_xy_cmss - get the maximum horizontal acceleration in cm/s/s
+    float get_max_accel_xy_cmss() const { return _accel_max_xy_cmss; }
 
     // set the maximum horizontal position error that will be allowed in the horizontal plane
-    void set_pos_error_max_xy(float error_max) { _p_pos_xy.set_limits(error_max, _vel_max_xy_cms, _accel_max_xy_cmss, 0.0f); }
-    float get_pos_error_max_xy() { return _p_pos_xy.get_error_max(); }
+    void set_pos_error_max_xy_cm(float error_max) { _p_pos_xy.set_limits(error_max, _vel_max_xy_cms, _accel_max_xy_cmss, 0.0f); }
+    float get_pos_error_max_xy_cm() { return _p_pos_xy.get_error_max(); }
 
     /// init_xy_controller - initialise the position controller to the current position, velocity, acceleration and attitude.
     ///     This function is the default initialisation for any position control that provides position, velocity and acceleration.
@@ -75,38 +75,37 @@ public:
 
     /// init_xy_controller_stopping_point - initialise the position controller to the stopping point with zero velocity and acceleration.
     ///     This function should be used when the expected kinimatic path assumes a stationary initial condition but does not specify a specific starting position.
-    ///     The starting position can be retrieved by getting the position target using get_pos_target() after calling this function.
+    ///     The starting position can be retrieved by getting the position target using get_pos_target_cm() after calling this function.
     void init_xy_controller_stopping_point();
 
     // relax_velocity_controller_xy - initialise the position controller to the current position and velocity with decaying acceleration.
     ///     This function decays the output acceleration by 95% every half second to achieve a smooth transition to zero requested acceleration.
     void relax_velocity_controller_xy();
 
-    /// input_vel_xy calculate a jerk limited path from the current position, velocity and acceleration to an input velocity.
+    /// input_vel_accel_xy calculate a jerk limited path from the current position, velocity and acceleration to an input velocity and acceleration.
     ///     The function takes the current position, velocity, and acceleration and calculates the required jerk limited adjustment to the acceleration for the next time dt.
-    ///     The kinematic path is constrained by:
-    ///         accel_max : maximum acceleration
-    ///         tc : time constant
+    ///     The kinematic path is constrained by the maximum acceleration and time constant set using the function set_max_speed_accel_xy and time constant.
     ///     The time constant defines the acceleration error decay in the kinematic path as the system approaches constant acceleration.
     ///     The time constant also defines the time taken to achieve the maximum acceleration.
-    ///     The time constant must be positive.
     ///     The function alters the input velocity to be the velocity that the system could reach zero acceleration in the minimum time.
     void input_vel_accel_xy(Vector3f& vel, const Vector3f& accel);
 
-    /// input_pos_vel_xy calculate a jerk limited path from the current position, velocity and acceleration to an input position and velocity.
+    /// input_vel_accel_xy calculate a jerk limited path from the current position, velocity and acceleration to an input position velocity and acceleration.
     ///     The function takes the current position, velocity, and acceleration and calculates the required jerk limited adjustment to the acceleration for the next time dt.
-    ///     The kinematic path is constrained by:
-    ///         vel_max : maximum velocity
-    ///         accel_max : maximum acceleration
-    ///         tc : time constant
+    ///     The kinematic path is constrained by the maximum acceleration and time constant set using the function set_max_speed_accel_xy and time constant.
     ///     The time constant defines the acceleration error decay in the kinematic path as the system approaches constant acceleration.
     ///     The time constant also defines the time taken to achieve the maximum acceleration.
-    ///     The time constant must be positive.
-    ///     The function alters the input position to be the closest position that the system could reach zero acceleration in the minimum time.
+    ///     The function alters the input velocity to be the velocity that the system could reach zero acceleration in the minimum time.
     void input_pos_vel_accel_xy(Vector3f& pos, Vector3f& vel, const Vector3f& accel);
 
     // is_active_xy - returns true if the xy position controller has been run in the previous 5 loop times
     bool is_active_xy() const;
+
+    /// stop_pos_xy_stabilisation
+    void stop_pos_xy_stabilisation();
+
+    /// stop_vel_xy_stabilisation
+    void stop_vel_xy_stabilisation();
 
     /// update_xy_controller - runs the horizontal position controller correcting position, velocity and acceleration errors.
     ///     Position and velocity errors are converted to velocity and acceleration targets using PID objects
@@ -122,27 +121,21 @@ public:
     ///     speed_down can be positive or negative but will always be interpreted as a descent speed
     void set_max_speed_accel_z(float speed_down, float speed_up, float accel_cmss);
 
-    /// get_max_speed_up_z - get the maximum vertical speed up in cm/s
-    float get_max_speed_up_z() const { return _vel_max_up_cms; }
-
-    /// get_max_speed_down_z - get the maximum vertical speed down in cm/s
-    float get_max_speed_down_z() const { return _vel_max_down_cms; }
-
-    /// get_max_accel_z - get the maximum vertical acceleration in cm/s/s
-    float get_max_accel_z() const { return _accel_max_z_cms; }
+    /// get_max_accel_z_cmss - get the maximum vertical acceleration in cm/s/s
+    float get_max_accel_z_cmss() const { return _accel_max_z_cmss; }
 
     // set_pos_error_max_z - set the maximum vertical position error that will be allowed
-    void set_pos_error_max_z(float error_min, float error_max) { _p_pos_z.set_limits(error_min, error_max, -fabsf(_vel_max_down_cms), _vel_max_up_cms, _accel_max_z_cms, 0.0f); }
+    void set_pos_error_max_z(float error_min, float error_max) { _p_pos_z.set_limits(error_min, error_max, -fabsf(_vel_max_down_cms), _vel_max_up_cms, _accel_max_z_cmss, 0.0f); }
 
-    // get_pos_error_max_z - get the maximum vertical position error that will be allowed
-    float get_pos_error_max_z() { return _p_pos_z.get_error_max(); }
-    float get_pos_error_min_z() { return _p_pos_z.get_error_min(); }
+    // get_pos_error_max_z_cm - get the maximum vertical position error that will be allowed
+    float get_pos_error_max_z_cm() { return _p_pos_z.get_error_max(); }
+    float get_pos_error_min_z_cm() { return _p_pos_z.get_error_min(); }
 
-    /// get_max_speed_up - accessors for current maximum up speed in cm/s
-    float get_max_speed_up() const { return _vel_max_up_cms; }
+    /// get_max_speed_up_cms - accessors for current maximum up speed in cm/s
+    float get_max_speed_up_cms() const { return _vel_max_up_cms; }
 
-    /// get_max_speed_down - accessors for current maximum down speed in cm/s.  Will be a negative number
-    float get_max_speed_down() const { return _vel_max_down_cms; }
+    /// get_max_speed_down_cms - accessors for current maximum down speed in cm/s.  Will be a negative number
+    float get_max_speed_down_cms() const { return _vel_max_down_cms; }
 
     /// init_z_controller - initialise the position controller to the current position, velocity, acceleration and attitude.
     ///     This function is the default initialisation for any position control that provides position, velocity and acceleration.
@@ -155,38 +148,31 @@ public:
 
     /// init_z_controller_stopping_point - initialise the position controller to the stopping point with zero velocity and acceleration.
     ///     This function should be used when the expected kinimatic path assumes a stationary initial condition but does not specify a specific starting position.
-    ///     The starting position can be retrieved by getting the position target using get_pos_target() after calling this function.
+    ///     The starting position can be retrieved by getting the position target using get_pos_target_cm() after calling this function.
     void init_z_controller_stopping_point();
 
     // relax_z_controller - initialise the position controller to the current position and velocity with decaying acceleration.
     ///     This function decays the output acceleration by 95% every half second to achieve a smooth transition to zero requested acceleration.
     void relax_z_controller(float throttle_setting);
 
-    /// input_vel_z calculate a jerk limited path from the current position, velocity and acceleration to an input velocity.
+    /// input_vel_accel_z calculate a jerk limited path from the current position, velocity and acceleration to an input velocity and acceleration.
     ///     The function takes the current position, velocity, and acceleration and calculates the required jerk limited adjustment to the acceleration for the next time dt.
-    ///     The kinematic path is constrained by:
-    ///         accel_max : maximum acceleration
-    ///         tc : time constant
+    ///     The kinematic path is constrained by the maximum acceleration and time constant set using the function set_max_speed_accel_z and time constant.
     ///     The time constant defines the acceleration error decay in the kinematic path as the system approaches constant acceleration.
     ///     The time constant also defines the time taken to achieve the maximum acceleration.
-    ///     The time constant must be positive.
-    ///     The function alters the input velocity to be the velocity that the system could reach zero acceleration in the minimum time.
+    ///     The function alters the input velocitiy to be the velocity that the system could reach zero acceleration in the minimum time.
     virtual void input_vel_accel_z(Vector3f& vel, const Vector3f& accel, bool force_descend);
 
     /// set_alt_target_from_climb_rate_ff - adjusts target up or down using a climb rate in cm/s
     ///     using the default position control kinimatic path.
-    void set_alt_target_from_climb_rate(const float& vel, bool force_descend);
+    void set_alt_target_from_climb_rate(const float vel, bool force_descend);
 
-    /// input_pos_vel_z calculate a jerk limited path from the current position, velocity and acceleration to an input position and velocity.
+    /// input_vel_accel_xy calculate a jerk limited path from the current position, velocity and acceleration to an input position velocity and acceleration.
     ///     The function takes the current position, velocity, and acceleration and calculates the required jerk limited adjustment to the acceleration for the next time dt.
-    ///     The kinematic path is constrained by:
-    ///         vel_up_max, vel_down_max : maximum velocity
-    ///         accel_max : maximum acceleration
-    ///         tc : time constant
+    ///     The kinematic path is constrained by the maximum acceleration and time constant set using the function set_max_speed_accel_z and time constant.
     ///     The time constant defines the acceleration error decay in the kinematic path as the system approaches constant acceleration.
     ///     The time constant also defines the time taken to achieve the maximum acceleration.
-    ///     The time constant must be positive.
-    ///     The function alters the input position to be the closest position that the system could reach zero acceleration in the minimum time.
+    ///     The function alters the input velocity to be the velocity that the system could reach zero acceleration in the minimum time.
     void input_pos_vel_accel_z(Vector3f& pos, Vector3f& vel, const Vector3f& accel);
 
     /// set_alt_target_with_slew - adjusts target up or down using a commanded altitude in cm
@@ -208,7 +194,7 @@ public:
     /// Assessors
     ///
 
-    /// set commanded position, velocity and acceleration inputs when the path is created externally.
+    /// set commanded position (cm), velocity (cm/s) and acceleration (cm/s/s) inputs when the path is created externally.
     void set_pos_vel_accel(const Vector3f& pos, const Vector3f& vel, const Vector3f& accel);
     void set_pos_vel_accel_xy(const Vector2f& pos, const Vector2f& vel, const Vector2f& accel);
 
@@ -218,58 +204,58 @@ public:
     /// set_pos_target_xy in cm from home
     void set_pos_target_xy(float pos_x, float pos_y) {_pos_target.x = pos_x; _pos_target.y = pos_y; }
 
-    /// get_pos_target - get target as position vector (from home in cm)
-    const Vector3f& get_pos_target() const { return _pos_target; }
+    /// get_pos_target_cm - get target as position vector (from home in cm)
+    const Vector3f& get_pos_target_cm() const { return _pos_target; }
 
     /// get_vel_desired - get xy target as position vector (from home in cm)
-    void get_pos_target_xy(Vector3f &pos_target) {pos_target.x = _pos_target.x; pos_target.y = _pos_target.y; }
+    void get_pos_target_xy_cm(Vector3f &pos_target) {pos_target.x = _pos_target.x; pos_target.y = _pos_target.y; }
 
-    /// set_pos_target_z - set altitude target in cm above home
-    void set_pos_target_z(float pos_target) { _pos_target.z = pos_target; }
+    /// set_pos_target_z_cm - set altitude target in cm above home
+    void set_pos_target_z_cm(float pos_target) { _pos_target.z = pos_target; }
 
-    /// get_pos_target_z - get desired altitude (in cm above home)
+    /// get_pos_target_z_cm - get desired altitude (in cm above home)
     // This should be used only for logging and telemetry
-    float get_pos_target_z() const { return _pos_target.z; }
+    float get_pos_target_z_cm() const { return _pos_target.z; }
 
-    /// get_stopping_point_xy - calculates stopping point based on current position, velocity, vehicle acceleration
-    void get_stopping_point_xy(Vector3f &stopping_point) const;
+    /// get_stopping_point_xy_cm - calculates stopping point in NEU cm based on current position, velocity, vehicle acceleration
+    void get_stopping_point_xy_cm(Vector3f &stopping_point) const;
 
-    /// get_stopping_point_z - calculates stopping point based on current position, velocity, vehicle acceleration
-    void get_stopping_point_z(Vector3f& stopping_point) const;
+    /// get_stopping_point_z_cm - calculates stopping point in NEU cm based on current position, velocity, vehicle acceleration
+    void get_stopping_point_z_cm(Vector3f& stopping_point) const;
 
-    /// get_pos_error - get position error vector between the current and target position
-    const Vector3f get_pos_error() const { return _pos_target - _inav.get_position(); }
+    /// get_pos_error_cm - get position error vector between the current and target position
+    const Vector3f get_pos_error_cm() const { return _pos_target - _inav.get_position(); }
 
-    /// get_pos_error_xy - get the length of the position error vector in the xy plane
-    float get_pos_error_xy() const { return norm(_pos_target.x - _inav.get_position().x, _pos_target.y - _inav.get_position().y); }
+    /// get_pos_error_xy_cm - get the length of the position error vector in the xy plane
+    float get_pos_error_xy_cm() const { return norm(_pos_target.x - _inav.get_position().x, _pos_target.y - _inav.get_position().y); }
 
-    /// get_alt_error - returns altitude error in cm
-    float get_pos_error_z() const { return (_pos_target.z - _inav.get_position().z); }
+    /// get_pos_error_z_cm - returns altitude error in cm
+    float get_pos_error_z_cm() const { return (_pos_target.z - _inav.get_position().z); }
 
 
     /// Velocity
 
-    /// set_vel_desired - sets desired velocity in cm/s in all 3 axis
+    /// set_vel_desired_cms - sets desired velocity in cm/s in all 3 axis
     ///     when update_vel_controller_xyz is next called the position target is moved based on the desired velocity
-    void set_vel_desired(const Vector3f &des_vel) { _vel_desired = des_vel; }
+    void set_vel_desired_cms(const Vector3f &des_vel) { _vel_desired = des_vel; }
 
     /// get_vel_desired - returns desired velocity (i.e. feed forward) in cm/s in NEU
     const Vector3f& get_vel_desired() { return _vel_desired; }
 
     /// get_vel_desired - returns xy desired velocity (i.e. feed forward) in cm/s in NEU
-    void get_vel_desired_xy(Vector3f &vel_desired) {vel_desired.x = _vel_desired.x; vel_desired.y = _vel_desired.y; }
+    void get_vel_desired_xy_cms(Vector3f &vel_desired) {vel_desired.x = _vel_desired.x; vel_desired.y = _vel_desired.y; }
 
-    /// set_vel_desired_xy - sets desired velocity in cm/s in lat and lon directions
+    /// set_vel_desired_xy_cms - sets desired velocity in cm/s in lat and lon directions
     ///     when update_xy_controller is next called the position target is moved based on the desired velocity and
     ///     the desired velocities are fed forward into the rate_to_accel step
-    void set_vel_desired_xy(float vel_x, float vel_y) {_vel_desired.x = vel_x; _vel_desired.y = vel_y; }
+    void set_vel_desired_xy_cms(float vel_x, float vel_y) {_vel_desired.x = vel_x; _vel_desired.y = vel_y; }
 
-    /// set_vel_desired_z - sets desired velocity in cm/s in z axis
-    void set_vel_desired_z(float vel_z_cms) {_vel_desired.z = vel_z_cms;}
+    /// set_vel_desired_z_cms - sets desired velocity in cm/s in z axis
+    void set_vel_desired_z_cms(float vel_z_cms) {_vel_desired.z = vel_z_cms;}
 
-    /// get_vel_target_z - returns current vertical speed in cm/s
+    /// get_vel_target_z_cms - returns current vertical speed in cm/s
     // This should be used only for logging and telemetry
-    float get_vel_target_z() const { return _vel_target.z; }
+    float get_vel_target_z_cms() const { return _vel_target.z; }
 
     /// get_lean_angle_max_cd - returns the maximum lean angle the autopilot may request
     float get_lean_angle_max_cd() const;
@@ -277,15 +263,15 @@ public:
 
     /// Acceleration
 
-    // set desired acceleration in cm/s in xy axis
-    void set_accel_desired_xy(float accel_lat_cms, float accel_lon_cms) { _accel_desired.x = accel_lat_cms; _accel_desired.y = accel_lon_cms; }
+    // set_accel_desired_xy_cmss set desired acceleration in cm/s in xy axis
+    void set_accel_desired_xy_cmss(float accel_x_cms, float accel_y_cms) { _accel_desired.x = accel_x_cms; _accel_desired.y = accel_y_cms; }
 
 
     /// Outputs
 
     /// get desired roll and pitch to be passed to the attitude controller
-    float get_roll() const { return _roll_target; }
-    float get_pitch() const { return _pitch_target; }
+    float get_roll_cd() const { return _roll_target; }
+    float get_pitch_cd() const { return _pitch_target; }
 
     /// get desired yaw to be passed to the attitude controller
     float get_yaw_cd() const { return _yaw_target; }
@@ -296,8 +282,8 @@ public:
     /// get desired roll and pitch to be passed to the attitude controller
     Vector3f get_thrust_vector() const;
 
-    /// get_bearing_to_target - get bearing to target position in centi-degrees
-    int32_t get_bearing_to_target() const;
+    /// get_bearing_to_target_cd - get bearing to target position in centi-degrees
+    int32_t get_bearing_to_target_cd() const;
 
 
     /// Other
@@ -316,15 +302,9 @@ public:
     // overrides the velocity process variable for one timestep
     void override_vehicle_velocity_xy(const Vector2f& vel_xy) { _vehicle_horiz_vel = vel_xy; _flags.vehicle_horiz_vel_override = true; }
 
-    /// stop_pos_xy_stabilisation
-    void stop_pos_xy_stabilisation();
-
-    /// stop_vel_xy_stabilisation
-    void stop_vel_xy_stabilisation();
-
     /// accessors for reporting
-    const Vector3f& get_vel_target() const { return _vel_target; }
-    const Vector3f& get_accel_target() const { return _accel_target; }
+    const Vector3f& get_vel_target_cms() const { return _vel_target; }
+    const Vector3f& get_accel_target_cmss() const { return _accel_target; }
 
     // lean_angles_to_accel - convert roll, pitch lean angles to lat/lon frame accelerations in cm/s/s
     Vector3f lean_angles_to_accel(const Vector3f& att_target_euler) const;
@@ -404,7 +384,8 @@ protected:
 
     // parameters
     AP_Float        _lean_angle_max;    // Maximum autopilot commanded angle (in degrees). Set to zero for Angle Max
-    AP_Float        _shaping_tc;        // This is the time constant used to determine how quickly the aircraft varies the acceleration target
+    AP_Float        _shaping_tc_xy_s;   // time constant of the xy kinimatic path generation in seconds used to determine how quickly the aircraft varies the acceleration target
+    AP_Float        _shaping_tc_z_s;    // time constant of the z kinimatic path generation in seconds used to determine how quickly the aircraft varies the acceleration target
     AC_P_2D         _p_pos_xy;          // XY axis position controller to convert distance error to desired velocity
     AC_P_1D         _p_pos_z;           // Z axis position controller to convert altitude error to desired climb rate
     AC_PID_2D       _pid_vel_xy;        // XY axis velocity controller to convert velocity error to desired acceleration
@@ -415,11 +396,13 @@ protected:
     float       _dt;                    // time difference (in seconds) between calls from the main program
     uint64_t    _last_update_xy_us;     // system time (in microseconds) since last update_xy_controller call
     uint64_t    _last_update_z_us;      // system time (in microseconds) since last update_z_controller call
-    float       _vel_max_down_cms;      // max descent rate in cm/s
-    float       _vel_max_up_cms;        // max climb rate in cm/s
+    float        _tc_xy_s;              // time constant of the xy kinimatic path generation in seconds used to determine how quickly the aircraft varies the acceleration target
+    float        _tc_z_s;               // time constant of the z kinimatic path generation in seconds used to determine how quickly the aircraft varies the acceleration target
     float       _vel_max_xy_cms;        // max horizontal speed in cm/s
-    float       _accel_max_z_cms;       // max vertical acceleration in cm/s/s
+    float       _vel_max_up_cms;        // max climb rate in cm/s
+    float       _vel_max_down_cms;      // max descent rate in cm/s
     float       _accel_max_xy_cmss;     // max horizontal acceleration in cm/s/s
+    float       _accel_max_z_cmss;      // max vertical acceleration in cm/s/s
     float       _vel_z_control_ratio = 2.0f;    // confidence that we have control in the vertical axis
 
     // output from controller
@@ -429,13 +412,13 @@ protected:
     float       _yaw_rate_target;       // desired yaw rate in centi-degrees per second calculated by position controller
 
     // position controller internal variables
-    Vector3f    _pos_target;            // target location in cm from home
-    Vector3f    _vel_desired;           // desired velocity in cm/s
-    Vector3f    _vel_target;            // velocity target in cm/s calculated by pos_to_rate step
+    Vector3f    _pos_target;            // target location in NEU cm from home
+    Vector3f    _vel_desired;           // desired velocity in NEU cm/s
+    Vector3f    _vel_target;            // velocity target in NEU cm/s calculated by pos_to_rate step
     Vector3f    _vel_error;             // error between desired and actual acceleration in cm/s
-    Vector3f    _accel_desired;         // desired acceleration in cm/s/s (feed forward)
-    Vector3f    _accel_target;          // acceleration target in cm/s/s
-    Vector3f    _accel_error;           // acceleration error in cm/s/s
+    Vector3f    _accel_desired;         // desired acceleration in NEU cm/s/s (feed forward)
+    Vector3f    _accel_target;          // acceleration target in NEU cm/s/s
+    Vector3f    _accel_error;           // acceleration error in NEU cm/s/s
     Vector2f    _vehicle_horiz_vel;     // velocity to use if _flags.vehicle_horiz_vel_override is set
     LowPassFilterFloat _vel_error_filter;   // low-pass-filter on z-axis velocity error
 

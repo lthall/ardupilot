@@ -25,12 +25,12 @@ void AC_PosControl_Sub::input_vel_accel_z(Vector3f& vel, const Vector3f& accel, 
     // limit desired velocity to prevent breeching altitude limits
     if (_alt_min < 0 && _alt_min < _alt_max && _alt_max < 100 && _pos_target.z < _alt_min) {
         vel.z = constrain_float(vel.z,
-            sqrt_controller(_alt_min-_pos_target.z, 0.0f, _accel_max_z_cms, 0.0f),
-            sqrt_controller(_alt_max-_pos_target.z, 0.0f, _accel_max_z_cms, 0.0f));
+            sqrt_controller(_alt_min-_pos_target.z, 0.0f, _accel_max_z_cmss, 0.0f),
+            sqrt_controller(_alt_max-_pos_target.z, 0.0f, _accel_max_z_cmss, 0.0f));
     }
 
     // calculated increased maximum acceleration if over speed
-    float accel_z_cms = _accel_max_z_cms;
+    float accel_z_cms = _accel_max_z_cmss;
     if (_vel_desired.z < _vel_max_down_cms && !is_zero(_vel_max_down_cms)) {
         accel_z_cms *= POSCONTROL_OVERSPEED_GAIN_Z * _vel_desired.z / _vel_max_down_cms;
     }
@@ -52,7 +52,7 @@ void AC_PosControl_Sub::input_vel_accel_z(Vector3f& vel, const Vector3f& accel, 
         _vel_desired.z, _accel_desired.z,
         _vel_max_down_cms, _vel_max_up_cms,
         -accel_z_cms, accel_z_cms,
-        POSCONTROL_Z_SHAPER_TC, _dt);
+        _tc_z_s, _dt);
 
     update_vel_accel_z(vel, accel, _dt, false, false, 0.0f);
 }
