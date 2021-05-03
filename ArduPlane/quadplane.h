@@ -56,7 +56,7 @@ public:
     bool init_mode(void);
     bool setup(void);
 
-    void vtol_position_xy(Vector3f &pos, const Vector3f &vel, float accel_xy_limit_cmss);
+    void vtol_position_xy(Vector3f &pos, float accel_xy_limit_cmss);
     void vtol_position_controller(void);
     void setup_target_position(void);
     void takeoff_controller(void);
@@ -605,9 +605,6 @@ private:
 
     void afs_terminate(void);
     bool guided_mode_enabled(void);
-
-    // set altitude target to current altitude
-    void set_alt_target_current(void);
 
     // additional options
     AP_Int32 options;

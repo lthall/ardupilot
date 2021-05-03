@@ -640,7 +640,7 @@ bool Plane::get_wp_distance_m(float &distance) const
 // return true if we should run the speed_height controller
 bool Plane::speed_height_controller_active(void)
 {
-    if (!auto_throttle_mode) {
+    if (!plane.control_mode->does_auto_throttle()) {
         return false;
     }
     if (quadplane.in_vtol_land_approach() &&

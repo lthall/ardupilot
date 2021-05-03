@@ -4,10 +4,6 @@
 bool ModeQRTL::_enter()
 {
     plane.mode_qstabilize._enter();
-    // QRTL starts off in QPOS_APPROACH which does use auto throttle
-    // and navigation
-    plane.auto_throttle_mode = true;
-    plane.auto_navigation_mode = true;
     return true;
 }
 
