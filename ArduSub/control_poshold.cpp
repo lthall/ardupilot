@@ -13,12 +13,12 @@ bool Sub::poshold_init()
     if (!position_ok()) {
         return false;
     }
-    pos_control.init_xy_controller_stopping_point();
-
-    // initialize vertical speeds and acceleration
+    // initialize vertical maximum speeds and acceleration
     pos_control.set_max_speed_accel_z(-get_pilot_speed_dn(), g.pilot_speed_up, g.pilot_accel_z);
+    pos_control.set_max_speed_accel_xy(wp_nav.get_default_speed_xy(), wp_nav.get_wp_acceleration());
 
     // initialise position and desired velocity
+    pos_control.init_xy_controller_stopping_point();
     pos_control.init_z_controller();
 
     // Stop all thrusters
@@ -64,16 +64,17 @@ void Sub::poshold_run()
         if (fabsf(pilot_lateral) > 0.1 || fabsf(pilot_forward) > 0.1) {
             pos_control.init_xy_controller_stopping_point();
         }
-        translate_pos_control_rp(lateral_out, forward_out);
         pos_control.update_xy_controller();
+        translate_pos_control_rp(lateral_out, forward_out);
     } else {
         pos_control.init_xy_controller_stopping_point();
     }
+
     motors.set_forward(forward_out + pilot_forward);
     motors.set_lateral(lateral_out + pilot_lateral);
+
     /////////////////////
     // Update attitude //
-
     // get pilot's desired yaw rate
     float target_yaw_rate = get_pilot_desired_yaw_rate(channel_yaw->get_control_in());
 
