@@ -185,14 +185,14 @@ void AC_WPNav::set_speed_xy(float speed_cms)
 /// set current target climb rate during wp navigation
 void AC_WPNav::set_speed_up(float speed_up_cms)
 {
-    _pos_control.set_max_speed_accel_z(_pos_control.get_max_speed_down(), speed_up_cms, _pos_control.get_max_accel_z());
+    _pos_control.set_max_speed_accel_z(_pos_control.get_max_speed_down_cms(), speed_up_cms, _pos_control.get_max_accel_z_cmss());
     update_track_with_speed_accel_limits();
 }
 
 /// set current target descent rate during wp navigation
 void AC_WPNav::set_speed_down(float speed_down_cms)
 {
-    _pos_control.set_max_speed_accel_z(speed_down_cms, _pos_control.get_max_speed_up(), _pos_control.get_max_accel_z());
+    _pos_control.set_max_speed_accel_z(speed_down_cms, _pos_control.get_max_speed_up_cms(), _pos_control.get_max_accel_z_cmss());
     update_track_with_speed_accel_limits();
 }
 
@@ -298,7 +298,7 @@ bool AC_WPNav::set_wp_destination(const Vector3f& destination, bool terrain_alt)
         _scurve_this_leg = _scurve_next_leg;
     } else {
         _scurve_this_leg.calculate_track(_origin, _destination,
-                                         _pos_control.get_max_speed_xy(), _pos_control.get_max_speed_up(), _pos_control.get_max_speed_down(),
+                                         _pos_control.get_max_speed_xy_cms(), _pos_control.get_max_speed_up_cms(), _pos_control.get_max_speed_down_cms(),
                                          _wp_accel_cmss, _wp_accel_z_cmss,
                                          _scurve_jerk_time, _scurve_jerk * 100.0f);
         if (!is_zero(origin_speed)) {
@@ -326,7 +326,7 @@ bool AC_WPNav::set_wp_destination_next(const Vector3f& destination, bool terrain
     }
 
     _scurve_next_leg.calculate_track(_destination, destination,
-                                     _pos_control.get_max_speed_xy(), _pos_control.get_max_speed_up(), _pos_control.get_max_speed_down(),
+                                     _pos_control.get_max_speed_xy_cms(), _pos_control.get_max_speed_up_cms(), _pos_control.get_max_speed_down_cms(),
                                      _wp_accel_cmss, _wp_accel_z_cmss,
                                      _scurve_jerk_time, _scurve_jerk * 100.0f);
     if (_this_leg_is_spline) {
@@ -365,7 +365,7 @@ void AC_WPNav::shift_wp_origin_to_current_pos()
     _pos_control.init_z_controller();
     _pos_control.init_xy_controller();
 
-    const Vector3f pos_target = _pos_control.get_pos_target();
+    const Vector3f pos_target = _pos_control.get_pos_target_cm();
 
     // shift origin and destination
     _origin.x = pos_target.x;
@@ -418,14 +418,14 @@ void AC_WPNav::shift_wp_origin_and_destination_to_stopping_point_xy()
 /// get_wp_stopping_point_xy - returns vector to stopping point based on a horizontal position and velocity
 void AC_WPNav::get_wp_stopping_point_xy(Vector3f& stopping_point) const
 {
-	_pos_control.get_stopping_point_xy(stopping_point);
+	_pos_control.get_stopping_point_xy_cm(stopping_point);
 }
 
 /// get_wp_stopping_point - returns vector to stopping point based on 3D position and velocity
 void AC_WPNav::get_wp_stopping_point(Vector3f& stopping_point) const
 {
-    _pos_control.get_stopping_point_xy(stopping_point);
-    _pos_control.get_stopping_point_z(stopping_point);
+    _pos_control.get_stopping_point_xy_cm(stopping_point);
+    _pos_control.get_stopping_point_z_cm(stopping_point);
 }
 
 /// advance_wp_target_along_track - move target location along track from origin to destination
@@ -448,7 +448,7 @@ bool AC_WPNav::advance_wp_target_along_track(float dt)
     // check target velocity is non-zero
     if (is_positive(curr_target_vel.length())) {
         Vector3f track_direction = curr_target_vel.normalized();
-        const float track_error = _pos_control.get_pos_error().dot(track_direction);
+        const float track_error = _pos_control.get_pos_error_cm().dot(track_direction);
         const float track_velocity = _inav.get_velocity().dot(track_direction);
         // set time scaler to be consistent with the achievable aircraft speed with a 5% buffer for short term variation.
         track_scaler_dt = constrain_float(0.05f + (track_velocity - _pos_control.get_pos_xy_p().kP() * track_error) / curr_target_vel.length(), 0.1f, 1.0f);
@@ -484,8 +484,8 @@ bool AC_WPNav::advance_wp_target_along_track(float dt)
     // input shape the terrain offset
     shape_pos_vel_accel(terr_offset, 0.0f, 0.0f,
         _pos_terrain_offset, _vel_terrain_offset, _accel_terrain_offset,
-        0.0f, _pos_control.get_max_speed_down(), _pos_control.get_max_speed_up(),
-        -_pos_control.get_max_accel_z(), _pos_control.get_max_accel_z(), 0.05f, dt);
+        0.0f, _pos_control.get_max_speed_down_cms(), _pos_control.get_max_speed_up_cms(),
+        -_pos_control.get_max_accel_z_cmss(), _pos_control.get_max_accel_z_cmss(), 0.05f, dt);
 
     update_pos_vel_accel(_pos_terrain_offset, _vel_terrain_offset, _accel_terrain_offset, dt, false, false, 0.0f, 0.0f);
 
@@ -522,18 +522,18 @@ void AC_WPNav::update_track_with_speed_accel_limits()
 {
     // update this leg
     if (_this_leg_is_spline) {
-        _spline_this_leg.set_speed_accel(_pos_control.get_max_speed_xy(), _pos_control.get_max_speed_up(), _pos_control.get_max_speed_down(),
+        _spline_this_leg.set_speed_accel(_pos_control.get_max_speed_xy_cms(), _pos_control.get_max_speed_up_cms(), _pos_control.get_max_speed_down_cms(),
                                          _wp_accel_cmss, _wp_accel_z_cmss);
     } else {
-        _scurve_this_leg.set_speed_max(_pos_control.get_max_speed_xy(), _pos_control.get_max_speed_up(), _pos_control.get_max_speed_down());
+        _scurve_this_leg.set_speed_max(_pos_control.get_max_speed_xy_cms(), _pos_control.get_max_speed_up_cms(), _pos_control.get_max_speed_down_cms());
     }
 
     // update next leg
     if (_next_leg_is_spline) {
-        _spline_next_leg.set_speed_accel(_pos_control.get_max_speed_xy(), _pos_control.get_max_speed_up(), _pos_control.get_max_speed_down(),
+        _spline_next_leg.set_speed_accel(_pos_control.get_max_speed_xy_cms(), _pos_control.get_max_speed_up_cms(), _pos_control.get_max_speed_down_cms(),
                                          _wp_accel_cmss, _wp_accel_z_cmss);
     } else {
-        _scurve_next_leg.set_speed_max(_pos_control.get_max_speed_xy(), _pos_control.get_max_speed_up(), _pos_control.get_max_speed_down());
+        _scurve_next_leg.set_speed_max(_pos_control.get_max_speed_xy_cms(), _pos_control.get_max_speed_up_cms(), _pos_control.get_max_speed_down_cms());
     }
 }
 
@@ -670,8 +670,8 @@ bool AC_WPNav::set_spline_destination(const Vector3f& destination, bool terrain_
     }
 
     // update spline calculators speeds and accelerations
-    _spline_this_leg.set_speed_accel(_pos_control.get_max_speed_xy(), _pos_control.get_max_speed_up(), _pos_control.get_max_speed_down(),
-                                     _pos_control.get_max_accel_xy(), _pos_control.get_max_accel_z());
+    _spline_this_leg.set_speed_accel(_pos_control.get_max_speed_xy_cms(), _pos_control.get_max_speed_up_cms(), _pos_control.get_max_speed_down_cms(),
+                                     _pos_control.get_max_accel_xy_cmss(), _pos_control.get_max_accel_z_cmss());
 
     // calculate origin and origin velocity vector
     Vector3f origin_vector;
@@ -770,8 +770,8 @@ bool AC_WPNav::set_spline_destination_next(const Vector3f& next_destination, boo
     }
 
     // update spline calculators speeds and accelerations
-    _spline_next_leg.set_speed_accel(_pos_control.get_max_speed_xy(), _pos_control.get_max_speed_up(), _pos_control.get_max_speed_down(),
-                                     _pos_control.get_max_accel_xy(), _pos_control.get_max_accel_z());
+    _spline_next_leg.set_speed_accel(_pos_control.get_max_speed_xy_cms(), _pos_control.get_max_speed_up_cms(), _pos_control.get_max_speed_down_cms(),
+                                     _pos_control.get_max_accel_xy_cmss(), _pos_control.get_max_accel_z_cmss());
 
     // setup next spline leg.  Note this could be made local
     _spline_next_leg.set_origin_and_destination(_destination, next_destination, origin_vector, destination_vector);
