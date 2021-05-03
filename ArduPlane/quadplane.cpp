@@ -1338,6 +1338,7 @@ void QuadPlane::init_qland(void)
     last_land_final_agl = plane.relative_ground_altitude(plane.g.rangefinder_landing);
     landing_detect.lower_limit_start_ms = 0;
     landing_detect.land_start_ms = 0;
+    gcs().send_text(MAV_SEVERITY_INFO,"VTOL land descend");
 #if LANDING_GEAR_ENABLED == ENABLED
     plane.g2.landing_gear.deploy_for_landing();
 #endif
@@ -1518,6 +1519,7 @@ void QuadPlane::control_loiter()
     if (plane.control_mode == &plane.mode_qland) {
         if (poscontrol.state < QPOS_LAND_FINAL && check_land_final()) {
             poscontrol.state = QPOS_LAND_FINAL;
+            gcs().send_text(MAV_SEVERITY_INFO,"VTOL land final");
             // cut IC engine if enabled
             if (land_icengine_cut != 0) {
                 plane.g2.ice_control.engine_control(0, 0, 0);
@@ -2636,6 +2638,8 @@ void QuadPlane::vtol_position_controller(void)
                                 (double)plane.auto_state.wp_distance,
                                 plane.relative_ground_altitude(plane.g.rangefinder_landing));
                 poscontrol.state = QPOS_POSITION1;
+                setup_target_position();
+                pos_control->set_pos_target_xy(poscontrol.target.x, poscontrol.target.y);
             } else {
                 gcs().send_text(MAV_SEVERITY_INFO,"VTOL airbrake v=%.1f d=%.1f h=%.1f",
                                 (double)groundspeed, (double)distance,
@@ -2676,7 +2680,7 @@ void QuadPlane::vtol_position_controller(void)
         if (poscontrol.state == QPOS_APPROACH) {
             poscontrol_init_approach();
         }
-        pos_control->init_xy_controller_stopping_point();
+        pos_control->init_xy_controller();
         break;
     }
 
@@ -3046,9 +3050,14 @@ void QuadPlane::control_qrtl(void)
  */
 void QuadPlane::poscontrol_init_approach(void)
 {
-    poscontrol.state = QPOS_APPROACH;
     poscontrol.start_closing_vel = landing_closing_velocity().length();
     poscontrol.start_dist = plane.current_loc.get_distance(plane.next_WP_loc);
+    if (poscontrol.state != QPOS_APPROACH) {
+        gcs().send_text(MAV_SEVERITY_INFO,"VTOL approach v=%.1f d=%.1f",
+                        poscontrol.start_closing_vel,
+                        poscontrol.start_dist);
+    }
+    poscontrol.state = QPOS_APPROACH;
     pos_control->init_xy_controller();
 }
 
