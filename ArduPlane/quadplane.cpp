@@ -2549,22 +2549,19 @@ void QuadPlane::update_land_positioning(void)
  */
 void QuadPlane::vtol_position_xy(Vector3f &pos, float accel_xy_limit_cmss)
 {
-#if 0
     // using the small angle approximation for simplicity and a conservative result when maximum acceleration is large
     // this assumes the time taken to achieve the maximum acceleration angle is limited by the angular acceleration rather than maximum angular rate.
     float lean_angle = accel_xy_limit_cmss / (GRAVITY_MSS * 100.0 * M_PI / 18000.0);
     float angle_accel = MIN(attitude_control->get_accel_pitch_max(), attitude_control->get_accel_roll_max());
     float tc = 2.0 * sqrtf(lean_angle / angle_accel);
 
-    pos_control->input_pos_vel_xy(pos, vel,
-                                  0.0,
-                                  wp_nav->get_default_speed_xy(),
-                                  accel_xy_limit_cmss, tc);
-#else
-    pos_control->set_max_speed_accel_xy(wp_nav->get_default_speed_xy(),
-                                        accel_xy_limit_cmss);
-    pos_control->set_pos_target_xy(pos.x, pos.y);
-#endif
+    pos_control->set_max_speed_accel_xy(wp_nav->get_default_speed_xy(), accel_xy_limit_cmss);
+    pos_control->set_shaper_tc_xy(tc);
+
+    Vector3f vel;
+    Vector3f accel;
+    pos_control->input_pos_vel_accel_xy(pos, vel, accel);
+    pos_control->update_xy_controller();
 }
 
 
@@ -2639,7 +2636,7 @@ void QuadPlane::vtol_position_controller(void)
                                 plane.relative_ground_altitude(plane.g.rangefinder_landing));
                 poscontrol.state = QPOS_POSITION1;
                 setup_target_position();
-                pos_control->set_pos_target_xy(poscontrol.target.x, poscontrol.target.y);
+                pos_control->set_pos_target_xy_cm(poscontrol.target.x, poscontrol.target.y);
             } else {
                 gcs().send_text(MAV_SEVERITY_INFO,"VTOL airbrake v=%.1f d=%.1f h=%.1f",
                                 (double)groundspeed, (double)distance,
@@ -2690,30 +2687,23 @@ void QuadPlane::vtol_position_controller(void)
 
         Vector2f target_speed_xy = desired_closing_vel;
 
-        Vector3f targ_vel;
-
         // zero offset in POS1 and POS2
         poscontrol.offset.zero();
 
-#if 0
         // using the small angle approximation for simplicity and a conservative result when maximum acceleration is large
         // this assumes the time taken to achieve the maximum acceleration angle is limited by the angular acceleration rather than maximum angular rate.
         // Allow a minimum of 125% transition_decel to provide 25% overshoot.
         const float accel_xy_limit_cmss = MAX(wp_nav->get_wp_acceleration(), transition_decel*125);
         float lean_angle = accel_xy_limit_cmss / (GRAVITY_MSS * 100.0 * M_PI / 18000.0);
         float angle_accel = MIN(attitude_control->get_accel_pitch_max(), attitude_control->get_accel_roll_max());
-        float tc = 2.0 * sqrtf(lean_angle / angle_accel);
-#endif
+        pos_control->set_shaper_tc_xy( 2.0 * sqrtf(lean_angle / angle_accel) );
 
         Vector3f vel = Vector3f(target_speed_xy.x*100, target_speed_xy.y*100, 0.0);
 
         Vector3f accel;
         pos_control->input_vel_accel_xy(vel, accel);
-
-        // reset position controller xy target to current position
-        // because we only want velocity control (no position control)
-        const Vector3f& curr_pos = inertial_nav.get_position();
-        pos_control->set_pos_target_xy(curr_pos.x, curr_pos.y);
+        pos_control->stop_pos_xy_stabilisation();
+        pos_control->update_xy_controller();
 
         // nav roll and pitch are controller by position controller
         plane.nav_roll_cd = pos_control->get_roll_cd();
@@ -2742,6 +2732,7 @@ void QuadPlane::vtol_position_controller(void)
             (closing_speed < desired_closing_speed * 0.7 &&
              closing_speed < wp_nav->get_default_speed_xy() * 0.01)) {
             poscontrol.state = QPOS_POSITION2;
+            pos_control->init_xy_controller();
             gcs().send_text(MAV_SEVERITY_INFO,"VTOL position2 v=%.1f d=%.1f h=%.1f",
                             closing_speed, (double)plane.auto_state.wp_distance,
                             plane.relative_ground_altitude(plane.g.rangefinder_landing));
@@ -3468,7 +3459,7 @@ int8_t QuadPlane::forward_throttle_pct()
     }
     vel_forward.last_ms = AP_HAL::millis();
     
-    const Vector3f &vel_error_xyz = pos_control->get_vel_error();
+    const Vector3f &vel_error_xyz = pos_control->get_vel_error_cms();
     Vector2f vel_error_xy(vel_error_xyz.x, vel_error_xyz.y);
 
     // get velocity error, and rotate to get fwd component
@@ -3487,7 +3478,7 @@ int8_t QuadPlane::forward_throttle_pct()
     // add in a component from our current pitch demand. This tends to
     // move us to zero pitch. Assume that LIM_PITCH would give us the
     // WP nav speed.
-    vel_error -= (pos_control->get_max_speed_xy() * 0.01f) * plane.nav_pitch_cd / (float)plane.aparm.pitch_limit_max_cd;
+    vel_error -= (pos_control->get_max_speed_xy_cms() * 0.01f) * plane.nav_pitch_cd / (float)plane.aparm.pitch_limit_max_cd;
 
     // work out the desired speed in forward direction
     Vector3f vel_ned;
@@ -3586,7 +3577,7 @@ float QuadPlane::get_weathervane_yaw_rate_cds(void)
         return 0;
     }
 
-    float roll = pos_control->get_roll() / 100.0f;
+    float roll = pos_control->get_roll_cd() / 100.0f;
     if (fabsf(roll) < weathervane.min_roll) {
         weathervane.last_output = 0;
         return 0;        
