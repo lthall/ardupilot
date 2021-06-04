@@ -638,6 +638,21 @@ void AC_PosControl::update_xy_controller()
     // update angle targets that will be passed to stabilize controller
     accel_to_lean_angles(_accel_target.x, _accel_target.y, _roll_target, _pitch_target);
     calculate_yaw_and_rate_yaw();
+
+    AP::logger().Write("AAB",
+                       "TimeUS,CVX,CVY,VTX,VTY,DVX,DVY,TVX,TVY",
+                       "snnnnnnnn",
+                       "F00000000",
+                       "Qffffffff",
+                       AP_HAL::micros64(),
+                       double(_p_pos_xy.kP() * (_pos_target.x - curr_pos.x)),
+                       double(_p_pos_xy.kP() * (_pos_target.y - curr_pos.y)),
+                       double(vel_target.x),
+                       double(vel_target.y),
+                       double(_vel_desired.x),
+                       double(_vel_desired.y),
+                       double(_vel_target.x),
+                       double(_vel_target.y));
 }
 
 

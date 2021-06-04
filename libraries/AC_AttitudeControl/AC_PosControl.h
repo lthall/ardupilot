@@ -45,6 +45,7 @@ public:
 
     /// get_dt - gets time delta in seconds for all position controllers
     float get_dt() const { return _dt; }
+    float get_last_dt() const { return (AP_HAL::micros64() - _last_update_xy_us)/1000000.0f; }
 
 
     ///

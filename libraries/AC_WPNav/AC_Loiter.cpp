@@ -293,4 +293,21 @@ void AC_Loiter::calc_desired_velocity(float nav_dt, bool avoidance_on)
 
     // send adjusted feed forward acceleration and velocity back to the Position Controller
     _pos_control.set_pos_vel_accel_xy(target_pos, desired_vel, _desired_accel);
+
+    AP::logger().Write("AAA",
+            "TimeUS,dvx,dvy,pax,pay,dax,day,ba,lu,gt,dt",
+            "snnooooosss",
+            "F0000000000",
+            "Qffffffffff",
+              AP_HAL::micros64(),
+              (double)desired_vel.x,
+              (double)desired_vel.y,
+              (double)_predicted_accel.x,
+              (double)_predicted_accel.y,
+              (double)_desired_accel.x,
+              (double)_desired_accel.y,
+              (double)_brake_accel,
+              (double)_pos_control.get_last_dt(),
+              (double)_pos_control.get_dt(),
+              (double)nav_dt);
 }
