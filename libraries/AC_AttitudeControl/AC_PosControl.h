@@ -63,7 +63,7 @@ public:
     void input_pos_xyz(const Vector3p& pos, float pos_offset_z, float pos_offset_z_buffer);
 
     /// pos_offset_z_scaler - calculates a multiplier used to reduce the horizontal velocity to allow the z position controller to stay within the provided buffer range
-    float pos_offset_z_scaler(float pos_z, float pos_offset_z_buffer);
+    float pos_offset_z_scaler(float pos_offset_z, float pos_offset_z_buffer) const;
 
     ///
     /// Lateral position controller

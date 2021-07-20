@@ -397,7 +397,7 @@ void AC_PosControl::input_pos_xyz(const Vector3p& pos, float pos_offset_z, float
 
 
 /// pos_offset_z_scaler - calculates a multiplier used to reduce the horizontal velocity to allow the z position controller to stay within the provided buffer range
-float AC_PosControl::pos_offset_z_scaler(float pos_offset_z, float pos_offset_z_buffer)
+float AC_PosControl::pos_offset_z_scaler(float pos_offset_z, float pos_offset_z_buffer) const
 {
     if (is_zero(pos_offset_z_buffer)) {
         return 1.0;
