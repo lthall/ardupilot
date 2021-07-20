@@ -175,6 +175,10 @@ void AC_WPNav::wp_and_spline_init(float speed_cms)
     _origin = _destination = stopping_point;
     _terrain_alt = false;
     _this_leg_is_spline = false;
+
+    // initialise the terrain velocity to the current maximum velocity
+    _terain_vel = _wp_speed_cms;
+    _terain_accel = 0.0;
 }
 
 /// set_speed_xy - allows main code to pass target horizontal velocity for wp navigation
